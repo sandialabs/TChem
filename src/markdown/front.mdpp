@@ -1,0 +1,27 @@
+# TChem - A Software Toolkit for the Analysis of Complex Kinetic Models
+
+!TOC
+
+!INCLUDE "intro.md", 1
+!INCLUDE "build.md", 1
+!INCLUDE "input-file-spec.md", 1
+!INCLUDE "thermodynamic-properties.md", 1
+!INCLUDE "reaction-rates.md", 1
+
+## Reactors
+
+!INCLUDE "time-integration.md", 2
+!INCLUDE "example-zero-d-ignition.md", 2
+!INCLUDE "example-plug-flow-reactor.md", 2
+
+## Application Programming Interface
+
+!INCLUDE "cxx-interface.md", 2
+
+!INCLUDE "future-work.md", 1
+
+## Acknowledgement
+
+This work is supported as part of the Computational Chemical Sciences Program funded by the U.S. Department of Energy, Office of Science, Basic Energy Sciences, Chemical Sciences, Geosciences and Biosciences Division.
+
+Award number: 0000232253

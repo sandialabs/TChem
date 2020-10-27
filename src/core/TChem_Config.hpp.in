@@ -1,0 +1,22 @@
+#ifndef __TCHEM_CONFIG_H__
+#define __TCHEM_CONFIG_H__
+
+/// tchem control
+#cmakedefine TCHEM_ENABLE_VERBOSE
+#cmakedefine TCHEM_ENABLE_DEBUG
+#cmakedefine TCHEM_ENABLE_PROBLEMS_NUMERICAL_JACOBIAN
+#cmakedefine TCHEM_ENABLE_NEWTONSOLVER_USE_WRMS_NORMS
+#cmakedefine TCHEM_ENABLE_TRBDF2_USE_WRMS_NORMS
+#cmakedefine TCHEM_ENABLE_PROBLEM_DAE_CSTR
+
+/// required libraries
+#cmakedefine TCHEM_ENABLE_TPL_KOKKOS
+#cmakedefine TCHEM_ENABLE_TPL_KOKKOSKERNELS
+
+/// optional libraries
+#cmakedefine TCHEM_ENABLE_TPL_OPENBLAS
+#cmakedefine TCHEM_ENABLE_TPL_OPENBLAS_CBLAS_HEADER
+#cmakedefine TCHEM_ENABLE_TPL_LAPACKE
+#cmakedefine TCHEM_ENABLE_TPL_MKL
+
+#endif

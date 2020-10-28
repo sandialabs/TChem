@@ -25,7 +25,7 @@
 5\.  [Reaction Rates](#reactionrates)  
 5.1\.  [Gas-Phase Chemistry](#gas-phasechemistry)  
 5.1.1\.  [Forward and Reverse Rate Constants](#forwardandreverserateconstants)  
-5.1.2\.  [Concentration of the "Third-Body"](#concentrationofthe"third-body")  
+5.1.2\.  [Concentration of the "Third-Body"](#concentrationofthethirdbody)  
 5.1.3\.  [Pressure-dependent Reactions](#pressure-dependentreactions)  
 5.1.4\.  [Note on Units for Net Production rates](#noteonunitsfornetproductionrates)  
 5.1.5\.  [Example](#example)  
@@ -522,7 +522,7 @@ When computing the equilibrium constant, the atmospheric pressure, <img src="svg
 
 Note: If a reaction is irreversible, <img src="svgs/7f87b958a998866226cc01233172402e.svg?invert_in_darkmode" align=middle width=45.97403579999999pt height=22.831056599999986pt/>.
 
-<a name="concentrationofthe"third-body""></a>
+<a name="concentrationofthethirdbody"></a>
 
 #### 5.1.2\. Concentration of the "Third-Body"   
 

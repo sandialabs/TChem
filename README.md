@@ -25,7 +25,7 @@
 5\.  [Reaction Rates](#reactionrates)  
 5.1\.  [Gas-Phase Chemistry](#gas-phasechemistry)  
 5.1.1\.  [Forward and Reverse Rate Constants](#forwardandreverserateconstants)  
-5.1.2\.  [Concentration of the "Third-Body"](#concentrationofthethirdbody)  
+5.1.2\.  [Concentration of the "Third-Body"](#concentrationofthethird-body)  
 5.1.3\.  [Pressure-dependent Reactions](#pressure-dependentreactions)  
 5.1.4\.  [Note on Units for Net Production rates](#noteonunitsfornetproductionrates)  
 5.1.5\.  [Example](#example)  
@@ -522,7 +522,7 @@ When computing the equilibrium constant, the atmospheric pressure, <img src="svg
 
 Note: If a reaction is irreversible, <img src="svgs/7f87b958a998866226cc01233172402e.svg?invert_in_darkmode" align=middle width=45.97403579999999pt height=22.831056599999986pt/>.
 
-<a name="concentrationofthethirdbody"></a>
+<a name="concentrationofthethird-body"></a>
 
 #### 5.1.2\. Concentration of the "Third-Body"   
 
@@ -874,29 +874,29 @@ The steps for the calculation of <img src="svgs/1aa19c5ae8db79847d59e829274a32ec
 
 * Derivatives of <img src="svgs/e680843a73d5214f63af89c487342755.svg?invert_in_darkmode" align=middle width=13.30617584999999pt height=22.465723500000017pt/>
 
-    + Basic reactions $\mathcal{C}_i = 1$: $\frac{\partial\mathcal{C}_i}{\partial T}\equiv \frac{\partial\mathcal{C}_i}{\partial\mathfrak{X}_l}\equiv 0$
+ Basic reactions <img src="svgs/39dba161c186097612d8d4091f90dee1.svg?invert_in_darkmode" align=middle width=44.264912999999986pt height=22.465723500000017pt/>: <img src="svgs/16f52234c9d90705f659e4c144d6da5e.svg?invert_in_darkmode" align=middle width=100.16420369999999pt height=29.46111299999998pt/>
 
-    + 3-rd body-enhanced reactions $\mathcal{C}_i = \mathfrak{X}_i$: $\frac{\partial\mathcal{C}_i}{\partial T}\equiv 0$, $\frac{\partial\mathcal{C}_i}{\partial\mathfrak{X}_l}=\alpha_{il}$
+ 3-rd body-enhanced reactions <img src="svgs/6ae8ec9f7aba2e44e15585f0cd90343a.svg?invert_in_darkmode" align=middle width=52.51947854999999pt height=22.731165599999983pt/>: <img src="svgs/d2f93f6d71d780a028429c98923e79a5.svg?invert_in_darkmode" align=middle width=52.18095794999999pt height=29.46111299999998pt/>, <img src="svgs/8840bcce1ae1f3a4d8f2a270ddaed974.svg?invert_in_darkmode" align=middle width=65.40098234999999pt height=29.46111299999998pt/>
 
-    + Unimolecular/recombination fall-off reactions $\mathcal{C}_i = \frac{\Pr_i}{1+\Pr_i}F_i$
+ Unimolecular/recombination fall-off reactions <img src="svgs/2ddf5f6146d6fba8b76d5ec6fb5c8746.svg?invert_in_darkmode" align=middle width=91.03657859999998pt height=29.205422400000014pt/>
 <p align="center"><img src="svgs/4e08aa709474ca0fe57f49c90750037f.svg?invert_in_darkmode" align=middle width=570.99382395pt height=40.5178356pt/></p>
 
-        - $\Pr_i=\frac{{k_0}_i}{{k_\infty}_i}\mathfrak{X}_i \Rightarrow \frac{\partial\Pr_i}{\partial T}=\frac{{k'_0}_i{k_\infty}_i-{k_0}_i{k'_\infty}_i}{{k_\infty^2}_i}\mathfrak{X}_i,\,\,\,\frac{\partial\Pr_i}{\partial\mathfrak{X}_l}=\frac{{k_0}_i}{{k_\infty}_i}\alpha_{il}$.
+ <img src="svgs/a1d4d73a76b766f5f1d012056d9dce65.svg?invert_in_darkmode" align=middle width=406.27654155pt height=37.46478449999999pt/>.
 
-        - $\Pr_i=\frac{{k_0}_i}{{k_\infty}_i}\mathfrak{X}_m \Rightarrow\frac{\partial\Pr_i}{\partial T}=\frac{{k'_0}_i{k_\infty}_i-{k_0}_i{k'_\infty}_i}{{k_\infty^2}_i}\mathfrak{X}_m,\,\,\,\frac{\partial\Pr_i}{\partial\mathfrak{X}_l}=\frac{{k_0}_i}{{k_\infty}_i}\delta_{lm}$, where $\delta_{lm}$ is Kroenecker delta symbol.
+ <img src="svgs/68825f650ca88386077ab978e96313f9.svg?invert_in_darkmode" align=middle width=424.10871855pt height=37.46478449999999pt/>, where <img src="svgs/66e50b1c2420c3a64f6647f94110d988.svg?invert_in_darkmode" align=middle width=23.19457634999999pt height=22.831056599999986pt/> is Kroenecker delta symbol.
 
-        - For Lindemann form $F_i=1 \Rightarrow \frac{\partial F_i}{\partial T}\equiv \frac{\partial F_i}{\partial\mathfrak{X}_l}\equiv 0$.
+ For Lindemann form <img src="svgs/bd72d4d231f2339f6f099a1c0c6c616b.svg?invert_in_darkmode" align=middle width=175.08827985pt height=29.46111299999998pt/>.
 
-        - For Troe form
+ For Troe form
 <p align="center"><img src="svgs/72a413e28b485cbab31530a6be3778c2.svg?invert_in_darkmode" align=middle width=1318.0485350999998pt height=59.5682406pt/></p>
 
 where
 <p align="center"><img src="svgs/df75775429479ccbc461988cb3671168.svg?invert_in_darkmode" align=middle width=1300.67202045pt height=39.452455349999994pt/></p>
 
-        - For SRI form
+ For SRI form
 <p align="center"><img src="svgs/099718c692469750f01c0407fec594d6.svg?invert_in_darkmode" align=middle width=1215.9538924499998pt height=49.315569599999996pt/></p>
 
-    + Chemically activated bimolecular reactions: $\mathcal{C}_i = \frac{1}{1+\Pr_i}F_i$
+ Chemically activated bimolecular reactions: <img src="svgs/2f54ce9d8494ad3a5972e07b542378f3.svg?invert_in_darkmode" align=middle width=91.03657859999998pt height=27.77565449999998pt/>
 <p align="center"><img src="svgs/a2c03c37b7494241aeb2f9087979ba4f.svg?invert_in_darkmode" align=middle width=596.5646906999999pt height=40.5178356pt/></p>
 
 Partial derivatives of <img src="svgs/9ad1568094e2a9f17f1cc28782ec690f.svg?invert_in_darkmode" align=middle width=22.27650644999999pt height=22.465723500000017pt/> and <img src="svgs/e17c35f619f835117e1ff8e25d5f8a9c.svg?invert_in_darkmode" align=middle width=15.22169714999999pt height=22.465723500000017pt/> are computed similar to the ones above.
@@ -904,9 +904,9 @@ Partial derivatives of <img src="svgs/9ad1568094e2a9f17f1cc28782ec690f.svg?inver
 * Derivatives of <img src="svgs/112d12b231c3277112d94b0a3d028253.svg?invert_in_darkmode" align=middle width=18.58246664999999pt height=22.465723500000017pt/>
 <p align="center"><img src="svgs/5b06b752aa2c0c206adb43d311fa55cb.svg?invert_in_darkmode" align=middle width=585.85752225pt height=54.93765749999999pt/></p>
 
-    + ${k_f}_i=A_iT^{\beta_i}\exp\left(-\frac{E_i}{R T}\right)=A_i\exp\left(\beta_i\ln T-\frac{{T_a}_i}{T}\right)$, where ${T_a}_i=E_i/R$. The derivative with respect to temperature can be calculated as ${k'_f}_i=\frac{{k_f}_i}{T}\left(\beta_i+\frac{{T_a}_i}{T}\right)$
+ <img src="svgs/f0ee88112d2f5ffde3736266e09df341.svg?invert_in_darkmode" align=middle width=349.51308975pt height=37.80850590000001pt/>, where <img src="svgs/9f837587d038422140941f58e892b2f3.svg?invert_in_darkmode" align=middle width=83.3840865pt height=24.65753399999998pt/>. The derivative with respect to temperature can be calculated as <img src="svgs/3347bb89f25991ef2b166a83f6d3e4dd.svg?invert_in_darkmode" align=middle width=149.36573024999998pt height=37.80850590000001pt/>
 
-    + if reverse Arrhenius parameters are provided, ${k'_r}_i$ is computed similar to above. If ${k_r}_i$ is computed based on ${k_f}_i$ and the equilibrium constant ${K_c}_i$, then its derivative is computed as
+ If reverse Arrhenius parameters are provided, <img src="svgs/d912e2a4c4c2bd28cd4bf492aac7699c.svg?invert_in_darkmode" align=middle width=20.488092899999987pt height=24.7161288pt/> is computed similar to above. If <img src="svgs/d99ec1601508d72f39e8f229c0784c89.svg?invert_in_darkmode" align=middle width=20.488092899999987pt height=22.831056599999986pt/> is computed based on <img src="svgs/c401619f66d3a4a96392fe1c60a5e6ed.svg?invert_in_darkmode" align=middle width=21.73055114999999pt height=22.831056599999986pt/> and the equilibrium constant <img src="svgs/402a64748a7c548103e8a6157b535764.svg?invert_in_darkmode" align=middle width=25.308656999999986pt height=22.465723500000017pt/>, then its derivative is computed as
 <p align="center"><img src="svgs/39a73887a8981ebcda407adf53724baf.svg?invert_in_darkmode" align=middle width=700.27402665pt height=52.84014285pt/></p>
 
 Since <img src="svgs/0f45e01abedb807fa5934327239deaaf.svg?invert_in_darkmode" align=middle width=469.87180019999994pt height=45.4613247pt/>. It follows that

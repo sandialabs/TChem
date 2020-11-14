@@ -22,7 +22,7 @@ git clone https://github.com/google/googletest.git ${GTEST_ROOT_PATH}/master
 git clone https://github.com/xianyi/OpenBLAS.git ${OPENBLAS_ROOT_PATH}/master
 git clone https://github.com/kokkos/kokkos.git ${KOKKOS_ROOT_PATH}/master
 git clone https://github.com/kokkos/kokkos-kernels.git ${KOKKOSKERNELS_ROOT_PATH}/master
-git clone kyukim@getz.ca.sandia.gov:/home/gitroot/TChem++ ${TCHEM_ROOT_PATH}/master
+git clone 	https://github.com/sandialabs/TChem.git ${TCHEM_ROOT_PATH}/master
 cd ${TCHEM_ROOT_PATH}/master; git checkout v2.0.0; cd ${TCHEM_DEMO_ROOT}
 
 # compile gtest

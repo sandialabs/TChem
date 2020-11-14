@@ -1,5 +1,5 @@
-<img src="logo/TChem_Logo_Large.png?invert_in_darkmode" align=middle width=500pt/>
-
+<p align="center"><img src="logo/TChem_Logo_Large.png?invert_in_darkmode" align=middle width=500pt/></p>
+    
 # TChem - A Software Toolkit for the Analysis of Complex Kinetic Models
 
 1\.  [Introduction](#introduction)  

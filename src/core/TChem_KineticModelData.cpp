@@ -1314,7 +1314,7 @@ KineticModelData::initChem()
         fscanf(chemfile, "%lf", &(reacPlogParsHost(i, 0)));
         reacPlogParsHost(i, 0) = log(reacPlogParsHost(i, 0));
         fscanf(chemfile, "%lf", &(reacPlogParsHost(i, 1)));
-        reacPlogParsHost(i, 1) = log(reacPlogParsHost(i, 1));
+//        reacPlogParsHost(i, 1) = log(reacPlogParsHost(i, 1));
         fscanf(chemfile, "%lf", &(reacPlogParsHost(i, 2)));
         fscanf(chemfile, "%lf", &(reacPlogParsHost(i, 3)));
       }

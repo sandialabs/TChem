@@ -177,10 +177,11 @@ struct ReactionRates
             Kokkos::atomic_fetch_add(&omega(kspec), val);
           }
           const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
+          const ordinal_type joff2 = kmcd.reacNreac(i);
           for (ordinal_type j = 0; j < kmcd.reacNprod(i); ++j) {
             const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
             // omega(kspec) += kmcd.reacRealNuki(i,j)*rop_at_i;
-            const real_type val = kmcd.reacRealNuki(ir, j) * rop_at_i;
+            const real_type val = kmcd.reacRealNuki(ir, j+joff2) * rop_at_i;
             Kokkos::atomic_fetch_add(&omega(kspec), val);
           }
         });

@@ -85,50 +85,95 @@ struct KForwardReverse
         ///
         if (plogtest) {
           ordinal_type idx = kmcd.reacPlogPno(iplog);
-          // printf("idx %d\n", idx );
           auto rpp = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
-          // printf("reacPlogPars %e log %e\n",kmcd.reacPlogPars(idx,0), logP );
+          rpp.assign_data(&kmcd.reacPlogPars(idx, 0));
           if (logP <= kmcd.reacPlogPars(idx, 0)) {
-            rpp.assign_data(&kmcd.reacPlogPars(idx, 0));
-            kfor(i) = ats<real_type>::exp(rpp(1) + rpp(2) * tln - rpp(3) * t_1);
-            // printf("ki i %d,  ki1 %e, logPi %e, log(A) %e, b %e, Ea %e \n",i,
-            // kfor(i), rpp(0),rpp(1),rpp(2),rpp(3) );
+
+            kfor(i) += rpp(1)*ats<real_type>::exp(rpp(2) * tln - rpp(3) * t_1);
+
+            // check if there are intervale with same pressure
+            for (ordinal_type inte = idx+1; inte < kmcd.reacPlogPno(iplog +1); inte++) {
+              if (kmcd.reacPlogPars(idx, 0) == kmcd.reacPlogPars(inte, 0) )
+              {
+                auto rpp2 = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
+                rpp2.assign_data(&kmcd.reacPlogPars(inte, 0));
+                kfor(i) += rpp2(1)*ats<real_type>::exp(rpp2(2) * tln - rpp2(3) * t_1);
+              }
+            }
+
 
           } else {
             idx = kmcd.reacPlogPno(iplog + 1) - 1;
-            // printf("reacPlogPars %e log %e\n",kmcd.reacPlogPars(idx,0), logP
-            // );
             rpp.assign_data(&kmcd.reacPlogPars(idx, 0));
+
             if (logP >= kmcd.reacPlogPars(idx, 0)) {
+
               kfor(i) =
-                ats<real_type>::exp(rpp(1) + rpp(2) * tln - rpp(3) * t_1);
-              // printf("ki i %d,  ki1 %e, logPi %e, log(A) %e, b %e, Ea %e
-              // \n",i, kfor(i), rpp(0),rpp(1),rpp(2),rpp(3) );
+                rpp(1)*ats<real_type>::exp(rpp(2) * tln - rpp(3) * t_1);
+              for (ordinal_type inte =  kmcd.reacPlogPno(iplog); inte < idx; inte++) {
+                if (rpp(0) == kmcd.reacPlogPars(inte, 0) )
+                {
+                  auto rpp2 = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
+                  rpp2.assign_data(&kmcd.reacPlogPars(inte, 0));
+                  kfor(i) += rpp2(1)*ats<real_type>::exp( rpp2(2) * tln - rpp2(3) * t_1);
+                }
+              }
+
+
             } else {
-              // printf("Reac No %d, kmcd.reacPlogPno(iplog) %d,
-              // kmcd.reacPlogPno(iplog+1)-1 %d \n", i, kmcd.reacPlogPno(iplog),
-              // kmcd.reacPlogPno(iplog+1)-1 );
               for (ordinal_type j = kmcd.reacPlogPno(iplog);
                    j < kmcd.reacPlogPno(iplog + 1);
                    ++j) {
-                // printf("logP %e kmcd.reacPlogPars(j,0)%e \n", logP,
-                // kmcd.reacPlogPars(j,0)  );
                 if (logP <= kmcd.reacPlogPars(j, 0)) {
-                  // printf("between intervals logP %e kmcd.reacPlogPars(j,0) %e
-                  // \n",logP,  kmcd.reacPlogPars(j,0) );
                   rpp.assign_data(&kmcd.reacPlogPars(j, 0));
-                  const real_type ki1 = (rpp(1) + rpp(2) * tln - rpp(3) * t_1);
+                  real_type ki1 = rpp(1)*ats<real_type>::exp(rpp(2) * tln - rpp(3) * t_1);
                   const real_type rpp1 = rpp(0);
-                  // printf("ki1 i %d,  ki1 %e, logPi %e, log(A) %e, b %e, Ea %e
-                  // \n",i, ki1, rpp(0),rpp(1),rpp(2),rpp(3) );
+
+                  // ordinal_type numberOfInter(0);
+                  for (ordinal_type inte = j + 1; inte < kmcd.reacPlogPno(iplog +1); inte++) {
+                    //is the next pressure same the highest value of  pressure ?
+                    if (rpp1 == kmcd.reacPlogPars(inte, 0) )
+                    {
+                      auto rpp2 = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
+                      rpp2.assign_data(&kmcd.reacPlogPars(inte, 0));
+                      ki1 += rpp2(1)*ats<real_type>::exp(rpp2(2) * tln - rpp2(3) * t_1);
+                    }
+                  }
+
+                  if (ki1 > 0)
+                  {
+                    ki1 = ats<real_type>::log(ki1);
+                  }else{
+                    printf("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative value (high range). \n\n");
+                    exit(1);
+                  }
+
                   rpp.assign_data(&kmcd.reacPlogPars(j - 1, 0));
-                  const real_type ki = (rpp(1) + rpp(2) * tln - rpp(3) * t_1);
-                  // printf("ki i %d,  ki1 %e, logPi %e, log(A) %e, b %e, Ea %e
-                  // \n",i, ki, rpp(0),rpp(1),rpp(2),rpp(3) );
+                  real_type ki = rpp(1)*ats<real_type>::exp(rpp(2) * tln - rpp(3) * t_1);
+                  for (ordinal_type inte = kmcd.reacPlogPno(iplog); inte < j-1; inte++)
+                  {
+
+                    //is the next pressure same the highest value of  pressure ?
+                    if (rpp(0) == kmcd.reacPlogPars(inte, 0) )
+                    {
+                      auto rpp2 = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
+                      rpp2.assign_data(&kmcd.reacPlogPars(inte, 0));
+                      ki += rpp2(1)*ats<real_type>::exp(rpp2(2) * tln - rpp2(3) * t_1);
+                    }
+                  }
+
+                  if (ki > 0)
+                  {
+                    ki = ats<real_type>::log(ki);
+                  }else{
+                    printf("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative value (low range). \n\n");
+                    printf("ki%e pressure %e\n", ki, ats<real_type>::exp(rpp(0)) );
+                    exit(1);
+                  }
+
 
                   kfor(i) = ats<real_type>::exp(
                     ki + (logP - rpp(0)) * (ki1 - ki) / (rpp1 - rpp(0)));
-                  // printf("Reacton No %d  kfor PLOG %e\n",i, kfor(i) );
                   break;
                 }
               } /* Done loop over all intervals */

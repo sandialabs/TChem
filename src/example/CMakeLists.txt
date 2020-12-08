@@ -21,6 +21,7 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_ThermalProperties.cpp
   TChem_InitialCondSurface.cpp
   TChem_TransientContStirredTankReactor.cpp
+  TChem_SourceTermToyProblem.cpp
 )
 
 #

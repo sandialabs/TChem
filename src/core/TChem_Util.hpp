@@ -126,6 +126,7 @@ constexpr real_type TCSMALL = 1.e-12;
 // 2*pi
 constexpr real_type DPI = 6.283185307179586;
 
+constexpr real_type PI = 3.141592653589793;
 /**
  * \def LENGTHOFELEMNAME
  * Maximum number of characters for element names

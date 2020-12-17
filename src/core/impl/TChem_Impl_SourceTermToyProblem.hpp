@@ -100,18 +100,16 @@ struct SourceTermToyProblem
       fprintf(fs, ":: SourceTermToyProblem::team_invoke\n");
       fprintf(fs, ":::: input\n");
       fprintf(fs,
-              "     nSpec %3d, nReac %3d, t %e, p %e\n",
+              "     nSpec %3d, nReac %3d\n",
               kmcd.nSpec,
-              kmcd.nReac,
-              t,
-              p);
+              kmcd.nReac);
       //
       fprintf(fs, ":: concX\n");
       for (int i = 0; i < int(concX.extent(0)); ++i)
         fprintf(fs,
                 "     i %3d, kfor %e\n",
                 i,
-                concX(i));        
+                concX(i));
       fprintf(fs, ":: kfor\n");
       for (int i = 0; i < int(kfor.extent(0)); ++i)
         fprintf(fs,

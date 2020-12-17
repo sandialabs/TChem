@@ -58,7 +58,7 @@ struct SourceTermToyProblem
     member.team_barrier();
 
 
-    /// 4. compute rate-of-progress
+    /// 2. compute rate-of-progress
     RateOfProgress::team_invoke(member,
                                 kfor,
                                 krev,
@@ -70,7 +70,7 @@ struct SourceTermToyProblem
 
     member.team_barrier();
 
-    /// 6. update rop with Crnd and assemble reaction rates
+    /// 3. assemble reaction rates
     auto rop = ropFor;
     Kokkos::parallel_for(
       Kokkos::TeamVectorRange(member, kmcd.nReac), [&](const ordinal_type& i) {
@@ -105,6 +105,13 @@ struct SourceTermToyProblem
               kmcd.nReac,
               t,
               p);
+      //
+      fprintf(fs, ":: concX\n");
+      for (int i = 0; i < int(concX.extent(0)); ++i)
+        fprintf(fs,
+                "     i %3d, kfor %e\n",
+                i,
+                concX(i));        
       fprintf(fs, ":: kfor\n");
       for (int i = 0; i < int(kfor.extent(0)); ++i)
         fprintf(fs,

@@ -43,7 +43,7 @@ struct SourceTermToyProblem
     {
       const real_type thetac(20.0); //! degrees
       const real_type lambdac(300.0);// ! degrees
-      const real_type k1 = ats<real_type>::sin(theta*PI/180) * ats<real_type>::sin(thetac*PI/180) *
+      const real_type k1 = ats<real_type>::sin(theta*PI/180) * ats<real_type>::sin(thetac*PI/180) +
                            ats<real_type>::cos(theta*PI/180) * ats<real_type>::cos(thetac*PI/180) *
                            ats<real_type>::cos(lambda*PI/180 - lambdac*PI/180);
       kfor(0) = k1 > 0 ? k1 : 0;
@@ -51,8 +51,8 @@ struct SourceTermToyProblem
       krev(0) = 0;
       krev(0) = 0;
 
-      // printf("sin(90)%e\n",ats<real_type>::sin(90*PI/180) );
-      // printf("cos(90)%e\n",ats<real_type>::cos(90*PI/180) );
+      // printf("k1 = %e\n",kfor(0) );
+      // printf("k2 = %e\n",kfor(1) );
     }
 
     member.team_barrier();

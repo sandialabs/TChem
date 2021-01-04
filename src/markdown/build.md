@@ -31,7 +31,7 @@ export LAPACKE_INSTALL_PATH=/where/you/install/lapacke
 Clone Kokkos, KokkosKernels and TChem repositories. Note that we use the develop branch of Kokkos and KokkosKernels.
 
 ```
-git clone getz.ca.sandia.gov:/home/gitroot/TChem++ ${TCHEM_REPOSITORY_PATH};
+git clone https://github.com/sandialabs/TChem.git ${TCHEM_REPOSITORY_PATH};
 git clone https://github.com/kokkos/kokkos.git ${KOKKOS_REPOSITORY_PATH};
 cd ${KOKKOS_REPOSITORY_PATH}; git checkout --track origin/develop;
 git clone https://github.com/kokkos/kokkos-kernels.git ${KOKKOSKERNELS_REPOSITORY_PATH};

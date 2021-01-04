@@ -67,6 +67,8 @@ main(int argc, char* argv[])
 
     theta(0) = 20;
     lambda(0) = 300;
+    // lambda(0) = 37.612;
+    // lambda(0) = 50;
 
     /// create a mirror view to store input from a file
     auto state_host = Kokkos::create_mirror_view(state);

@@ -473,6 +473,17 @@ public:
   ordinal_type initChem();
   ordinal_type initChemSurf();
 
+  /// this modify begin allocate a view to replace the existing reacArhenFor_
+  void modifyArrheniusForwardParametersBegin();
+
+  /// change the values as much as a user want within the begin, end clauses
+  real_type getArrheniusForwardParameter(const int i, const int j);
+  void modifyArrheniusForwardParameter(const int i, const int j, const real_type value);
+
+  /// this sync the host values to device ; now it is ready to construct a const object
+  void modifyArrheniusForwardParametersEnd();
+
+
   /// copy only things needed; we need to review what is actually needed for
   /// computations
   template<typename SpT>
@@ -635,5 +646,94 @@ public:
     return data;
   }
 };
+
+/// make an array of kinetic mode to vary kinetic models
+static inline
+Kokkos::View<KineticModelData*,Kokkos::HostSpace>
+cloneKineticModelData(const KineticModelData reference, const int nModels) {
+  Kokkos::View<KineticModelData*,Kokkos::HostSpace> r_val("KMD::cloned models", nModels);
+  Kokkos::deep_copy(r_val, reference);
+  return r_val;
+}
+
+
+template<typename SpT>
+static inline
+Kokkos::View<KineticModelConstData<SpT>*,SpT>
+createKineticModelConstData(Kokkos::View<KineticModelData*,Kokkos::HostSpace> kmds) {
+  Kokkos::View<KineticModelConstData<SpT>*,SpT> r_val("KMCD::const data objects", kmds.extent(0));
+  auto r_val_host = Kokkos::create_mirror_view(r_val);
+  Kokkos::parallel_for
+    (Kokkos::RangePolicy<host_exec_space>(0, kmds.extent(0)),
+     KOKKOS_LAMBDA(const int i) {
+      r_val_host(i) = kmds(i).createConstData<SpT>();
+    });
+  Kokkos::deep_copy(r_val, r_val_host);
+  return r_val;
+}
+
+static inline
+void
+KineticModelsModifyWithArrheniusForwardParameters(Kokkos::View<KineticModelData*,Kokkos::HostSpace> kmds,
+  const std::string& filename, const ordinal_type& nBatch )
+{
+
+  std::vector<real_type> valuesFiles;
+  {
+    std::ifstream file(filename);
+
+    if (file.is_open()) {
+      printf("readSample: Reading reaction modification parameters from %s\n", filename.c_str());
+      real_type value;
+      while (file >> value) {
+        valuesFiles.push_back(value);
+      }
+
+    } else{
+      printf("readSample : Could not open %s -> Abort !\n", filename.c_str());
+      exit(1);
+    }
+    file.close();
+
+  }
+  const ordinal_type NTotalItems = valuesFiles.size();
+  const ordinal_type NreacWModification = NTotalItems/(3*nBatch);
+
+  ordinal_type_1d_view_host reacIndx("reacIndx", NreacWModification);
+
+  for (ordinal_type ireac = 0; ireac < NreacWModification; ireac++) {
+    reacIndx(ireac) = valuesFiles[ireac];
+  }
+
+  for (int p=0;p<nBatch;++p) {
+    /// use reference so that we modify an object in the view
+    auto& kmd_at_p = kmds(p);
+    kmd_at_p.modifyArrheniusForwardParametersBegin();
+
+    /// this should be some range value that a user want to modify
+    {
+      for (ordinal_type ireac = 0; ireac < NreacWModification; ireac++) {
+        for (ordinal_type i = 0; i < 3; i++) {
+          const real_type reference_value = kmd_at_p.getArrheniusForwardParameter(reacIndx[ireac], i);
+          /// do actual modification of the value and set it
+          /// for this test, we just set the same value again
+          const real_type value = reference_value* valuesFiles[NreacWModification*(p*3+i+1) + ireac];
+          kmd_at_p.modifyArrheniusForwardParameter(reacIndx[ireac], i, value);
+
+        }
+
+
+      }
+    }
+    kmd_at_p.modifyArrheniusForwardParametersEnd();
+
+
+  }
+
+}
+
+
+
+
 } // namespace TChem
 #endif

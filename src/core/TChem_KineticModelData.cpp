@@ -1904,4 +1904,46 @@ KineticModelData::initChemSurf()
   return (0);
 }
 
+void
+KineticModelData::modifyArrheniusForwardParametersBegin() {
+  /// back up data (soft copy and reference counting keep the memory)
+  auto reacArhenFor = reacArhenFor_.view_host();
+
+  /// create a new allocation and copy the content of the previous arhenius parameters
+  reacArhenFor_ = real_type_2d_dual_view
+    (do_not_init_tag("KMD::reacArhenFor"), reacArhenFor.extent(0), reacArhenFor.extent(1));
+  Kokkos::deep_copy(reacArhenFor_.view_host(), reacArhenFor);
+
+  /// raise a flag modify host so that we can transfer data to device
+  reacArhenFor_.modify_host();
+}
+
+real_type
+KineticModelData::getArrheniusForwardParameter(const int i, const int j) {
+  TCHEM_CHECK_ERROR(i >= reacArhenFor_.view_host().extent(0),
+		    "Error: indeix i is greater than the view extent(0)");
+  TCHEM_CHECK_ERROR(j >= reacArhenFor_.view_host().extent(1),
+		    "Error: indeix j is greater than the view extent(1)");
+
+  /// modify arhenius parameter
+  return reacArhenFor_.view_host()(i,j);
+}
+
+void
+KineticModelData::modifyArrheniusForwardParameter(const int i, const int j, const real_type value) {
+  TCHEM_CHECK_ERROR(i >= reacArhenFor_.view_host().extent(0),
+		    "Error: indeix i is greater than the view extent(0)");
+  TCHEM_CHECK_ERROR(j >= reacArhenFor_.view_host().extent(1),
+		    "Error: indeix j is greater than the view extent(1)");
+
+  /// modify arhenius parameter
+  reacArhenFor_.view_host()(i,j) = value;
+}
+
+void
+KineticModelData::modifyArrheniusForwardParametersEnd() {
+  /// device view is now synced with the host view
+  reacArhenFor_.sync_device();
+}
+
 } // namespace TChem

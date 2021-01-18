@@ -22,6 +22,7 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_InitialCondSurface.cpp
   TChem_TransientContStirredTankReactor.cpp
   TChem_SourceTermToyProblem.cpp
+  TChem_IgnitionZeroD_ModelVariation.cpp
 )
 
 #

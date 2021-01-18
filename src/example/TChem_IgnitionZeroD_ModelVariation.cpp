@@ -203,7 +203,10 @@ main(int argc, char* argv[])
       ordinal_type ireac(0);
       printf("-- Testing Modification --\n");
 
-      for (ordinal_type isample = 0; isample < 3; isample++) {
+      ordinal_type NprintSample(3);
+      if  (nBatch < NprintSample) NprintSample=nBatch;
+
+      for (ordinal_type isample = 0; isample < NprintSample; isample++) {
         auto kmcd_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(),
       						       Kokkos::subview(kmcds, isample));
         printf("sample No %d Reaction Index %d \n", isample, ireac );

@@ -1,0 +1,39 @@
+! Hydrogen mechanism, from :  
+! Yetter, R.A., Dryer, F.L., and Rabitz, H., Comb. Sci. & Tech., 
+! vol. 79, pp. 97-128 (1991)
+! HNN: Took out N and N2 from elements and species lists
+ELEMENTS
+H O
+END
+
+SPECIES
+H2 O2 O OH H2O H HO2 H2O2
+END
+
+REACTIONS
+H+O2=O+OH                   1.915E+14  0.00  1.644E+04
+O+H2=H+OH                   5.080E+04  2.67  6.290E+03
+H2+OH=H2O+H                 2.160E+08  1.51  3.430E+03
+OH+OH=O+H2O                 1.230E+04  2.62 -1.880E+03
+H2+M=H+H+M                  4.577E+19 -1.40  1.044E+05
+   H2/2.5/ H2O/12/
+O+O+M=O2+M                  6.165E+15 -0.50  0.000E+00
+  H2/2.5/ H2O/12/
+O+H+M=OH+M                  4.714E+18 -1.00  0.000E+00
+  H2/2.5/ H2O/12/
+H+OH+M=H2O+M                2.240E+22 -2.00  0.000E+00
+  H2/2.5/ H2O/6.3/
+H+O2+M=HO2+M                6.170E+19 -1.42  0.000E+00
+  H2/2.5/ H2O/12/
+HO2+H=H2+O2                 6.630E+13  0.00  2.130E+03
+HO2+H=OH+OH                 1.690E+14  0.00  8.740E+02
+HO2+O=O2+OH                 1.810E+13  0.00 -4.000E+02
+HO2+OH=H2O+O2               1.450E+16 -1.00  0.000E+00
+HO2+HO2=H2O2+O2             3.020E+12  0.00  1.390E+03
+H2O2+M=OH+OH+M              1.202E+17  0.00  4.550E+04
+  H2/2.5/ H2O/12/
+H2O2+H=H2O+OH               1.000E+13  0.00  3.590E+03
+H2O2+H=HO2+H2               4.820E+13  0.00  7.950E+03
+H2O2+O=OH+HO2               9.550E+06  2.00  3.970E+03
+H2O2+OH=HO2+H2O             7.000E+12  0.00  1.430E+03
+END

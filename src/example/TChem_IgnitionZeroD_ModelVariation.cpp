@@ -195,6 +195,30 @@ main(int argc, char* argv[])
     TChem::KineticModelsModifyWithArrheniusForwardParameters(kmds, inputFileParamModifiers, nBatch );
     auto kmcds = TChem::createKineticModelConstData<TChem::exec_space>(kmds);
 
+
+    if (verbose) {
+      auto reacArhenFor_host_orginal = Kokkos::create_mirror_view(kmcd.reacArhenFor);
+      Kokkos::deep_copy(reacArhenFor_host_orginal, kmcd.reacArhenFor);
+
+      ordinal_type ireac(0);
+      printf("-- Testing Modification --\n");
+
+      for (ordinal_type isample = 0; isample < 3; isample++) {
+        auto kmcd_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(),
+      						       Kokkos::subview(kmcds, isample));
+        printf("sample No %d Reaction Index %d \n", isample, ireac );
+        printf("Before Modification : A %e B %f E/R %f \n", reacArhenFor_host_orginal(ireac,0),
+          reacArhenFor_host_orginal(ireac,1), reacArhenFor_host_orginal(ireac,2) );
+        printf("After  Modification : A %e B %f E/R %f \n", kmcd_host().reacArhenFor(ireac,0),
+          kmcd_host().reacArhenFor(ireac,1), kmcd_host().reacArhenFor(ireac,2) );
+        printf("       Modification : A %f B %f E/R %f \n", kmcd_host().reacArhenFor(ireac,0)/reacArhenFor_host_orginal(ireac,0),
+          kmcd_host().reacArhenFor(ireac,1)/reacArhenFor_host_orginal(ireac,1),kmcd_host().reacArhenFor(ireac,2)/reacArhenFor_host_orginal(ireac,2));
+
+      }
+
+    }
+
+
     // #endif
     // Temperature at iter and iter-1 for each sample, row: sample, colum iter
     // and iter-1

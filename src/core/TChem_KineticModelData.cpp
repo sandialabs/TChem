@@ -594,7 +594,9 @@ KineticModelData::initChem()
     printf("kmod.list : Error when interpreting kinetic model  !!!");
     exit(1);
   }
-  printf("kmod.list : %s\n", charvar4);
+  #ifdef TCHEM_ENABLE_VERBOSE
+    printf("kmod.list : %s\n", charvar4);
+  #endif
 
   fscanf(chemfile, "%d", &maxSpecInReac_);
   fscanf(chemfile, "%d", &maxTbInReac_);

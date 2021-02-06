@@ -184,7 +184,7 @@ TCKMI_getthermo9(char* singleword,
                  int* iread,
                  int* ierror);
 
-#define VERBOSE
+// #define VERBOSE
 
 //#include "TC_getthc9.c"
 
@@ -285,7 +285,7 @@ TC_kmodint_(char* mechfile, char* thermofile)
   /* Integer flags */
   int ierror, iread, ithermo, iremove;
 
-#ifdef VERBOSE
+#ifdef TCHEM_ENABLE_VERBOSE
   printf("\n");
   printf("       _                           _  _         _      \n");
   printf("      | | __ _ __ ___    ___    __| |(_) _ __  | |_    \n");
@@ -295,7 +295,7 @@ TC_kmodint_(char* mechfile, char* thermofile)
   printf("                                                       \n\n");
 #endif
 
-#ifdef VERBOSE
+#ifdef TCHEM_ENABLE_VERBOSE
   printf("Reading kinetic model from : %s\n", mechfile);
   printf("      and thermo data from : %s\n", thermofile);
 #endif
@@ -3391,7 +3391,7 @@ TCKMI_verifyreac(element* listelem,
 
   } /* Done outer loop */
 
-#ifdef VERBOSE
+#ifdef TCHEM_ENABLE_VERBOSE
   printf("!!! There are %d errors in the kinetic model \n", icount);
 #endif
 

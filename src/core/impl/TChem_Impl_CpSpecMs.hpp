@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_IMPL_CPSPECMS_HPP__
 #define __TCHEM_IMPL_CPSPECMS_HPP__
 
@@ -27,15 +29,17 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 namespace Impl {
 
+
 struct CpSpecMsFcn
 {
   template<typename MemberType,
+           typename RealType,
            typename RealType1DViewType,
            typename KineticModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const real_type& t,
+    const RealType& t,
     /// output
     const RealType1DViewType& cpi,
     /// const input from kinetic model

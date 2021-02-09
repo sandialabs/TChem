@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 /*! \file TC_kmodint_surface.c
 
     \brief Collection of functions used to parse surface kinetics
@@ -171,7 +173,7 @@ TC_kmodint_surface_(char* mechfile, char* thermofile, infoGasChem* kmGas)
     if (feof(mechin) > 0)
       break;
 
-//#define DEBUGMSG
+// #define DEBUGMSG
 #ifdef DEBUGMSG
     printf(
       "Line #%d, String: |%s|, Length: %d \n", icline, linein, strlen(linein));
@@ -375,7 +377,7 @@ TC_kmodint_surface_(char* mechfile, char* thermofile, infoGasChem* kmGas)
                     fileascii);
 
 //
-  saveSurfRectionEquations(kmGas->infoS,
+  TCKMI_saveSurfRectionEquations(kmGas->infoS,
                            listspecSurf,
                            listreacSurf,
                            &NreacSurf,
@@ -1449,6 +1451,8 @@ TCKMI_resetreacdatasurf(reactionSurf* currentreac, char* aunits, char* eunits)
 
   currentreac[0].isdup = -2;
   currentreac[0].isstick = 0;
+  currentreac[0].iscov = 0;
+  currentreac[0].cov_count = 0;
   currentreac[0].isrev = 0;
   currentreac[0].isbal = 0;
   currentreac[0].iscomp = 0;
@@ -1527,6 +1531,11 @@ TCKMI_getreactionssurf(char* linein,
   for (i = 0; i < len1 - 4; i++)
     if (strncmp(&linein[i], "STICK", 5) == 0)
       iloc = i;
+  //
+  for (i = 0; i < len1 - 2; i++)
+    if (strncmp(&linein[i], "COV", 3) == 0)
+      iloc = i;
+
 #ifdef DEBUGMSG
   printf("TCKMI_getreactions: %d \n", iloc);
 #endif
@@ -1544,6 +1553,8 @@ TCKMI_getreactionssurf(char* linein,
 #endif
     TCKMI_getreacauxlsurf(linein,
                           singleword,
+                          listspec,
+                          Nspec,
                           listspecSurf,
                           NspecSurf,
                           listreacSurf,
@@ -1580,6 +1591,8 @@ TCKMI_getreactionssurf(char* linein,
 int
 TCKMI_getreacauxlsurf(char* linein,
                       char* singleword,
+                      speciesGas* listspecGas,
+                      int* NspecGas,
                       speciesSurf* listspecSurf,
                       int* NspecSurf,
                       reactionSurf* listreacSurf,
@@ -1644,6 +1657,79 @@ TCKMI_getreacauxlsurf(char* linein,
 
     else if (strncmp(wordkey, "STICK", 5) == 0)
       listreacSurf[ireac].isstick = 1;
+    //
+    else if (strncmp(wordkey, "COV", 3) == 0) {
+      listreacSurf[ireac].iscov = 1;
+      listreacSurf[ireac].cov_count +=1;
+
+      std::vector<std::string> items;
+
+      std::string line(wordval);
+      std::string delimiter = " ";
+      size_t pos = 0;
+      std::string token;
+      while ((pos = line.find(delimiter)) != std::string::npos) {
+        items.push_back(line.substr(0, pos));
+        line.erase(0, pos + delimiter.length());
+      }
+      items.push_back(line);
+
+      double number(0);
+      std::string species_name ;
+      int count_cov(0);
+      const int count_cov_reac = listreacSurf[ireac].cov_count - 1;
+      for (size_t i = 0; i < items.size(); i++) {
+        if(items[i].find_first_not_of(' ') != std::string::npos)
+        {
+        try
+          {
+            number = std::stod(items[i]);
+            listreacSurf[ireac].cov_param[count_cov + 3*count_cov_reac ] = number;
+            count_cov++;
+#ifdef DEBUGMSG
+            printf("var %s %e \n",items[i].c_str(), number);
+#endif
+          }
+        catch(std::exception& e)
+          {
+            species_name = items[i];
+          }
+
+        }
+      }
+
+      int ipos = 0;
+      char *specname = &species_name[0];
+
+      // TCKMI_checkspecinlistsurf(specname, listspecSurf, NspecSurf, &ipos);
+      // if (ipos == *NspecSurf) {
+      //   printf("%s\n", specname);
+      //   *ierror = 665;
+      //   return 1;
+      // }
+      int isGas = 0;
+      TCKMI_checkspecinlistsurf(specname, listspecSurf, NspecSurf, &ipos);
+      if (ipos == *NspecSurf) {
+        isGas = 1;
+        TCKMI_checkspecinlistgas(specname, listspecGas, NspecGas, &ipos);
+        if (ipos == *NspecGas) {
+          printf("%s\n", specname);
+          *ierror = 665;
+          return 1;
+        }
+      }
+
+      listreacSurf[ireac].cov_species_index[count_cov_reac] = ipos;
+      listreacSurf[ireac].cov_isgas[count_cov_reac] = isGas ;
+      listreacSurf[ireac].cov_reaction_index[count_cov_reac] = ireac;
+
+
+#ifdef DEBUGMSG
+    printf("COV %s species index %d, reaction index %d \n", species_name.c_str(), ipos, ireac );
+#endif
+
+    }
+
 
     else if (strncmp(wordkey, "REV", 3) == 0) {
 
@@ -1832,7 +1918,7 @@ TCKMI_getreaclinesurf(char* linein,
   }
 
 #ifdef DEBUGMSG
-  printf("---> %d  %d %d\n", listreac[*Nreac].isrev, ipos, ipos1);
+  // printf("---> %d  %d %d\n", listreac[*Nreac].isrev, ipos, ipos1);
 #endif
 
   /* split into reactants and products */
@@ -2301,9 +2387,29 @@ TCKMI_outformsurf(element* listelem,
       fprintf(fileascii, "\n");
     }
 
-    /* Duplicate */
+    /* stick */
     if (listreacSurf[i].isstick == 1) {
       fprintf(fileascii, "    --> STICK\n");
+    }
+
+    /*surface coverage modification */
+    if (listreacSurf[i].iscov == 1) {
+
+      for (int k = 0; k < listreacSurf[i].cov_count; k++) {
+        fprintf(fileascii, "    --> COV parameters : ");
+
+        if (listreacSurf[i].cov_isgas[k]){
+          fprintf(fileascii," %s ",listspec[listreacSurf[i].cov_species_index[k]].name);
+        }else{
+          fprintf(fileascii," %s ",listspecSurf[listreacSurf[i].cov_species_index[k]].name);
+        }
+
+        fprintf(fileascii,
+                "%11.4e  %5.2f  %11.4e\n",
+                listreacSurf[i].cov_param[3*k],
+                listreacSurf[i].cov_param[3*k + 1],
+                listreacSurf[i].cov_param[3*k + 2]);
+      }
     }
 
     /* Arrhenius parameters forward */
@@ -2405,10 +2511,20 @@ TCKMI_outunformsurf(int* Nelem,
   fprintf(filelist, "%12d\n", *NspecSurf); /* Number of species */
   fprintf(filelist, "%12d\n", *NreacSurf); /* Number of reactions */
 
-  /* Tolerance for reaction balance */
-  fprintf(filelist, "%24.16e\n", REACBALANCE);
+  int count_cov(0);
+  for (i = 0; i < (*NreacSurf); i++) {
+    if (listreacSurf[i].iscov == 1)
+      //number of reaction with cov modification
+      // reaction can has more than one cov modification
+      count_cov += listreacSurf[i].cov_count;
+  }
+
+  fprintf(filelist, "%12d\n", count_cov); /* Number of reactions with cov modification*/
 
   /* Tolerance for reaction balance */
+  fprintf(filelist, "%24.16e\n", REACBALANCE());
+
+  /* surface site fraction */
   fprintf(filelist, "%24.16e\n", siteden);
 
   /* Species' name and weights */
@@ -2518,6 +2634,26 @@ TCKMI_outunformsurf(int* Nelem,
         fprintf(filelist, "0\n"); /* no  */
     }
 
+    /* If reactions needs a coverage modification or not */
+    for (i = 0; i < (*NreacSurf); i++) {
+      if (listreacSurf[i].iscov == 1){
+        fprintf(filelist, "1\n"); /* yes it is cov*/
+        const int NumofCOV =  listreacSurf[i].cov_count;
+        fprintf(filelist,"%d \n", NumofCOV); /*Number of COV in reaction*/
+        for (int k = 0; k < NumofCOV; k++) {
+          fprintf(filelist,"%d \n",listreacSurf[i].cov_species_index[k]); // species index
+          fprintf(filelist,"%d \n",listreacSurf[i].cov_isgas[k]); // is surface?
+          fprintf(filelist,"%d \n",listreacSurf[i].cov_reaction_index[k]); // reaction index
+          fprintf(filelist, "%24.16e \n",listreacSurf[i].cov_param[3*k]); //eta
+          fprintf(filelist, "%24.16e \n",listreacSurf[i].cov_param[3*k + 1]); // mu
+          fprintf(filelist, "%24.16e \n",listreacSurf[i].cov_param[3*k + 2]); //epsilon
+        }
+
+      } else
+        fprintf(filelist, "0\n"); /* no, it is not cov  */
+    }
+
+
   } /* Done if Nreac > 0 */
 
   return (0);
@@ -2607,6 +2743,15 @@ TCKMI_rescalereacsurf(reactionSurf* listreac, int* Nreac)
     /* If reverse parameter were provided, then scale it */
     if (listreac[i].isrevset > 0)
       listreac[i].arhenrev[2] *= factor;
+
+    /* if reaction has cov modification*/
+    if (listreac[i].iscov == 1){
+      //epsilon
+      for (int k = 0; k <listreac[i].cov_count; k++) {
+        listreac[i].cov_param[3*k + 2] *= factor;
+      }
+    }
+
   }
 
   return 0;
@@ -2614,7 +2759,7 @@ TCKMI_rescalereacsurf(reactionSurf* listreac, int* Nreac)
 } /* Done with "TCKMI_rescalereacsurf" */
 
 int
-saveSurfRectionEquations(speciesGas* listspec,
+TCKMI_saveSurfRectionEquations(speciesGas* listspec,
                      speciesSurf* listspecSurf,
                      reactionSurf* listreacSurf,
                      int* NreacSurf,

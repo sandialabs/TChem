@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_IMPL_GK_HPP__
 #define __TCHEM_IMPL_GK_HPP__
 
@@ -32,12 +34,13 @@ namespace Impl {
 struct GkFcn
 {
   template<typename MemberType,
+           typename RealType,
            typename RealType1DViewType,
            typename KineticModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input temperature
-    const real_type& t,
+    const RealType& t,
     /// output
     const RealType1DViewType& gk,
     const RealType1DViewType& hks,
@@ -46,8 +49,8 @@ struct GkFcn
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
-    const real_type t_1 = real_type(1) / t;
-    const real_type tln = ats<real_type>::log(t);
+    const RealType t_1 = RealType(1) / t;
+    const RealType tln = ats<RealType>::log(t);
 
     /// no need for barrier as all parallelized for kmcd.nSpec
     Entropy0SpecMl::team_invoke(member, t, gk, cpks, kmcd);

@@ -11,12 +11,6 @@
 
 /// required libraries
 #cmakedefine TCHEM_ENABLE_TPL_KOKKOS
-#cmakedefine TCHEM_ENABLE_TPL_KOKKOSKERNELS
-
-/// optional libraries
-#cmakedefine TCHEM_ENABLE_TPL_OPENBLAS
-#cmakedefine TCHEM_ENABLE_TPL_OPENBLAS_CBLAS_HEADER
-#cmakedefine TCHEM_ENABLE_TPL_LAPACKE
-#cmakedefine TCHEM_ENABLE_TPL_MKL
+#cmakedefine TCHEM_ENABLE_TPL_TINES
 
 #endif

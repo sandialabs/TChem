@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_IMPL_NUMERICAL_JACOBIAN_RICHARDSON_EXTRAPOLATION_HPP__
 #define __TCHEM_IMPL_NUMERICAL_JACOBIAN_RICHARDSON_EXTRAPOLATION_HPP__
 
@@ -50,7 +52,7 @@ struct NumericalJacobianRichardsonExtrapolation
     const real_type eps_1_8 = ats<real_type>::sqrt(eps_1_4);
     const real_type eps_3_4 = eps_1_2 * eps_1_4; // bl
     const real_type eps_7_8 = eps / (eps_1_8);   // br
-    const real_type zero(0), one(1), two(2), eight(8), twelve(12);
+    const real_type zero(0), /*one(1), */two(2), eight(8), twelve(12);
     const real_type eps_2_1_2 = ats<real_type>::sqrt(two*eps);     // U
     const real_type fac_min_use = fac_min <= zero ? (eps_3_4) : fac_min;
     const real_type fac_max_use = fac_max <= zero ? (eps_2_1_2) : fac_max;

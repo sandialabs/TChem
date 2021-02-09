@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_KINETIC_MODELMDATA_HPP__
 #define __TCHEM_KINETIC_MODELMDATA_HPP__
 
@@ -82,6 +84,7 @@ public:
     is_device,
     string_type_1d_view<LENGTHOFSPECNAME + 1>,
     string_type_1d_view_host<LENGTHOFSPECNAME + 1>>::type>;
+
 
   real_type rho;
   kmcd_string_type_1d_view speciesNames;
@@ -176,6 +179,7 @@ public:
   kmcd_real_type_2d_view reacPlogPars;
 
   kmcd_real_type_3d_view cppol;
+
   // kmcd_real_type_3d_view spec9trng;
   // kmcd_real_type_3d_view spec9coefs;
 };
@@ -218,6 +222,14 @@ public:
     is_device,
     string_type_1d_view<LENGTHOFSPECNAME + 1>,
     string_type_1d_view_host<LENGTHOFSPECNAME + 1>>::type>;
+
+  //
+  using kmcd_coverage_modification_type_1d_view =
+     ConstUnmanaged<typename std::conditional<is_device,
+                                           coverage_modification_type_1d_view,
+                                           coverage_modification_type_1d_view_host>::type>;
+
+  kmcd_coverage_modification_type_1d_view coverageFactor;
 
   kmcd_string_type_1d_view speciesNames;
 
@@ -425,7 +437,7 @@ public:
 
   /* surface chemistry */
   ordinal_type TCsurf_maxSpecInReac_, TCsurf_nNASAinter_, TCsurf_nCpCoef_,
-    TCsurf_nArhPar_, TCsurf_Nspec_, TCsurf_Nreac_;
+    TCsurf_nArhPar_, TCsurf_Nspec_, TCsurf_Nreac_, TCsurf_NcoverageFactors;
 
   string_type_1d_dual_view<LENGTHOFSPECNAME + 1> TCsurf_sNames_;
 
@@ -453,6 +465,8 @@ public:
 
   ordinal_type_2d_dual_view vski_;
   ordinal_type_2d_dual_view vsurfki_;
+
+  coverage_modification_type_1d_dual_view coverageFactor_;
 
   void syncSurfToDevice();
   void allocateViewsSurf(FILE* errfile);
@@ -636,12 +650,14 @@ public:
 
     /* determine machine precision parameters (for numerical Jac) */
     const real_type two(2);
-    const real_type eps = Kokkos::ArithTraits<real_type>::epsilon();
+    const real_type eps = ats<real_type>::epsilon();
     data.TChem_reltol = sqrt(two * eps); // 1e-6;//
     data.TChem_abstol = data.TChem_reltol;
 
     data.vki = vski_.template view<SpT>();
     data.vsurfki = vsurfki_.template view<SpT>();
+
+    data.coverageFactor = coverageFactor_.template view<SpT>();
 
     return data;
   }

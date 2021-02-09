@@ -1,5 +1,5 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
@@ -7,9 +7,9 @@ Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS
 Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_TEST_SURF_THERMO_HPP__
 #define __TCHEM_TEST_SURF_THERMO_HPP__
 
@@ -32,15 +34,15 @@ TEST( Thermo, hostBatch ) {
 
   /// input: state vectors: temperature, pressure and concentration
   const ordinal_type nBatch(1);
-  real_type_2d_view state("StateVector", nBatch,
+  real_type_2d_view_host state("StateVector", nBatch,
    TChem::Impl::getStateVectorSize(kmcd.nSpec));
 
 
-  real_type_2d_view gk("gibbsGas", nBatch, kmcd.nSpec);
-  real_type_2d_view gkSurf("gibbsSurf", nBatch, kmcdSurf.nSpec);
+  real_type_2d_view_host gk("gibbsGas", nBatch, kmcd.nSpec);
+  real_type_2d_view_host gkSurf("gibbsSurf", nBatch, kmcdSurf.nSpec);
 
-  real_type_2d_view hks("enthalpyGas", nBatch, kmcd.nSpec);
-  real_type_2d_view hksSurf("enthalpySurf", nBatch, kmcdSurf.nSpec);
+  real_type_2d_view_host hks("enthalpyGas", nBatch, kmcd.nSpec);
+  real_type_2d_view_host hksSurf("enthalpySurf", nBatch, kmcdSurf.nSpec);
 
  /// input from a file; this is not necessary as the input is created
  /// by other applications.

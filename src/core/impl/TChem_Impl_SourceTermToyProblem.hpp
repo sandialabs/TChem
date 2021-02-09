@@ -1,3 +1,25 @@
+/* =====================================================================================
+TChem version 2.1.0
+Copyright (2020) NTESS
+https://github.com/sandialabs/TChem
+
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+certain rights in this software.
+
+This file is part of TChem. TChem is open-source software: you can redistribute it
+and/or modify it under the terms of BSD 2-Clause License
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+provided under the main directory
+
+Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
+           Kyungjoo Kim at <kyukim@sandia.gov>, or
+           Oscar Diaz-Ibarra at <odiazib@sandia.gov>
+
+Sandia National Laboratories, Livermore, CA, USA
+===================================================================================== */
+
+
 #ifndef __TCHEM_IMPL_REACTIONRATESTOYPROBLEM_HPP__
 #define __TCHEM_IMPL_REACTIONRATESTOYPROBLEM_HPP__
 
@@ -43,9 +65,9 @@ struct SourceTermToyProblem
     {
       const real_type thetac(20.0); //! degrees
       const real_type lambdac(300.0);// ! degrees
-      const real_type k1 = ats<real_type>::sin(theta*PI/180) * ats<real_type>::sin(thetac*PI/180) +
-                           ats<real_type>::cos(theta*PI/180) * ats<real_type>::cos(thetac*PI/180) *
-                           ats<real_type>::cos(lambda*PI/180 - lambdac*PI/180);
+      const real_type k1 = ats<real_type>::sin(theta*PI()/180) * ats<real_type>::sin(thetac*PI()/180) +
+                           ats<real_type>::cos(theta*PI()/180) * ats<real_type>::cos(thetac*PI()/180) *
+                           ats<real_type>::cos(lambda*PI()/180 - lambdac*PI()/180);
       kfor(0) = k1 > 0 ? k1 : 0;
       kfor(1) = 1;
       krev(0) = 0;

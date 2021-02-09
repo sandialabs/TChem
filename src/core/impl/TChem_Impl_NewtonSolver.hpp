@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,11 +18,11 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_IMPL_NEWTON_SOLVER_HPP__
 #define __TCHEM_IMPL_NEWTON_SOLVER_HPP__
 
-#include "TChem_Impl_DenseNanInf.hpp"
-#include "TChem_Impl_DenseUTV.hpp"
 #include "TChem_Util.hpp"
 
 namespace TChem {
@@ -74,18 +74,18 @@ struct NewtonSolver
     problem.computeInitValues(member, x);
     bool is_valid(true);
     ordinal_type iter = 0;
-    real_type norm2_f0(0);
+    //real_type norm2_f0(0);
     for (; iter < max_iter && !converge; ++iter) {
       problem.computeJacobian(member, x, J);
       problem.computeFunction(member, x, f);
       /// sanity check
-      TChem::Impl::DenseNanInf ::team_check_sanity(member, J, is_valid);
+      Tines::CheckNanInf::invoke(member, J, is_valid);
 
       if (is_valid) {
         /// solve the equation: dx = -J^{-1} f(x);
         ordinal_type matrix_rank(0);
-        TChem::Impl::DenseUTV ::team_factorize_and_solve(
-          member, J, dx, f, work, matrix_rank);
+	Tines::SolveLinearSystem
+	  ::invoke(member, J, dx, f, work, matrix_rank);
 
 #if defined(TCHEM_ENABLE_NEWTONSOLVER_USE_WRMS_NORMS)
         const real_type one(1);

@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #include "TChem_NetProductionRateSurfacePerMass.hpp"
 #include "TChem_CommandLineParser.hpp"
 #include "TChem_KineticModelData.hpp"
@@ -34,7 +36,7 @@ main(int argc, char* argv[])
 {
 
   /// default inputs
-  std::string prefixPath("data/reaction-rates-surfaces/X/");
+  std::string prefixPath("data/reaction-rates-surfaces/PT/");
   std::string chemFile(prefixPath + "chem.inp");
   std::string thermFile(prefixPath + "therm.dat");
   std::string chemSurfFile(prefixPath + "chemSurf.inp");
@@ -57,9 +59,11 @@ main(int argc, char* argv[])
   opts.set_option<std::string>(
     "chemSurffile", "Chem file name e.g., chem.inp", &chemSurfFile);
   opts.set_option<std::string>(
-    "thermSurffile", "Therm file name e.g., therm.dat", &thermSurfFile);
+    "thermSurffile", "Therm file name e.g., thermSurf.dat", &thermSurfFile);
   opts.set_option<std::string>(
     "inputfile", "Input state file name e.g., input.dat", &inputFile);
+  opts.set_option<std::string>(
+    "inputfileSurf", "Input state file name e.g., input.dat", &inputFileSurf);
   opts.set_option<std::string>(
     "outputfile", "Output omega file name e.g., omega.dat", &outputFile);
   opts.set_option<std::string>(
@@ -195,7 +199,7 @@ main(int argc, char* argv[])
       }
     }
 
-    printf("done Oscar\n");
+    printf("Done \n");
   }
   Kokkos::finalize();
 

@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #include "TChem_Util.hpp"
 
 #include "TChem_PlugFlowReactor.hpp"
@@ -94,7 +96,7 @@ PlugFlowReactor_TemplateRun( /// required template arguments
       const RealType1DViewType fac_at_i =
         Kokkos::subview(fac, i, Kokkos::ALL());
       const auto tadv_at_i = tadv(i);
-      const real_type t_beg = tadv_at_i._tbeg, t_end = tadv_at_i._tend;
+      const real_type /*t_beg = tadv_at_i._tbeg, */t_end = tadv_at_i._tend;
       const RealType0DViewType t_out_at_i = Kokkos::subview(t_out, i);
       if (t_out_at_i() < t_end) {
       const RealType1DViewType state_at_i =

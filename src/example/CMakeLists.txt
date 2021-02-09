@@ -9,10 +9,7 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_PlugFlowReactorRHS.cpp
   TChem_NetProductionRatePerMass.cpp
   TChem_Jacobian.cpp
-  TChem_NewtonSolver.cpp
-  TChem_TrBDF2.cpp
-  TChem_IgnitionZeroD.cpp
-  TChem_DenseUTV.cpp
+  TChem_IgnitionZeroD_ModelVariation.cpp
   TChem_IgnitionZeroDSA.cpp
   TChem_PlugFlowReactor.cpp
   TChem_PlugFlowReactorSmat.cpp
@@ -22,7 +19,7 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_InitialCondSurface.cpp
   TChem_TransientContStirredTankReactor.cpp
   TChem_SourceTermToyProblem.cpp
-  TChem_IgnitionZeroD_ModelVariation.cpp
+  TChem_Driver.cpp  
 )
 
 #

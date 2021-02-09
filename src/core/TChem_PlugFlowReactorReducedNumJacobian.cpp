@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #include "TChem_PlugFlowReactorReducedNumJacobian.hpp"
 #include "TChem_Util.hpp"
 #include "TChem_PlugFlowReactor.hpp"
@@ -38,14 +40,15 @@ PlugFlowReactorReducedNumJacobian::runDeviceBatch( /// input
   /// const data from kinetic model
   const KineticModelConstDataDevice& kmcd,
   /// const data from kinetic model surface
-  const KineticSurfModelConstDataDevice& kmcdSurf)
+  const KineticSurfModelConstDataDevice& kmcdSurf,
+  const pfr_data_type& pfrd)
 {
 
   Kokkos::Profiling::pushRegion("TChem::PlugFlowReactorReducedNumJacobian::runDeviceBatch");
   using policy_type = Kokkos::TeamPolicy<exec_space>;
 
   // data for PRF
-  const auto pfrd = PlugFlowReactorRHS::createConstData<exec_space>();
+  // const auto pfrd = PlugFlowReactorRHS::createConstData<exec_space>();
 
   const ordinal_type m = kmcd.nSpec + 3 + kmcdSurf.nSpec;
 

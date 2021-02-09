@@ -80,11 +80,15 @@ Parameters $a$, $T^{***}$, $T^{*}$, and $T^{**}$ are provided (in this order) in
 $$X=\left(1+\left(\log_{10}\Pr_i\right)^2\right)^{-1}.$$
 Parameters $a$, $b$, $c$, $d$, and $e$ are provided in the kinetic model description for each SRI-type reaction. If $d$ and $e$ are omitted, these parameters are set to $d=1$ and $e=0$.
 
-Miller~\cite{PLOGprinceton} has developed an alternative expressionfor the pressure dependence for pressure fall-off reactions that cannot be fitted with a single Arrhenius rate expression. This approach employs linear interpolation of $\log {k_f}_i$ as a function of pressure for reaction $i$ as follows
+Miller~\cite{PLOGprinceton} has developed an alternative expression for the pressure dependence for pressure fall-off reactions that cannot be fitted with a single Arrhenius rate expression. This approach employs linear interpolation of $\log {k_f}_i$ as a function of pressure for reaction $i$ as follows
 $$
 \log {k_f}_i(T) = \log {k_f}_{i,l}(T)+(\log p-\log p_l)\frac{\log {k_f}_{i,l+1}(T)-\log {k_f}_{i,l}(T)}{\log p_{l+1}-\log p_l}
 $$
-Here, ${k_f}_{i,l}(T)=A_{i,l}T^{\beta_{i,l}}\exp\left(-\frac{E_{i,l}}{R T}\right)$ is the Arrhenius rate corresponding to pressure $p_l$. For $p<p_1$ the Arrhenius rate is set to ${k_f}_i={k_f}_{i,1}$, and similar for $p>p_{N_i}$ where $N_i$ is the number of pressures for which the Arrhenius factors are provided, for reaction $i$. This formulation can be combined with 3$^{\mathrm{rd}}$ body information, e.g. $\mathcal{C}_i=\mathfrak{X}_i$.
+Here, ${k_f}_{i,l}(T)=A_{i,l}T^{\beta_{i,l}}\exp\left(-\frac{E_{i,l}}{R T}\right)$ is the Arrhenius rate corresponding to pressure $p_l$. For $p<p_1$ the Arrhenius rate is set to ${k_f}_i={k_f}_{i,1}$, and similar for $p>p_{N_i}$ where $N_i$ is the number of pressures for which the Arrhenius factors are provided, for reaction $i$. This formulation can be combined with 3$^{\mathrm{rd}}$ body information, e.g. $\mathcal{C}_i=\mathfrak{X}_i$. For PLOG reactions for which there are multiple PLOG entries for each pressure value, the forward rate constants are evaluated as
+$$
+{k_f}_{i,l}(T)=\sum_{j=1}^{M_l} A_{i,l}^{(j)}T^{\beta_{i,l}^{(j)}}\exp\left(-\frac{E_{i,l}^{(j)}}{R T}\right)
+$$
+where $j=1,\ldots,M_l$ is the index for the entries corresponding to pressure $p_l$.
 
 ### Note on Units for Net Production rates
 

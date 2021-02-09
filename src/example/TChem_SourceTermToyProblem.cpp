@@ -1,3 +1,25 @@
+/* =====================================================================================
+TChem version 2.1.0
+Copyright (2020) NTESS
+https://github.com/sandialabs/TChem
+
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+certain rights in this software.
+
+This file is part of TChem. TChem is open-source software: you can redistribute it
+and/or modify it under the terms of BSD 2-Clause License
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+provided under the main directory
+
+Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
+           Kyungjoo Kim at <kyukim@sandia.gov>, or
+           Oscar Diaz-Ibarra at <odiazib@sandia.gov>
+
+Sandia National Laboratories, Livermore, CA, USA
+===================================================================================== */
+
+
 #include "TChem_SourceTermToyProblem.hpp"
 #include "TChem_CommandLineParser.hpp"
 #include "TChem_KineticModelData.hpp"
@@ -67,8 +89,6 @@ main(int argc, char* argv[])
 
     theta(0) = 20;
     lambda(0) = 300;
-    // lambda(0) = 37.612;
-    // lambda(0) = 50;
 
     /// create a mirror view to store input from a file
     auto state_host = Kokkos::create_mirror_view(state);

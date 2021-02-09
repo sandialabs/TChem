@@ -12,7 +12,7 @@ FILE(COPY reference
 
 INSTALL(DIRECTORY reference
         DESTINATION ${CMAKE_INSTALL_PREFIX}/unit-test)
-	
+
 INSTALL(TARGETS tchem-test.x
         PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE
         DESTINATION "${CMAKE_INSTALL_PREFIX}/${TCHEM_INSTALL_TEST_PATH}")
@@ -20,3 +20,5 @@ INSTALL(TARGETS tchem-test.x
 ADD_TEST(TChemTest tchem-test.x)
 
 ADD_SUBDIRECTORY (surfaceKinetics)
+ADD_SUBDIRECTORY (plug-flow-reactor)
+ADD_SUBDIRECTORY (ignition-zero-d)

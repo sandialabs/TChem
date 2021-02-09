@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #include "TChem_KineticModelData.hpp"
 #include "TC_kmodint.hpp"
 
@@ -406,8 +408,11 @@ KineticModelData::allocateViewsSurf(FILE* errfile)
       do_not_init_tag("KMD::TCsurf_reacArhenFor_"), TCsurf_Nreac_, 3);
     TCsurf_isDup_ = ordinal_type_1d_dual_view(
       do_not_init_tag("KMD::TCsurf_isDup_"), TCsurf_Nreac_);
+
     TCsurf_isStick_ = ordinal_type_1d_dual_view(
       do_not_init_tag("KMD::TCsurf_isStick_"), TCsurf_Nreac_);
+
+
     // stoichiometric matrix only gas species
     vski_ = ordinal_type_2d_dual_view(
       do_not_init_tag("KMD::stoichiometric_matrix_gas"), nSpec_, TCsurf_Nreac_);
@@ -415,7 +420,16 @@ KineticModelData::allocateViewsSurf(FILE* errfile)
       do_not_init_tag("KMD::stoichiometric_matrix_surf"),
       TCsurf_Nspec_,
       TCsurf_Nreac_);
+
+
   }
+
+
+
+  /* surface coverge modification  */
+  coverageFactor_ = coverage_modification_type_1d_dual_view(
+    do_not_init_tag("KMD::coveragefactor"),TCsurf_NcoverageFactors );
+
 }
 
 void
@@ -519,6 +533,7 @@ KineticModelData::syncToDevice()
   kc_coeff_.sync_device();
 }
 
+
 void
 KineticModelData::syncSurfToDevice()
 {
@@ -547,6 +562,7 @@ KineticModelData::syncSurfToDevice()
 
   vski_.sync_device();
   vsurfki_.sync_device();
+  coverageFactor_.sync_device();
 }
 
 int
@@ -594,9 +610,10 @@ KineticModelData::initChem()
     printf("kmod.list : Error when interpreting kinetic model  !!!");
     exit(1);
   }
-  #ifdef TCHEM_ENABLE_VERBOSE
-    printf("kmod.list : %s\n", charvar4);
-  #endif
+
+#ifdef TCHEM_ENABLE_VERBOSE
+  printf("kmod.list : %s\n", charvar4);
+#endif
 
   fscanf(chemfile, "%d", &maxSpecInReac_);
   fscanf(chemfile, "%d", &maxTbInReac_);
@@ -1398,7 +1415,7 @@ KineticModelData::initChem()
     for (int i = 0; i < nReac_; i++) {
       int ir = reacScoefHost(i);
       kc_coeffHost(i) =
-        std::pow(ATMPA * real_type(10) / Rcgs_,
+        std::pow(ATMPA() * real_type(10) / Rcgs_,
                  ir == -1 ? real_type(sigNuHost(i)) : sigRealNuHost(ir));
     }
 
@@ -1534,6 +1551,7 @@ KineticModelData::initChemSurf()
   fscanf(chemfile, "%d", &TCsurf_nArhPar_);
   fscanf(chemfile, "%d", &TCsurf_Nspec_);
   fscanf(chemfile, "%d", &TCsurf_Nreac_);
+  fscanf(chemfile, "%d", &TCsurf_NcoverageFactors);
 
   fprintf(
     echofile,
@@ -1559,6 +1577,11 @@ KineticModelData::initChemSurf()
     echofile,
     "kmodSurf.list : # of reactions                                    : %d\n",
     TCsurf_Nreac_);
+  //
+  fprintf(
+    echofile,
+    "kmodSurf.list : # of reactions with cov modification              : %d\n",
+    TCsurf_NcoverageFactors);
   fprintf(echofile,
           "----------------------------------------------------------"
           "---------------\n");
@@ -1618,7 +1641,14 @@ KineticModelData::initChemSurf()
 
   auto TCsurf_isDupHost = TCsurf_isDup_.view_host();
   auto TCsurf_isStickHost = TCsurf_isStick_.view_host();
-  // auto .view_host();
+
+  /*I do not need  this on the device */
+  ordinal_type_1d_view_host TCsurf_isCovHost (
+    do_not_init_tag("KMD::TCsurf_isCov_"), TCsurf_Nreac_);
+
+  ordinal_type_1d_view_host TCsurf_Cov_CountHost (
+    do_not_init_tag("KMD::TCsurf_Cov_Count_"), TCsurf_Nreac_);
+
 
   // from gas reader
   auto eNamesHost = eNames_.view_host();
@@ -1629,6 +1659,10 @@ KineticModelData::initChemSurf()
   /* stoichiometric matrix gas species*/
   auto vskiHost = vski_.view_host();
   auto vsurfkiHost = vsurfki_.view_host();
+
+  /* surface coverage modification  */
+  auto coverageFactorHost = coverageFactor_.view_host();
+
 
   // Species
   for (int i = 0; i < TCsurf_Nspec_; i++) {
@@ -1735,6 +1769,8 @@ KineticModelData::initChemSurf()
   }
   DASHLINE(echofile);
 
+
+
   /* reaction info */
   if (TCsurf_Nreac_ > 0) {
 
@@ -1792,7 +1828,34 @@ KineticModelData::initChemSurf()
       fscanf(chemfile, "%d", &(TCsurf_isStickHost(i)));
     }
 
+    /*surface coverage modification  */
+    int count_cov(0);
+    for (int i = 0; i < TCsurf_Nreac_; i++) {
+      fscanf(chemfile, "%d", &(TCsurf_isCovHost(i)));
+      if (TCsurf_isCovHost(i)) {
+        int NumofCOV; // number of cov parameters per reaction
+        fscanf(chemfile, "%d",  &NumofCOV);
+        TCsurf_Cov_CountHost(i) = NumofCOV;
+        for (int k = 0; k < NumofCOV; k++) {
+          coverage_modification_type cov;
+          fscanf(chemfile, "%d",  &cov._species_index);
+          fscanf(chemfile, "%d",  &cov._isgas);
+          fscanf(chemfile, "%d",  &cov._reaction_index );
+          fscanf(chemfile, "%lf", &cov._eta );
+          fscanf(chemfile, "%lf", &cov._mu);
+          fscanf(chemfile, "%lf", &cov._epsilon);
+          coverageFactorHost(count_cov) = cov;
+          count_cov++;
+        }
+
+      } else {
+        TCsurf_Cov_CountHost(i) = 0;
+      }
+    }
+
+    count_cov = 0; // set this value to zero to print out cov parameters in echofile
     fprintf(echofile, "Reaction data : species and Arrhenius pars\n");
+
     for (int i = 0; i < TCsurf_Nreac_; i++) {
       fprintf(echofile,
               "%-5d\t%1d\t%2d\t%2d | ",
@@ -1835,12 +1898,39 @@ KineticModelData::initChemSurf()
               TCsurf_reacArhenForHost(i, 1),
               TCsurf_reacArhenForHost(i, 2));
 
+
       if (TCsurf_isDupHost[i] == 1)
         fprintf(echofile, "  DUPLICATE");
       if (TCsurf_isStickHost[i] == 1)
         fprintf(echofile, "  STICK");
+#if 1
+
+      if (TCsurf_isCovHost(i) == 1){
+
+        for (int  k = 0; k < TCsurf_Cov_CountHost(i); k++) {
+          fprintf(echofile, "  \n COV");
+
+          if (coverageFactorHost(count_cov)._isgas){
+            fprintf(echofile," %s\t", &sNamesHost(coverageFactorHost(count_cov)._species_index,0));
+          } else {
+            //surface species
+            fprintf(echofile," %s\t", &TCsurf_sNamesHost(coverageFactorHost(count_cov)._species_index,0));
+          }
+
+          fprintf(echofile,
+                  "%16.8e\t%16.8e\t%16.8e",
+                  coverageFactorHost(count_cov)._eta,
+                  coverageFactorHost(count_cov)._mu,
+                  coverageFactorHost(count_cov)._epsilon);
+          count_cov++;
+        }
+
+      }
+#endif
+      //
       fprintf(echofile, "\n");
     }
+
     DASHLINE(echofile);
     if (verboseEnabled)
       printf("KineticModelData::initChem() : Done reading reaction data\n");
@@ -1874,7 +1964,12 @@ KineticModelData::initChemSurf()
         }
       }
     }
-  }
+
+
+
+
+
+  }//end surface reactions
 
   /// Raise modify flags for all modified dual views
   TCsurf_isStick_.modify_host();
@@ -1900,6 +1995,9 @@ KineticModelData::initChemSurf()
   TCsurf_sNames_.modify_host();
   vski_.modify_host();
   vsurfki_.modify_host();
+
+  coverageFactor_.modify_host();
+
 
   syncSurfToDevice();
 
@@ -1948,4 +2046,5 @@ KineticModelData::modifyArrheniusForwardParametersEnd() {
   reacArhenFor_.sync_device();
 }
 
-} // namespace TChem
+
+} // end TChem

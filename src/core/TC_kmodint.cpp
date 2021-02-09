@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 /*! \file TC_kmodint.c
 
     \brief Collection of functions used to parse kinetic models from files
@@ -184,7 +186,6 @@ TCKMI_getthermo9(char* singleword,
                  int* iread,
                  int* ierror);
 
-// #define VERBOSE
 
 //#include "TC_getthc9.c"
 
@@ -656,7 +657,7 @@ TC_kmodint_(char* mechfile, char* thermofile)
                 fileascii);
 
   //
-  saveRectionEquations(listspec, listreac, &Nreac, filereacEqn);
+  TCKMI_saveRectionEquations(listspec, listreac, &Nreac, filereacEqn);
 
   /* Rescale pre-exponential factors and activation energies (if needed) */
   TCKMI_rescalereac(listreac, &Nreac);
@@ -3084,7 +3085,7 @@ TCKMI_verifyreac(element* listelem,
 #endif
 
       if (listreac[i].isreal == 1) {
-        if (fabs(rsum) > REACBALANCE) {
+        if (fabs(rsum) > REACBALANCE()) {
           printf("!!! Error: Reaction #%d does not balance for element %s\n",
                  i + 1,
                  listelem[j].name);
@@ -3120,7 +3121,7 @@ TCKMI_verifyreac(element* listelem,
         ispec = listreac[i].spec[NSPECREACMAX + k];
         rsum += listreac[i].rnuki[NSPECREACMAX + k] * listspec[ispec].charge;
       }
-      if (fabs(rsum) > REACBALANCE) {
+      if (fabs(rsum) > REACBALANCE()) {
         printf(
           "!!! Error: Electron charge does not balance for reaction #%d ! \n",
           i + 1);
@@ -3314,7 +3315,7 @@ TCKMI_verifyreac(element* listelem,
             if (listreac[i].isreal == 1) {
               if ((listreac[j].spec[j1] == listreac[i].spec[i1]) &&
                   ((fabs(listreac[j].rnuki[j1] - listreac[i].rnuki[i1]) <
-                    REACBALANCE) &&
+                    REACBALANCE()) &&
                    (icheckvec[i1] == 0))) {
                 icheck += 1;
                 icheckvec[i1] += 1;
@@ -3343,7 +3344,7 @@ TCKMI_verifyreac(element* listelem,
               if ((listreac[j].spec[NSPECREACMAX + j1] ==
                    listreac[i].spec[NSPECREACMAX + i1]) &&
                   ((fabs(listreac[j].rnuki[NSPECREACMAX + j1] -
-                         listreac[i].rnuki[NSPECREACMAX + i1]) < REACBALANCE) &&
+                         listreac[i].rnuki[NSPECREACMAX + i1]) < REACBALANCE()) &&
                    (icheckvec[i1] == 0))) {
                 icheck += 1;
                 icheckvec[i1] += 1;
@@ -3540,7 +3541,7 @@ TCKMI_rescalereac(reaction* listreac, int* Nreac)
  */
 
 int
-saveRectionEquations(species* listspec,
+TCKMI_saveRectionEquations(species* listspec,
                      reaction* listreac,
                      int* Nreac,
                      FILE* fileascii)
@@ -3884,7 +3885,7 @@ TCKMI_outform(element* listelem,
         if (j < listreac[i].inreac) {
           if (listreac[i].isreal > 0) {
             if (fabs(listreac[i].rnuki[j] - listreac[i].arbnuki[j]) >
-                REACBALANCE) {
+                REACBALANCE()) {
               fprintf(fileascii,
                       " %-10.18s : %5.2f",
                       listspec[listreac[i].arbspec[j]].name,
@@ -3916,7 +3917,7 @@ TCKMI_outform(element* listelem,
         if (j < listreac[i].inprod) {
           if (listreac[i].isreal > 0) {
             if (fabs(listreac[i].rnuki[NSPECREACMAX + j] -
-                     listreac[i].arbnuki[2 * NSPECREACMAX + j]) > REACBALANCE) {
+                     listreac[i].arbnuki[2 * NSPECREACMAX + j]) > REACBALANCE()) {
               fprintf(fileascii,
                       " %-10.18s : %5.2f",
                       listspec[listreac[i].arbspec[2 * NSPECREACMAX + j]].name,
@@ -4136,7 +4137,7 @@ TCKMI_outunform(element* listelem,
     nNASA9coef); /* Number of species with 9-coefficients polynomial fits */
 
   /* Tolerance for reaction balance */
-  fprintf(filelist, "%24.16e\n", REACBALANCE);
+  fprintf(filelist, "%24.16e\n", REACBALANCE());
 
   /* Elements' name and weights */
   for (i = 0; i < (*Nelem); i++)

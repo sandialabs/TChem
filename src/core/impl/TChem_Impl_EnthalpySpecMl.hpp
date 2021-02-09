@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_IMPL_ENTHALPYSPECML_HPP__
 #define __TCHEM_IMPL_ENTHALPYSPECML_HPP__
 
@@ -30,12 +32,13 @@ namespace Impl {
 struct EnthalpySpecMlFcn
 {
   template<typename MemberType,
+           typename RealType,
            typename RealType1DViewType,
            typename KineticModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const real_type& t,
+    const RealType& t,
     /// output (nspec)
     const RealType1DViewType& hi,
     /// workspace (nspec)
@@ -43,10 +46,11 @@ struct EnthalpySpecMlFcn
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
+    //constant number
     const real_type one[4] = { 0.5, (1.0 / 3.0), 0.25, 0.2 };
-    const real_type tLoc = getValueInRange(kmcd.TthrmMin, kmcd.TthrmMax, t);
-    const real_type delT = t - tLoc;
-    const real_type tln = ats<real_type>::log(tLoc);
+    const auto tLoc = getValueInRangev2(kmcd.TthrmMin, kmcd.TthrmMax, t);
+
+    // const RealType tln = ats<RealType>::log(tLoc);
     Kokkos::parallel_for(
       Kokkos::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
         const ordinal_type ipol = tLoc > kmcd.Tmi(i);
@@ -65,12 +69,15 @@ struct EnthalpySpecMlFcn
         hi(i) *= kmcd.Runiv;
       });
 
-    if (ats<real_type>::abs(delT) > REACBALANCE) {
+    const auto delT = t - tLoc;
+    if (ats<RealType>::abs(delT) > REACBALANCE()) {
       CpSpecMl::team_invoke(member, tLoc, cpks, kmcd);
       Kokkos::parallel_for(
         Kokkos::TeamVectorRange(member, kmcd.nSpec),
         [&](const ordinal_type& i) { hi(i) += cpks(i) * delT; });
     }
+
+
 #if defined(TCHEM_ENABLE_SERIAL_TEST_OUTPUT) && !defined(__CUDA_ARCH__)
     if (member.league_rank() == 0) {
       FILE* fs = fopen("EnthalpySpecMl.team_invoke.test.out", "a+");

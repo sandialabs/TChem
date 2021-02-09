@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_UTIL_HPP__
 #define __TCHEM_UTIL_HPP__
 
@@ -46,33 +48,11 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "Kokkos_DualView.hpp"
 #include "impl/Kokkos_Timer.hpp"
 
-/// kokkoskernels
-#include "Kokkos_ArithTraits.hpp"
-
 /// tchem configure header
 #include "TChem_Config.hpp"
 
 /// blas
-#if defined(TCHEM_ENABLE_TPL_MKL)
-#include "mkl.h"
-#else
-#if defined(TCHEM_ENABLE_TPL_OPENBLAS)
-#if defined(TCHEM_ENABLE_TPL_OPENBLAS_CBLAS_HEADER)
-#include "cblas_openblas.h"
-#else
-#include "cblas.h"
-#endif
-#endif
-#endif
-
-/// lapacke
-#if defined(TCHEM_ENABLE_TPL_MKL)
-#include "mkl.h"
-#else
-#if defined(TCHEM_ENABLE_TPL_LAPACKE)
-#include "lapacke.h"
-#endif
-#endif
+#include "Tines.hpp"
 
 namespace TChem {
 
@@ -83,7 +63,7 @@ using host_exec_space = Kokkos::DefaultHostExecutionSpace;
 template<typename ExecSpace>
 struct UseThisTeamPolicy
 {
-  using type = Kokkos::TeamPolicy<ExecSpace, Kokkos::Schedule<Kokkos::Dynamic> >;
+  using type = Kokkos::TeamPolicy<ExecSpace, Kokkos::Schedule<Kokkos::Static> >;
 };
 
 /// type defs
@@ -96,9 +76,9 @@ using size_type = size_t;
 
 /// control parameters
 #if defined(TCHEM_ENABLE_VERBOSE)
-constexpr bool verboseEnabled = true;
+static constexpr bool verboseEnabled = true;
 #else
-constexpr bool verboseEnabled = false;
+static constexpr bool verboseEnabled = false;
 #endif
 
 #if defined(TCHEM_ENABLE_DEBUG)
@@ -118,100 +98,132 @@ constexpr bool verboseEnabled = false;
 /// parameters
 
 /**
- * \def TCSMALL
- * Threshold for various numerical estimates
- */
-constexpr real_type TCSMALL = 1.e-12;
-
-// 2*pi
-constexpr real_type DPI = 6.283185307179586;
-
-constexpr real_type PI = 3.141592653589793;
-/**
  * \def LENGTHOFELEMNAME
  * Maximum number of characters for element names
  */
-constexpr ordinal_type LENGTHOFELEMNAME = 3;
+static constexpr ordinal_type LENGTHOFELEMNAME = 3;
 
 /**
  * \def LENGTHOFSPECNAME
  *  Maximum number of characters for species names
  */
-constexpr ordinal_type LENGTHOFSPECNAME = 18;
+static constexpr ordinal_type LENGTHOFSPECNAME = 18;
 
 /**
  * \def NUMBEROFELEMINSPEC
  * Maximum number of (different) elements that compose a species
  */
-constexpr ordinal_type NUMBEROFELEMINSPEC = 5;
+static constexpr ordinal_type NUMBEROFELEMINSPEC = 5;
 
 /**
  * \def NTHRDBMAX
  * Maximum number of third body efficiencies
  */
-constexpr ordinal_type NTHRDBMAX = 10;
+static constexpr ordinal_type NTHRDBMAX = 10;
 
 /**
  * \def NPLOGMAX
  * Maximum number of interpolation ranges for PLOG
  */
-constexpr ordinal_type NPLOGMAX = 10;
+static constexpr ordinal_type NPLOGMAX = 10;
 
 /**
  * \def NTH9RNGMAX
  * Maximum number of temperature ranges for 9-coefficients NASA polynomials
  */
-constexpr ordinal_type NTH9RNGMAX = 5;
+static constexpr ordinal_type NTH9RNGMAX = 5;
 
 /**
  * \def NSPECREACMAX
  * Maximum number of reactant or product species in a reaction
  */
-constexpr ordinal_type NSPECREACMAX = 6;
+static constexpr ordinal_type NSPECREACMAX = 6;
 
 /**
- * \def REACBALANCE
- * Treshold for checking reaction balance with
- *        real stoichiometric coefficients
+ * \def NAVOG
+ * Avogadro's number
  */
-constexpr real_type REACBALANCE = 1.e-4;
+static constexpr real_type NAVOG = 6.02214179E23;
 
 /**
  * \def RUNIV
  * Universal gas constant \f$J/(mol\cdot K)\f$
  */
 // constexpr real_type RUNIV = 8.3144621;
-constexpr real_type RUNIV = 8.314472;
-
-/**
- * \def NAVOG
- * Avogadro's number
- */
-constexpr real_type NAVOG = 6.02214179E23;
-
-/**
- * \def ATMPA
- * Standard atmospheric pressure \f$[Pa]\f$
- */
-constexpr real_type ATMPA = 101325.0;
+static constexpr real_type RUNIV = 8.314472;
 
 /**
  * \def CALJO
  * Conversion from calories to Joule
  */
-constexpr real_type CALJO = 4.184;
+static constexpr real_type CALJO = 4.184;
 
 /**
  * \def KBOLT
  * Boltzmann's constant \f$(k_B)\f$ \f$[JK^{-1}]\f$
  */
-constexpr real_type KBOLT = 1.3806504E-23;
+static constexpr real_type KBOLT = 1.3806504E-23;
 
 /**
  * \def EVOLT
  * electron volt (eV) unit \f$[J]\f$
  */
-constexpr real_type EVOLT = 1.60217653E-19;
+static constexpr real_type EVOLT = 1.60217653E-19;
+
+/// callable from device
+/// old cuda compilers do not support constexpr values well
+/// need to make a constexpr function
+/**
+ * \def TCSMALL
+ * Threshold for various numerical estimates
+ */
+static KOKKOS_FORCEINLINE_FUNCTION constexpr real_type TCSMALL() { return 1.e-12; }
+
+static KOKKOS_FORCEINLINE_FUNCTION constexpr real_type PI() { return 3.141592653589793; }
+// 2*pi
+static KOKKOS_FORCEINLINE_FUNCTION constexpr real_type DPI() { return 6.283185307179586; }
+
+
+/**
+ * \def REACBALANCE
+ * Treshold for checking reaction balance with
+ *        real stoichiometric coefficients
+ */
+static KOKKOS_FORCEINLINE_FUNCTION constexpr real_type REACBALANCE() { return 1.e-4; }
+
+/**
+ * \def ATMPA
+ * Standard atmospheric pressure \f$[Pa]\f$
+ */
+static KOKKOS_FORCEINLINE_FUNCTION constexpr real_type ATMPA() { return 101325.0; }
+
+///
+struct CoverageModification
+{
+ real_type _eta;
+ real_type _epsilon;
+ real_type _mu;
+ ordinal_type _species_index;
+ ordinal_type _isgas;
+ ordinal_type _reaction_index;
+};
+
+using coverage_modification_type = CoverageModification;
+
+using coverage_modification_type_0d_dual_view =
+  Kokkos::DualView<coverage_modification_type, Kokkos::LayoutRight, exec_space>;
+using coverage_modification_type_1d_dual_view =
+  Kokkos::DualView<coverage_modification_type*, Kokkos::LayoutRight, exec_space>;
+
+using coverage_modification_type_0d_view =
+  typename coverage_modification_type_0d_dual_view::t_dev;
+using coverage_modification_type_1d_view =
+  typename coverage_modification_type_1d_dual_view::t_dev;
+
+using coverage_modification_type_0d_view_host =
+  typename coverage_modification_type_0d_dual_view::t_host;
+using coverage_modification_type_1d_view_host =
+  typename coverage_modification_type_1d_dual_view::t_host;
 
 /// time marching data structure
 struct TimeAdvance
@@ -293,7 +305,7 @@ using string_type_1d_view_host = typename string_type_1d_dual_view<S>::t_host;
 using do_not_init_tag = std::string; // Kokkos::ViewAllocateWithoutInitializing;
                                      // // currently not working
 template<typename T>
-using ats = Kokkos::ArithTraits<T>;
+using ats = Tines::ArithTraits<T>;
 
 namespace Impl {
 template<typename ViewType, typename MemoryTraitsType>
@@ -352,6 +364,22 @@ getValueInRange(const T& lo, const T& up, const T& val)
   return val < lo ? lo : val > up ? up : val;
 }
 
+template<typename T,
+         typename T2>
+KOKKOS_FORCEINLINE_FUNCTION T2
+getValueInRangev2(const T& lo, const T& up, const T2& val)
+{
+  auto out = val;
+  if (val < lo) {
+    out = lo;
+  }else if (val > up){
+    out = up;
+  }
+
+  return out;
+}
+
+
 template<typename ViewType, typename T>
 void
 convertToKokkos(ViewType& out, const std::vector<T>& in)
@@ -394,7 +422,7 @@ convertToKokkos(ViewType& out, const std::vector<std::vector<T>>& in)
   {
     static_assert(Kokkos::is_view<ViewType>::value,
                   "Error: Output view is not Kokkos::View");
-    static_assert(ViewType::rank == 2, "Error: Output view is not rank-1");
+    static_assert(ViewType::rank == 2, "Error: Output view is not rank-2");
     static_assert(
       std::is_same<T, typename ViewType::non_const_value_type>::value,
       "Error: std::vector value type does not match to Kokkos::View value "
@@ -411,9 +439,50 @@ convertToKokkos(ViewType& out, const std::vector<std::vector<T>>& in)
       Kokkos::ViewAllocateWithoutInitializing("convertStdVector2D"), n0, n1);
   const auto out_host = Kokkos::create_mirror_view(out);
   Kokkos::parallel_for(Kokkos::RangePolicy<host_exec_space>(0, n0),
-                       [&](const ordinal_type& i) {
+                       [n1,&out_host,&in](const ordinal_type& i) {
                          for (ordinal_type j = 0; j < n1; ++j)
                            out_host(i, j) = in[i][j];
+                       });
+  Kokkos::deep_copy(out, out_host);
+}
+
+template<typename ViewType, typename T>
+void
+convertToKokkos(ViewType& out, const std::vector< std::vector< std::vector<T> >>& in)
+{
+#if defined(TCHEM_ENABLE_DEBUG)
+  std::cout << "WARNING: we highly discourage to use this utility function and "
+               "recommend to use Kokkos::View directly\n";
+#endif
+  {
+    static_assert(Kokkos::is_view<ViewType>::value,
+                  "Error: Output view is not Kokkos::View");
+    static_assert(ViewType::rank == 3, "Error: Output view is not rank-3");
+    static_assert(
+      std::is_same<T, typename ViewType::non_const_value_type>::value,
+      "Error: std::vector value type does not match to Kokkos::View value "
+      "type");
+    static_assert(
+      std::is_same<typename ViewType::array_layout, Kokkos::LayoutRight>::value,
+      "Error: Output view is supposed to be layout right");
+  }
+
+  const ordinal_type m0 = out.extent(0), m1 = out.extent(1), m2 = out.extent(2);
+  const ordinal_type n0 = in.size(), n1 = in[0].size(), n2p = in[0][0].size();
+  if (m0 != n0 || m1 != n1 || m2 != n2p)
+    out = ViewType(
+      Kokkos::ViewAllocateWithoutInitializing("convertStdVector3D"), n0, n1, n2p);
+  const auto out_host = Kokkos::create_mirror_view(out);
+  Kokkos::parallel_for(Kokkos::RangePolicy<host_exec_space>(0, n0),
+                       [n1,&out_host,&in](const ordinal_type& i) {
+                         for (ordinal_type j = 0; j < n1; ++j){
+                           const ordinal_type n2 = in[0][0].size();
+                           for (ordinal_type k = 0; k < n2; k++) {
+                             out_host(i, j,k) = in[i][j][k];
+                           }
+
+                         }
+
                        });
   Kokkos::deep_copy(out, out_host);
 }
@@ -560,8 +629,13 @@ public:
   using real_value_type = typename RealType1DView::non_const_value_type;
   using range_type = Kokkos::pair<ordinal_type, ordinal_type>;
 
-  KOKKOS_INLINE_FUNCTION StateVector() = default;
-  KOKKOS_INLINE_FUNCTION StateVector(const StateVector& b) = default;
+  KOKKOS_INLINE_FUNCTION StateVector()
+    : _nSpec(), _v()
+  {}
+  KOKKOS_INLINE_FUNCTION StateVector(const StateVector& b)
+    : _nSpec(b._nSpec),
+      _v(b._v)
+  {}
   KOKKOS_INLINE_FUNCTION StateVector(const ordinal_type nSpec,
                                      const RealType1DView& v)
     : _nSpec(nSpec)
@@ -1112,6 +1186,76 @@ compareFiles(const std::string& filename1, const std::string& filename2)
                  std::istreambuf_iterator<char>());
   return (s1.compare(s2) == 0);
 }
+
+static inline bool
+compareFilesValues(const std::string& filename1, const std::string& filename2)
+{
+  std::ifstream f1(filename1);
+  std::string s1((std::istreambuf_iterator<char>(f1)),
+                 std::istreambuf_iterator<char>());
+  std::ifstream f2(filename2);
+  std::string s2((std::istreambuf_iterator<char>(f2)),
+                 std::istreambuf_iterator<char>());
+
+  bool passTest(true);
+  if (s1.compare(s2) != 0) {
+
+    using ats = Tines::ats<real_type>;
+
+    std::ifstream file1(filename1);
+    std::ifstream file2(filename2);
+    real_type max_relative_error(0);
+    real_type max_absolute_error(0);
+    real_type save_value1(0);
+    real_type save_value2(0);
+
+    if (file1.is_open() && file2.is_open()) {
+      //header
+      std::string line;
+      std::getline(file1, line);
+      std::istringstream iss1(line);
+
+      std::string line2;
+      std::getline(file2, line2);
+      std::istringstream iss2(line2);
+
+      real_type value1, value2, diff;
+      while (file1 >> value1 && file2 >> value2) {
+
+        diff = ats::abs(value1 - value2) ;
+        if (diff > max_absolute_error)
+        {
+          max_absolute_error = diff;
+          max_relative_error = diff/value2;
+          save_value1= value1;
+          save_value2= value2;
+
+        }
+      }
+
+    } else {
+      printf("test : Could not open %s -> Abort !\n", filename1.c_str());
+      printf("test : Could not open %s -> Abort !\n", filename2.c_str());
+      return (false);
+    }
+    printf("Files are not exactly the same \n");
+    printf("Maximum relative error : %15.10e \n",max_relative_error );
+    printf("Maximum absolute error : %15.10e \n", max_absolute_error );
+    printf("Current value :  %15.10e Reference value : %15.10e \n",save_value1 ,save_value2 );
+    const real_type threshold = ats::epsilon() * save_value2;
+    if ( max_relative_error < threshold) {
+      printf("PASS with threshold: %15.10e \n", threshold );
+      passTest=true;
+    } else {
+      printf("FAIL with threshold: %15.10e \n", threshold );
+      passTest=false;
+    }
+
+  }
+
+  return (passTest);
+}
+
 
 } // namespace Test
 

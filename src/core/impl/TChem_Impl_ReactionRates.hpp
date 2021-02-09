@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_IMPL_REACTIONRATES_HPP__
 #define __TCHEM_IMPL_REACTIONRATES_HPP__
 
@@ -71,7 +73,7 @@ struct ReactionRates
     const real_type zero(0);
 
     /// 0. compute (-ln(T)+dS/R-dH/RT) for each species
-    Gk ::team_invoke(member,
+    Gk::team_invoke(member,
                      t, /// input
                      gk,
                      hks,  /// output
@@ -80,7 +82,7 @@ struct ReactionRates
     member.team_barrier();
 
     /// 1. compute forward and reverse rate constants
-    KForwardReverse ::team_invoke(member,
+    KForwardReverse::team_invoke(member,
                                   t,
                                   p,
                                   gk, /// input

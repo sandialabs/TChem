@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,10 +18,13 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef __TCHEM_IMPL_RATEOFPROGRESS_SURFACE_HPP__
 #define __TCHEM_IMPL_RATEOFPROGRESS_SURFACE_HPP__
 
 #include "TChem_Util.hpp"
+#include "TChem_Impl_SurfaceCoverageModification.hpp"
 
 namespace TChem {
 namespace Impl {
@@ -36,6 +39,7 @@ struct RateOfProgressSurface
            typename KineticSurfModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
+    const real_type &t,
     /// input
     const RealType1DViewType& kfor,
     const RealType1DViewType& krev,
@@ -44,15 +48,22 @@ struct RateOfProgressSurface
     /// output
     const RealType1DViewType& ropFor,
     const RealType1DViewType& ropRev,
+    // work
+    const RealType1DViewType& CoverageFactor,
     /// const input from kinetic model
     const KineticSurfModelConstDataType& kmcdSurf)
   {
 
+    SurfaceCoverageModification::team_invoke(member,
+    t, concX, concXSurf, CoverageFactor, kmcdSurf);
+
+    member.team_barrier();
+
     Kokkos::parallel_for(
       Kokkos::TeamVectorRange(member, kmcdSurf.nReac),
       [&](const ordinal_type& i) {
-        real_type ropFor_at_i = kfor(i);
-        real_type ropRev_at_i = krev(i);
+        real_type ropFor_at_i = kfor(i)*CoverageFactor(i);
+        real_type ropRev_at_i = krev(i)*CoverageFactor(i);
 
         /* compute forward rop */
         for (ordinal_type j = 0; j < kmcdSurf.reacNreac(i); ++j) {
@@ -119,6 +130,7 @@ struct RateOfProgressSurface
            typename KineticSurfModelConstDataType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
+    const real_type &t,
     /// input
     const RealType1DViewType& kfor,
     const RealType1DViewType& krev,
@@ -132,14 +144,13 @@ struct RateOfProgressSurface
     /// const input from kinetic model
     const KineticSurfModelConstDataType& kmcd)
   {
-    // auto w = (ordinal_type*)work.data();
-    // auto irnus = Kokkos::View<ordinal_type*,Kokkos::LayoutRight,typename
-    // WorkViewType::memory_space>(w, kmcd.nReac); w+=kmcd.nReac; auto iords =
-    // Kokkos::View<ordinal_type*,Kokkos::LayoutRight,typename
-    // WorkViewType::memory_space>(w, kmcd.nReac); w+=kmcd.nReac;
+
+    auto w = (real_type*)work.data();
+    auto CoverageFactor = RealType1DViewType(w, kmcd.nReac);
+    w += kmcd.nReac;
 
     team_invoke_detail(
-      member, kfor, krev, concX, concXSurf, ropFor, ropRev, kmcd);
+      member, t,  kfor, krev, concX, concXSurf, ropFor, ropRev, CoverageFactor, kmcd);
   }
 };
 

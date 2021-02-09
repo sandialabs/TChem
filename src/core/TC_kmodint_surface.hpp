@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #ifndef TCkmodintSurfHSeen
 #define TCkmodintSurfHSeen
 
@@ -79,6 +81,7 @@ typedef struct
 {
   int isdup; /* Duplicate reactions */
   int isstick;
+  int iscov; /*  COV is surface coverage modification */
   int isrev;  /* Is reversible */
   int isbal;  /* Is balanced */
   int iscomp; /* Is complete */
@@ -99,6 +102,12 @@ typedef struct
 
   char aunits[4]; /* pre-exponential factor units */
   char eunits[4]; /* activation energy units */
+
+  double cov_param[3 * NSPECREACMAX];
+  int cov_species_index[NSPECREACMAX];
+  int cov_isgas[NSPECREACMAX];
+  int cov_reaction_index[NSPECREACMAX];
+  int cov_count;
 
 } reactionSurf;
 
@@ -168,6 +177,8 @@ TCKMI_getreactionssurf(char* linein,
 int
 TCKMI_getreacauxlsurf(char* linein,
                       char* singleword,
+                      speciesGas* listspec,
+                      int* Nspec,
                       speciesSurf* listspecSurf,
                       int* NspecSurf,
                       reactionSurf* listreacSurf,
@@ -211,7 +222,7 @@ TCKMI_outformsurf(element* listelem,
 
 //
 int
-saveSurfRectionEquations(speciesGas* listspec,
+TCKMI_saveSurfRectionEquations(speciesGas* listspec,
                      speciesSurf* listspecSurf,
                      reactionSurf* listreacSurf,
                      int* NreacSurf,

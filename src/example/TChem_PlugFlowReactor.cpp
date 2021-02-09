@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #include "TChem_CommandLineParser.hpp"
 #include "TChem_KineticModelData.hpp"
 #include "TChem_Util.hpp"
@@ -59,8 +61,6 @@ main(int argc, char* argv[])
   real_type Area(0.00053);
   real_type Pcat(0.025977239243415308);
 
-  // std::string outputFile(prefixPath + "SurfaceRHS.dat");
-
   const real_type zero(0);
   real_type tbeg(0), tend(0.025);
   real_type dtmin(1e-10), dtmax(1e-6);
@@ -82,8 +82,9 @@ main(int argc, char* argv[])
   std::string inputFile("sample.dat");
   std::string inputFileSurf( "inputSurf.dat");
   std::string inputFilevelocity( "inputVelocity.dat");
+  std::string outputFile("PFRSolution.dat");
 
-  bool use_prefixPath(true);
+  bool use_prefixPath(true); 
   /// parse command line arguments
   TChem::CommandLineParser opts(
     "This example computes Temperature, density, mass fraction and site "
@@ -119,8 +120,8 @@ main(int argc, char* argv[])
   opts.set_option<std::string>
   ("inputVelocityfile", "Input state file name e.g., inputVelocity.dat", &inputFilevelocity);
 
-  // opts.set_option<std::string>("outputfile", "Output rhs file name e.g.,
-  // SurfaceRHS.dat", &outputFile);
+  opts.set_option<std::string>("outputfile",
+  "Output file name e.g., PFRSolution.dat", &outputFile);
   opts.set_option<real_type>("Area", "Cross-sectional Area", &Area);
   opts.set_option<real_type>("Pcat", "Chemically active perimeter,", &Pcat);
 
@@ -248,7 +249,7 @@ main(int argc, char* argv[])
 
     Kokkos::Impl::Timer timer;
 
-    FILE* fout = fopen("PFRSolution.dat", "w");
+    FILE* fout = fopen(outputFile.c_str(), "w");
 
     auto writeState =
       [](const ordinal_type iter,

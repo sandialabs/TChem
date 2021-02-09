@@ -1,37 +1,3 @@
-def getMassFractionH2(phi):
-    ne = 2 
-    EW = [1.00797, 15.99940] # H O 
-    
-    # define species compositions and names
-    iFU  = [2, 0]
-    iO2  = [0, 1]
-    iH2O = [2, 1]
-
-    ispec = {'Fuel':iFU, 'O2' :iO2 , \
-             'H2O':iH2O}
-    
-    # compute molecular weights
-    for spec in ispec:
-        sumW = 0.0
-        i    = 0
-        while i < ne:
-            sumW += ispec[spec][i]*EW[i]
-            i += 1
-        ispec[spec].append(sumW)
-    Wfuel = ispec['Fuel'][ne]
-    Wo2   = ispec['O2'  ][ne]
-    Wh2o  = ispec['H2O' ][ne]
-    
-    small  = 1.e-15
-    
-    # compute REACTANTS
-    alpha  =  1. / phi 
-    denom   = Wfuel+alpha*Wo2
-    Yr_fuel = Wfuel/denom
-    Yr_o2   = alpha *Wo2  /denom
-
-    return Yr_fuel, Yr_o2
-
 def getMassFractionCO(phi):
     ne = 5
     EW = [1.00797, 15.99940, 12.01115, 14.00670, 39.94800] # H O C N AR

@@ -1,5 +1,5 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
@@ -7,9 +7,9 @@ Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS
 Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
 #include "TChem_CommandLineParser.hpp"
 #include "TChem_KineticModelData.hpp"
 #include "TChem_Util.hpp"
@@ -58,6 +60,13 @@ main(int argc, char* argv[])
   /// default inputs
   std::string prefixPath("data/");
 
+  std::string chemFile("chem.inp");
+  std::string thermFile("therm.dat");
+  std::string chemSurfFile("chemSurf.inp");
+  std::string thermSurfFile("thermSurf.dat");
+  std::string inputFile("sample.dat");
+  std::string inputFileSurf( "inputSurf.dat");
+
   real_type mdotIn(3.596978981250784e-06);
   real_type Vol(0.00013470);
   real_type Acat (0.0013074);
@@ -74,6 +83,8 @@ main(int argc, char* argv[])
   bool verbose(true);
   int output_frequency(-1);
 
+  bool use_prefixPath(true);
+
 #if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
   bool transient_initial_condition(false);
   bool initial_condition(true);
@@ -84,6 +95,9 @@ main(int argc, char* argv[])
     "fraction for a plug flow reactor");
   opts.set_option<std::string>(
     "prefixPath", "prefixPath e.g.,inputs/", &prefixPath);
+  //
+  opts.set_option<bool>(
+      "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
 
   opts.set_option<real_type>("Acat", "Catalytic area [m2]", &Acat);
   opts.set_option<real_type>("Vol", "Reactor Volumen [m3]", &Vol);
@@ -97,19 +111,27 @@ main(int argc, char* argv[])
 
 #endif
 
-  // opts.set_option<std::string>("chemfile", "Chem file name e.g., chem.inp",
-  // &chemFile); opts.set_option<std::string>("thermfile", "Therm file name
-  // e.g., therm.dat", &thermFile); opts.set_option<std::string>("chemSurffile",
-  // "Chem file name e.g., chem.inp", &chemSurfFile);
-  // opts.set_option<std::string>("thermSurffile", "Therm file name e.g.,
-  // therm.dat", &thermSurfFile);
-  // opts.set_option<std::string>("inputfile", "Input state file name e.g.,
-  // input.dat", &inputFile); opts.set_option<std::string>("inputfile", "Input
-  // state file name e.g., inputSurfGas.dat", &inputFileSurf);
-  // opts.set_option<std::string>("inputfile", "Input state file name e.g.,
-  // inputVelocity.dat", &inputFilevelocity);
-  // opts.set_option<std::string>("outputfile", "Output rhs file name e.g.,
-  // SurfaceRHS.dat", &outputFile);
+  //
+  opts.set_option<std::string>
+  ("chemfile", "Chem file name e.g., chem.inp",
+  &chemFile);
+
+  opts.set_option<std::string>
+  ("thermfile", "Therm file name e.g., therm.dat", &thermFile);
+
+  opts.set_option<std::string>
+  ("chemSurffile","Chem file name e.g., chemSurf.inp",
+   &chemSurfFile);
+
+  opts.set_option<std::string>
+  ("thermSurffile", "Therm file name e.g.,thermSurf.dat",
+  &thermSurfFile);
+
+  opts.set_option<std::string>
+  ("samplefile", "Input state file name e.g., input.dat", &inputFile);
+
+  opts.set_option<std::string>
+  ("inputSurffile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
 
   opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
   opts.set_option<real_type>("tend", "Time end", &tend);
@@ -142,16 +164,23 @@ main(int argc, char* argv[])
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
 
+
   const bool r_parse = opts.parse(argc, argv);
   if (r_parse)
     return 0; // print help return
 
-  std::string chemFile(prefixPath + "chem.inp");
-  std::string thermFile(prefixPath + "therm.dat");
-  std::string chemSurfFile(prefixPath + "chemSurf.inp");
-  std::string thermSurfFile(prefixPath + "thermSurf.dat");
-  std::string inputFile(prefixPath + "sample.dat");
-  std::string inputFileSurf(prefixPath + "inputSurf.dat");
+
+  // if ones wants to all the input files in one directory,
+  //and do not want give all names
+  if ( use_prefixPath ){
+    chemFile      = prefixPath + "chem.inp";
+    thermFile     = prefixPath + "therm.dat";
+    chemSurfFile  = prefixPath + "chemSurf.inp";
+    thermSurfFile = prefixPath + "thermSurf.dat";
+    inputFile     = prefixPath + "sample.dat";
+    inputFileSurf = prefixPath + "inputSurf.dat";
+    printf("Using a prefix path %s \n",prefixPath.c_str() );
+  }
 
   printf("Inlet mass faction %e\n", mdotIn );
   printf("Catalytic Area %e\n",Acat);

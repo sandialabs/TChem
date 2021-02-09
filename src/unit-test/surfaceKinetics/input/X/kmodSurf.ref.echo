@@ -4,6 +4,7 @@ kmodSurf.list : # of polynomial coefficients for thermo fits      : 5
 kmodSurf.list : # of Arrhenius parameters                         : 3
 kmodSurf.list : # of species                                      : 17
 kmodSurf.list : # of reactions                                    : 30
+kmodSurf.list : # of reactions with cov modification              : 0
 -------------------------------------------------------------------------
 kmodSurf.list : Tolerance for reaction balance                    : 1.000000e-04
 -------------------------------------------------------------------------

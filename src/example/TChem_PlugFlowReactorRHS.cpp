@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.0
+TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
 certain rights in this software.
 
-This file is part of TChem. TChem is open source software: you can redistribute it
+This file is part of TChem. TChem is open-source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,14 +18,22 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+
+
+#include "TChem_Util.hpp"
 #include "TChem_PlugFlowReactorRHS.hpp"
 #include "TChem_CommandLineParser.hpp"
 #include "TChem_KineticModelData.hpp"
-#include "TChem_Util.hpp"
+#include "TChem_PlugFlowReactor.hpp"
+
 using ordinal_type = TChem::ordinal_type;
 using real_type = TChem::real_type;
 using real_type_1d_view = TChem::real_type_1d_view;
 using real_type_2d_view = TChem::real_type_2d_view;
+
+using pfr_data_type = TChem::pfr_data_type;
+using pfr_data_type_0d_view = TChem::pfr_data_type_0d_view;
 
 int
 main(int argc, char* argv[])
@@ -123,6 +131,15 @@ main(int argc, char* argv[])
     /// create a mirror view to store input from a file
     auto velocity_host = Kokkos::create_mirror_view(velocity);
 
+    //
+    real_type Area(0.00053);
+    real_type Pcat(0.025977239243415308);
+
+    pfr_data_type pfrd;
+    pfrd.Area = Area; // m2
+    pfrd.Pcat = Pcat; //
+
+
     /// input from a file; this is not necessary as the input is created
     /// by other applications.
     {
@@ -160,7 +177,8 @@ main(int argc, char* argv[])
                                               rhs,
                                               // data
                                               kmcd,
-                                              kmcdSurf);
+                                              kmcdSurf,
+                                              pfrd);
 
     Kokkos::fence(); /// timing purpose
     const real_type t_device_batch = timer.seconds();

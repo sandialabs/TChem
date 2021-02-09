@@ -1,6 +1,6 @@
 # Building TChem
 
-TChem is designed and implemented using Kokkos (a performance portable parallel programming model) and it requires Kokkos and KokkosKernels. For testing, we use GTEST infrastructure. Additionally, it can use OpenBLAS or Intel MKL (more precisely we use CBLAS and LAPACKE interface from those libraries).
+TChem is designed and implemented using Kokkos (a performance portable parallel programming model) and it requires Kokkos and Tines. For testing, we use GTEST infrastructure. Additionally, it can use OpenBLAS or Intel MKL (more precisely we use CBLAS and LAPACKE interface from those libraries).
 
 For convenience, we explain how to build the TChem code using the following environment variable that a user can modify according to their working environments.
 
@@ -8,19 +8,19 @@ For convenience, we explain how to build the TChem code using the following envi
 /// repositories
 export TCHEM_REPOSITORY_PATH=/where/you/clone/tchem/git/repo
 export KOKKOS_REPOSITORY_PATH=/where/you/clone/kokkos/git/repo
-export KOKKOSKERNELS_REPOSITORY_PATH=/where/you/clone/kokkoskernels/git/repo
+export TINES_REPOSITORY_PATH=/where/you/clone/tines/git/repo
 export GTEST_REPOSITORY_PATH=/where/you/clone/gtest/git/repo
 
 /// build directories
 export TCHEM_BUILD_PATH=/where/you/build/tchem
 export KOKKOS_BUILD_PATH=/where/you/build/kokkos
-export KOKKOSKERNELS_BUILD_PATH=/where/you/build/kokkoskernels
+export TINES_BUILD_PATH=/where/you/build/tines
 export GTEST_BUILD_PATH=/where/you/build/gtest
 
 /// install directories
 export TCHEM_INSTALL_PATH=/where/you/install/tchem
 export KOKKOS_INSTALL_PATH=/where/you/install/kokkos
-export KOKKOSKERNELS_INSTALL_PATH=/where/you/install/kokkoskernels
+export TINES_INSTALL_PATH=/where/you/install/tines
 export GTEST_INSTALL_PATH=/where/you/install/gtest
 export OPENBLAS_INSTALL_PATH=/where/you/install/openblas
 export LAPACKE_INSTALL_PATH=/where/you/install/lapacke
@@ -28,14 +28,12 @@ export LAPACKE_INSTALL_PATH=/where/you/install/lapacke
 
 ## Download Libraries
 
-Clone Kokkos, KokkosKernels and TChem repositories. Note that we use the develop branch of Kokkos and KokkosKernels.
+Clone Kokkos, Tines and TChem repositories. 
 
 ```
-git clone https://github.com/sandialabs/TChem.git ${TCHEM_REPOSITORY_PATH};
+git clone getz.ca.sandia.gov:/home/gitroot/TChem++ ${TCHEM_REPOSITORY_PATH};
 git clone https://github.com/kokkos/kokkos.git ${KOKKOS_REPOSITORY_PATH};
-cd ${KOKKOS_REPOSITORY_PATH}; git checkout --track origin/develop;
-git clone https://github.com/kokkos/kokkos-kernels.git ${KOKKOSKERNELS_REPOSITORY_PATH};
-cd ${KOKKOSKERNELS_REPOSITORY_PATH}; git checkout --track origin/develop;
+git clone getz.ca.sandia.gov:/home/gitroot/math_utils  ${TINES_REPOSITORY_PATH};
 git clone https://github.com/google/googletest.git ${GTEST_REPOSITORY_PATH}
 ```
 
@@ -78,22 +76,24 @@ cmake \
 make -j install
 ```
 
-### KokkosKernels
+### Tines
 
-Compiling KokkosKernels follows Kokkos configuration of which information is available at ``${KOKKOS_INSTALL_PATH}``.
+Compiling Tines follows Kokkos configuration of which information is available at ``${KOKKOS_INSTALL_PATH}``. The openblas and lapacke libraries are required on a host device providing an optimized version of dense linear algebra library. With an Intel compiler, one can replace these libraries with Intel MKL by adding an option ``TCHEM_ENABLE_MKL=ON`` instead of using openblas and lapacke. On Mac OSX, we use the openblas library managed by **macports**. This version of openblas has different header names and we need to distinguish this version of the code from others which are typically used in linux distributions. To discern the two version of the code, cmake looks for ``cblas_openblas.h`` to tell that the installed version is from MacPort. This mechanism can be broken if MacPort openblas is changed later. The macport openblas version include lapacke interface and one can remove ``LAPACKE_INSTALL_PATH`` from the configure script. Tines also include SACADO (cite Eric P paper).
 
 ```
-cd ${KOKKOSKERNELS_BUILD_PATH}
 cmake \
-    -D CMAKE_INSTALL_PREFIX="${KOKKOSKERNELS_INSTALL_PATH}" \
-    -D CMAKE_CXX_COMPILER="${CXX}"  \
-    -D CMAKE_CXX_FLAGS="-g"  \
-    -D KokkosKernels_INST_LAYOUTRIGHT:BOOL=ON \
-    -D Kokkos_DIR="${KOKKOS_INSTALL_PATH}/lib64/cmake/Kokkos" \
-    -D KokkosKernels_ENABLE_TPL_LAPACKE:BOOL=ON \
-    -D KokkosKernels_ENABLE_TPL_CBLAS:BOOL=ON \
-    -D CBLAS_INCLUDE_DIRS="/opt/local/include" \
-    ${KOKKOSKERNELS_REPOSITORY_PATH}
+    -D CMAKE_INSTALL_PREFIX=${TINES_INSTALL_PATH} \
+    -D CMAKE_CXX_COMPILER="${CXX}" \
+    -D CMAKE_CXX_FLAGS="-g" \
+    -D TINES_ENABLE_DEBUG=OFF \
+    -D TINES_ENABLE_VERBOSE=OFF \
+    -D TINES_ENABLE_TEST=ON \
+    -D TINES_ENABLE_EXAMPLE=ON \
+    -D KOKKOS_INSTALL_PATH="${HOME}/Work/lib/kokkos/install/butter/release" \
+    -D GTEST_INSTALL_PATH="${HOME}/Work/lib/gtest/install/butter/release" \
+    -D OPENBLAS_INSTALL_PATH="${OPENBLAS_INSTALL_PATH}" \
+    -D LAPACKE_INSTALL_PATH="${LAPACKE_INSTALL_PATH}" \
+    ${TINES_REPOSITORY_PATH}/src
 make -j install
 ```
 
@@ -114,7 +114,7 @@ make -j install
 
 ### TChem
 
-The following example cmake script compiles TChem on host linking with the libraries described in the above e.g., kokkos, kokkoskernels, gtest and openblas. The openblas and lapacke libraries are required on a host device providing an optimized version of dense linear algebra library. With an Intel compiler, one can replace these libraries with Intel MKL by adding an option ``TCHEM_ENABLE_MKL=ON`` instead of using openblas and lapacke. On Mac OSX, we use the openblas library managed by **macports**. This version of openblas has different header names and we need to distinguish this version of the code from others which are typically used in linux distributions. To discern the two version of the code, cmake looks for ``cblas_openblas.h`` to tell that the installed version is from MacPort. This mechanism can be broken if MacPort openblas is changed later. The macport openblas version include lapacke interface and one can remove ``LAPACKE_INSTALL_PATH`` from the configure script.
+The following example cmake script compiles TChem on host linking with the libraries described in the above e.g., kokkos, tines, gtest and openblas. 
 ```
 cd ${TCHEM_BUILD_PATH}
 cmake \
@@ -122,16 +122,12 @@ cmake \
     -D CMAKE_CXX_COMPILER="${CXX}" \
     -D CMAKE_BUILD_TYPE=RELEASE \
     -D TCHEM_ENABLE_VERBOSE=OFF \
-    -D TCHEM_ENABLE_KOKKOS=ON \
-    -D TCHEM_ENABLE_KOKKOSKERNELS=ON \
     -D TCHEM_ENABLE_TEST=ON \
     -D TCHEM_ENABLE_EXAMPLE=ON \
     -D KOKKOS_INSTALL_PATH="${KOKKOS_INSTALL_PATH}" \
-    -D KOKKOSKERNELS_INSTALL_PATH="${KOKKOSKERNELS_INSTALL_PATH}" \
-    -D OPENBLAS_INSTALL_PATH="${OPENBLAS_INSTALL_PATH}" \
-    -D LAPACKE_INSTALL_PATH="${LAPACKE_INSTALL_PATH}" \
+    -D TINES_INSTALL_PATH="${TINES_INSTALL_PATH}" \
     -D GTEST_INSTALL_PATH="${GTEST_INSTALL_PATH}" \
-    ${TCHEM_SRC_PATH}
+    ${TCHEM_REPOSITORY_PATH}/src
 make -j install
 ```
 For GPUs, we can use the above cmake script replacing the compiler with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX_COMPILER="${KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper"``.

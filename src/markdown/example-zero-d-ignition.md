@@ -6,10 +6,13 @@ In this example we consider a transient zero-dimensional constant-pressure probl
 
 For an open batch reactor the system of ODEs solved by TChem are given by:
 * ***Energy equation***
+
 $$
 \frac{dT}{dt}= -\frac{1}{\rho c_p}\sum_{k=1}^{N_{spec}}\dot{\omega_{k}} W_k h_k = S_T
 $$
+
 * ***Species equation***
+
 $$
 \frac{dY_k}{dt}=\frac{1}{\rho}\dot{\omega_{k}}W_k=S_{Y_k},\,\,\,k=1\ldots N_{spec}
 $$
@@ -21,30 +24,41 @@ where $\rho$ is the density, $c_p$ is the specific heat at constant pressure for
 Efficient integration and accurate analysis of the stiff system of ODEs shown above requires the Jacobian matrix of the *rhs* vector. In this section we will derive the Jacobian matrix components.
 
 Let
+
 $$
 \Phi=\left\{T,Y_1,Y_2,\ldots,Y_{N_{spec}}\right\}^T
 $$
+
 by the denote the variables in the *lhs* of the 0D system and let
+
 $$
 \tilde{\Phi}=\left\{\rho,P,T,Y_1,Y_2,\ldots,Y_{N_{spec}}\right\}^T
 $$
+
 be the extended state vector. The 0D system can be written in compact form as
+
 $$
 \frac{d\Phi}{dt}=f(\Phi)\,\,\,\mathrm{and}\,\,\,\frac{d\tilde{\Phi}}{dt}=\tilde{f}(\tilde{\Phi})
 $$
+
 where $f=\{S_T,S_{Y_1},\ldots S_{Y_{N_{spec}}}\}^T$ and $\tilde{f}=\{S_\rho,S_P,S_T,S_{Y_1},\ldots S_{Y_{N_{spec}}}\}^T$. The thermodynamic pressure $P$ was introduced for completeness. For open batch reactors $P$ is constant and $S_P\equiv 0$. The source term $S_\rho$ is computed considering the ideal gas equation of state
+
 $$
 P=\rho R \sum \frac{Y_i}{W_i} T
 $$
+
 with P=const and using the expressions above for $S_T$ and $S_{Y_k}$,
+
 $$
 S_\rho=-W\sum_{k=1}^{N_{spec}}\dot{\omega_k}+\frac{1}{c_p T}\sum_{k=1}^{N_{spec}}\dot{\omega_{k}} W_k h_k
 $$
 
 Let $\tilde{J}$ and $J$ be the Jacobian matrices corresponding to $\tilde{f}(\tilde{\Phi})$ and $f(\Phi)$, respectively. Chain-rule differentiation leads to
+
 $$
 \frac{\partial f_u}{\partial v}=\frac{\partial \tilde{f}_u}{\partial v}+\frac{\partial \tilde{f}_u}{\partial \rho}\frac{\partial \rho}{\partial v}
 $$
+
 Note that each component $u$ of $\Phi$ is also a component of $\tilde{\Phi}$ and the corresponding *rhs* components are also the same, $f_u(\Phi)=\tilde{f}_u(\tilde{\Phi})$.
 
 ### Evaluation of $\tilde{J}$ Components
@@ -56,10 +70,13 @@ We first identify the dependencies on the elements of $\tilde{\Phi}$ for each of
 * $\tilde{f}_2=S_P=0$
 
 * $\tilde{f}_3=S_T$. $S_T$ is defined above. Here we highlight its dependencies on the elements of $\tilde{\Phi}$
+
 $$
 c_p=\sum_{k=1}^{N_{spec}} Y_k{c_p}_k(T),\,\,\, h_k=h_k(T),\,\,\,\text{ and }\,\,\, \dot{\omega}_k=\dot{\omega}_k(T,\mathfrak{X}_1,\mathfrak{X}_2,\ldots,\mathfrak{X}_{N_{spec}}),
 $$
+
 where $\mathfrak{X}_k$ is the molar concentration of species $k$, $\mathfrak{X}_k=\rho Y_k/W_k$.
+
 $$
 \tilde{J}_{3,1}=\frac{\partial\tilde{f}_3}{\partial\rho}=\frac{1}{\rho c_p}\sum h_k\left(\frac{\dot{\omega}_k}{\rho}-\frac{\partial\dot{\omega}_k}{\partial\rho}\right),\,\,\,
 \tilde{J}_{3,2}=0,\\
@@ -71,6 +88,7 @@ $$
 $$
 
 * $\tilde{f}_{3+k}=S_{Y_k}$
+
 $$
 \tilde{J}_{3+k,1}=\frac{\partial\tilde{f}_{3+k}}{\partial\rho}= \frac{W_k}{\rho}\left(\frac{\partial\dot{\omega}_k}{\partial\rho}-\frac{\dot{\omega}_k}{\rho}\right),\,\,\,
 \tilde{J}_{3+k,2}=\frac{\partial\tilde{f}_{3+k}}{\partial P}\equiv 0,\\
@@ -79,13 +97,16 @@ $$
 $$
 
 The values for heat capacities and their derivatives are computed based on the NASA polynomial fits as
+
 $$
 \frac{\partial c_p}{\partial Y_k}= {c_p}_k,\,\,\,
 \frac{\partial c_p}{\partial T}= \sum Y_k \frac{d{c_p}_k}{dT},\,\,\,
 \frac{d{c_p}_k}{dT}=R_k\Bigl(a_{1,k}+T\bigl(2a_{2,k}+T\left(3a_{3,k}+4a_{4,k}T\right)\bigr)\Bigr)
 $$
+
 The partial derivatives of the species production rates,   $\dot{\omega}_k(T,\mathfrak{X}_1,\mathfrak{X}_2,\ldots)$, are computed as
 as
+
 $$
 \left.\frac{\partial\dot{\omega}_k}{\partial\rho}\right\vert_{T,Y}=\sum_{l=1}^{N_{spec}}\frac{\partial\dot{\omega}_k}{\partial\mathfrak{X}_l}\frac{\partial\mathfrak{X}_l}{\partial\rho}
 +\frac{\partial\dot{\omega}_k}{\partial T}\underbrace{\frac{\partial T}{\partial\rho}}_{0}+\underbrace{\frac{\partial\dot{\omega}_k}{\partial\rho}}_{0}\frac{\partial\rho}{\partial\rho}
@@ -99,6 +120,7 @@ $$
 The steps for the calculation of $\frac{\partial\dot{\omega}_k}{\partial T}$ and $\frac{\partial\dot{\omega}_k}{\partial\mathfrak{X}_l}$ are itemized below
 
 * Derivatives of production rate $\dot{\omega}_k$ of species $k$
+
 $$
 \dot{\omega}_k=\sum_{i=1}^{N_{reac}}\nu_{ki}q_i \Rightarrow
 \frac{\partial\dot{\omega}_k}{\partial T}=\sum_{i=1}^{N_{reac}}\nu_{ki}\frac{\partial q_i}{\partial T},\,\,\,
@@ -106,6 +128,7 @@ $$
 $$
 
 * Derivatives of rate-of-progress variable $q_i$ of reaction $i$
+
 $$
 q_i=\mathcal{C}_i\mathcal{R}_i \Rightarrow \frac{\partial q_i}{\partial T} = \frac{\partial\mathcal{C}_i}{\partial T}\mathcal{R}_i+\mathcal{C}_i\frac{\partial\mathcal{R}_i}{\partial T},\,\,\,
 \frac{\partial q_i}{\partial\mathfrak{X}_l} = \frac{\partial\mathcal{C}_i}{\partial \mathfrak{X}_l}\mathcal{R}_i+\mathcal{C}_i\frac{\partial\mathcal{R}_i}{\partial\mathfrak{X}_l}
@@ -113,26 +136,28 @@ $$
 
 * Derivatives of $\mathcal{C}_i$
 
-    + Basic reactions $\mathcal{C}_i = 1$: $\frac{\partial\mathcal{C}_i}{\partial T}\equiv \frac{\partial\mathcal{C}_i}{\partial\mathfrak{X}_l}\equiv 0$
+Basic reactions $\mathcal{C}_i = 1$: $\frac{\partial\mathcal{C}_i}{\partial T}\equiv \frac{\partial\mathcal{C}_i}{\partial\mathfrak{X}_l}\equiv 0$
 
-    + 3-rd body-enhanced reactions $\mathcal{C}_i = \mathfrak{X}_i$: $\frac{\partial\mathcal{C}_i}{\partial T}\equiv 0$, $\frac{\partial\mathcal{C}_i}{\partial\mathfrak{X}_l}=\alpha_{il}$
+3-rd body-enhanced reactions $\mathcal{C}_i = \mathfrak{X}_i$: $\frac{\partial\mathcal{C}_i}{\partial T}\equiv 0$, $\frac{\partial\mathcal{C}_i}{\partial\mathfrak{X}_l}=\alpha_{il}$
 
-    + Unimolecular/recombination fall-off reactions $\mathcal{C}_i = \frac{\Pr_i}{1+\Pr_i}F_i$
+Unimolecular/recombination fall-off reactions $\mathcal{C}_i = \frac{\Pr_i}{1+\Pr_i}F_i$
+
 $$
 \frac{\partial\mathcal{C}_i}{\partial T}=\frac{1}{\left(1+\Pr_i\right)^2}\frac{\partial\Pr_i}{\partial T}F_i+\frac{\Pr_i}{1+\Pr_i}\frac{\partial F_i}{\partial T} \\
 \frac{\partial\mathcal{C}_i}{\partial\mathfrak{X}_l}=\frac{1}{\left(1+\Pr_i\right)^2}\frac{\partial\Pr_i}{\partial\mathfrak{X}_l}F_i+\frac{\Pr_i}{1+\Pr_i}\frac{\partial F_i}{\partial\mathfrak{X}_l}
 $$
 
-        - $\Pr_i=\frac{{k_0}_i}{{k_\infty}_i}\mathfrak{X}_i \Rightarrow \frac{\partial\Pr_i}{\partial T}=\frac{{k'_0}_i{k_\infty}_i-{k_0}_i{k'_\infty}_i}{{k_\infty^2}_i}\mathfrak{X}_i,\,\,\,
+$\Pr_i=\frac{{k_0}_i}{{k_\infty}_i}\mathfrak{X}_i \Rightarrow \frac{\partial\Pr_i}{\partial T}=\frac{{k'_0}_i{k_\infty}_i-{k_0}_i{k'_\infty}_i}{{k_\infty^2}_i}\mathfrak{X}_i,\,\,\,
 \frac{\partial\Pr_i}{\partial\mathfrak{X}_l}=\frac{{k_0}_i}{{k_\infty}_i}\alpha_{il}$.
 
-        - $\Pr_i=\frac{{k_0}_i}{{k_\infty}_i}\mathfrak{X}_m \Rightarrow
+$\Pr_i=\frac{{k_0}_i}{{k_\infty}_i}\mathfrak{X}_m \Rightarrow
 \frac{\partial\Pr_i}{\partial T}=\frac{{k'_0}_i{k_\infty}_i-{k_0}_i{k'_\infty}_i}{{k_\infty^2}_i}\mathfrak{X}_m,\,\,\,
 \frac{\partial\Pr_i}{\partial\mathfrak{X}_l}=\frac{{k_0}_i}{{k_\infty}_i}\delta_{lm}$, where $\delta_{lm}$ is Kroenecker delta symbol.
 
-        - For Lindemann form $F_i=1 \Rightarrow \frac{\partial F_i}{\partial T}\equiv \frac{\partial F_i}{\partial\mathfrak{X}_l}\equiv 0$.
+For Lindemann form $F_i=1 \Rightarrow \frac{\partial F_i}{\partial T}\equiv \frac{\partial F_i}{\partial\mathfrak{X}_l}\equiv 0$.
 
-        - For Troe form
+For Troe form
+
 $$
 \frac{\partial F_i}{\partial T}=\frac{\partial F_i}{\partial F_{cent}}\frac{\partial F_{cent}}{\partial T}+\frac{\partial F_i}{\partial \Pr_i}\frac{\partial \Pr_i}{\partial T},\\
 \frac{\partial F_i}{\partial\mathfrak{X}_l}=\frac{\partial F_i}{\partial F_{cent}}\underbrace{\frac{\partial F_{cent}}{\partial\mathfrak{X}_l}}_{0}+\frac{\partial Fi}{\partial\Pr_i}\frac{\partial\Pr_i}{\partial\mathfrak{X}_l}
@@ -143,7 +168,9 @@ $$
 \frac{\partial F_i}{\partial\Pr_i}=F\ln F_{cent}\left(\frac{2A}{B^3}\right)
 \frac{A_{\Pr}B-B_{\Pr}A}{\left(1+\left(\frac{A}{B}\right)^2\right)^2}
 $$
+
 where
+
 $$
 A_F=\frac{\partial A}{\partial F_{cent}}=-\frac{0.67}{F_{cent}\ln 10},\,\,\,
 B_F=\frac{\partial B}{\partial F_{cent}}=-\frac{1.1762}{F_{cent}\ln 10} \\
@@ -153,7 +180,8 @@ B_{\Pr}=\frac{\partial B}{\partial \Pr_i}=-\frac{0.14}{\Pr_i\ln 10} \\
 -\frac{a}{T^*}\exp\left(-\frac{T}{T^{*}}\right)+\frac{T^{**}}{T^2}\exp\left(-\frac{T^{**}}{T}\right)
 $$
 
-        - For SRI form
+For SRI form
+
 $$
 \frac{\partial F_i}{\partial T} = F\Biggl(\frac{e}{T}+\frac{\partial X}{\partial\Pr_i}\frac{\partial\Pr_i}{\partial T}\ln\left(a\exp\left(-\frac{b}{T}\right)
 +\exp\left(-\frac{T}{c}\right)\right)\Biggr.
@@ -164,14 +192,17 @@ $$
 \frac{\partial X}{\partial\Pr_i} =-X^2\frac{2\log_10 \Pr_i}{\Pr_i\ln 10}
 $$
 
-    + Chemically activated bimolecular reactions: $\mathcal{C}_i = \frac{1}{1+\Pr_i}F_i$
+Chemically activated bimolecular reactions: $\mathcal{C}_i = \frac{1}{1+\Pr_i}F_i$
+
 $$
 \frac{\partial\mathcal{C}_i}{\partial T}=-\frac{1}{\left(1+\Pr_i\right)^2}\frac{\partial\Pr_i}{\partial T}F_i+\frac{1}{1+\Pr_i}\frac{\partial F_i}{\partial T} \\
 \frac{\partial\mathcal{C}_i}{\partial\mathfrak{X}_l}=-\frac{1}{\left(1+\Pr_i\right)^2}\frac{\partial\Pr_i}{\partial\mathfrak{X}_l}F_i+\frac{1}{1+\Pr_i}\frac{\partial F_i}{\partial\mathfrak{X}_l}
 $$
+
 Partial derivatives of $\Pr_i$ and $F_i$ are computed similar to the ones above.
 
 * Derivatives of $\mathcal{R}_i$
+
 $$
 \frac{\partial \mathcal{R}_i}{\partial T}={k'_f}_i\prod_{j=1}^{N_{spec}}\mathfrak{X}_j^{\nu'_{ji}}-
 {k'_r}_i\prod_{j=1}^{N_{spec}}\mathfrak{X}_j^{\nu''_{ji}} \\
@@ -179,10 +210,11 @@ $$
 -\frac{{k_r}_i\nu''_{li}\prod_{j=1}^{N_{spec}}\mathfrak{X}_j^{\nu''_{ji}}}{\mathfrak{X}_l}
 $$
 
-    + ${k_f}_i=A_iT^{\beta_i}\exp\left(-\frac{E_i}{R T}\right)
+${k_f}_i=A_iT^{\beta_i}\exp\left(-\frac{E_i}{R T}\right)
 =A_i\exp\left(\beta_i\ln T-\frac{{T_a}_i}{T}\right)$, where ${T_a}_i=E_i/R$. The derivative with respect to temperature can be calculated as ${k'_f}_i=\frac{{k_f}_i}{T}\left(\beta_i+\frac{{T_a}_i}{T}\right)$
 
-    + if reverse Arrhenius parameters are provided, ${k'_r}_i$ is computed similar to above. If ${k_r}_i$ is computed based on ${k_f}_i$ and the equilibrium constant ${K_c}_i$, then its derivative is computed as
+if reverse Arrhenius parameters are provided, ${k'_r}_i$ is computed similar to above. If ${k_r}_i$ is computed based on ${k_f}_i$ and the equilibrium constant ${K_c}_i$, then its derivative is computed as
+
 $$
 {k_r}_i=\frac{{k_f}_i}{{K_c}_i}\Rightarrow
 {k'_r}_i=\frac{{k'_f}_i {K_c}_i-{k_f}_i {K_c}'_i}{{K_c}_i^2}=
@@ -190,13 +222,18 @@ $$
 -\frac{{k_f}_i}{{K_c}_i}\frac{{K_c} '_i}{{K_c}_i}\\
 ={k_r}_i\left(\frac{1}{T}\left(\beta_i+\frac{{T_a}_i}{T}\right)-\frac{{K_c} '_i}{{K_c}_i}\right).
 $$
-Since ${K_c}_i=\left(\frac{p_{atm}}{\Re}\right)^{\sum_{k=1}^{N_{spec}}\nu_{ki}}
+
+Since
+${K_c}_i=\left(\frac{p_{atm}}{\Re}\right)^{\sum_{k=1}^{N_{spec}}\nu_{ki}}
 \exp\left(\sum_{k=1}^{N_{spec}}\nu_{ki}g_k\right)\Rightarrow
 \frac{{K_c}'_i}{{K_c}_i}=\sum_{k=1}^{N_{spec}}\nu_{ki}g'_k$. It follows that
+
 $$
 {k'_r}_i = {k_r}_i\left(\frac{1}{T}\left(\beta_i+\frac{{T_a}_i}{T}\right)-\sum_{k=1}^{N_{spec}}\nu_{ki}g'_k\right)
 $$
+
 where $g'_k$ is computed based on NASA polynomial fits as
+
 $$
 g'_k=\frac{1}{T}\left(a_{0,k}-1+\frac{a_{5,k}}{T}\right)+\frac{a_{1,k}}{2}
 +T\left(\frac{a_{2,k}}{3}+T\left(\frac{a_{3,k}}{4}+\frac{a_{4,k}}{5}T\right)\right)
@@ -205,6 +242,7 @@ $$
 ####  Efficient Evaluation of the $\tilde{J}$ Terms
 
 * Step 1:
+
 $$
 \tilde{J}_{3+k,2}\equiv 0,\\
 \tilde{J}_{3+k,3}=\frac{W_k}{\rho}\frac{\partial\dot{\omega}_k}{\partial T}=\frac{W_k}{\rho}\left[\sum_{j=1}^{N_{reac}}\nu_{kj}\frac{\partial\mathcal{C}_j}{\partial T}
@@ -216,13 +254,16 @@ $$
 \frac{{\mathcal{R}_f}_j\nu'_{kj}-{\mathcal{R}_r}_j\nu''_{kj}}{\mathfrak{X}_i}\right],\\
 i=1,2,\ldots,{N_{spec}}
 $$
+
 Here ${\mathcal{R_f}}_j$ and ${\mathcal{R}_r}_j$ are the forward and reverse parts, respectively of $\mathcal{R}_j$:
+
 $$
 {\mathcal{R}_f}_j={k_f}_j\prod_{i=1}^{N_{spec}}\mathfrak{X}_i^{\nu'_{ij}},\,\,\,
 {\mathcal{R}_r}_j={k_r}_j\prod_{i=1}^{N_{spec}}\mathfrak{X}_i^{\nu''_{ij}}
 $$
 
 * Step 2: Once $\tilde{J}_{3+k,3+i}$ are evaluated for all $i$, then $\tilde{J}_{3+k,1}$ is computed as
+
 $$
 \tilde{J}_{3+k,1}=\frac{W_k}{\rho}\left(\frac{\partial\dot{\omega}_k}{\partial\rho}-\frac{\dot{\omega}_k}{\rho}\right)
 =\frac{W_k}{\rho}\left(-\frac{\dot{\omega}_k}{\rho}+\sum_{i=1}^{N_{spec}}Y_i\frac{\partial\dot{\omega}_k}{\partial\mathfrak{X}_i}\right)
@@ -230,6 +271,7 @@ $$
 $$
 
 * Step 3:
+
 $$
 \tilde{J}_{3,1}=\frac{1}{\rho c_p}\sum_{i=1}^{N_{spec}} W_i h_i\left(\frac{\dot{\omega}_i}{\rho}-\frac{\partial\dot{\omega}_i}{\partial\rho}\right)
 =-\frac{1}{c_p}\sum_{i=1}^{N_{spec}} h_i \tilde{J}_{3+i,1},\,\,\,
@@ -244,22 +286,28 @@ $$
 ### Evaluation of $J$ Components
 
 * *Temperature equation*
+
 $$
 J_{1,1}=\tilde{J}_{3,3}+\tilde{J}_{3,1}\frac{\partial\rho}{\partial T},\,\,\,
 J_{1,1+k}=\tilde{J}_{3,3+k}+\tilde{J}_{3,1}\frac{\partial \rho}{\partial Y_k}
 $$
 
 * *Species equations*
+
 $$
 J_{i,1}  =\tilde{J}_{1+i,3}+\tilde{J}_{i+1,1}\frac{\partial\rho}{\partial T}, \\
 J_{i,1+k}=\tilde{J}_{i+1,3+k}+\tilde{J}_{i+1,1}\frac{\partial\rho}{\partial Y_k},\,\,\, k=1,2,\ldots,{N_{spec}}
 $$
+
 For $P=const$ density is a dependent variable, calculated based on
 the ideal gas equation of state:
+
 $$
 \rho=\frac{P}{R T\sum_{k=1}^{N_{spec}}\frac{Y_k}{W_k}}
 $$
+
 The partial derivaties of density with respect to the independent variables are computed as
+
 $$
 \frac{\partial\rho}{\partial P} = \frac{\rho}{P},\,\,\, \frac{\partial\rho}{\partial T} =-\frac{\rho}{T},\,\,\,
 \frac{\partial\rho}{\partial Y_k}=-\frac{\rho W}{W_k}.
@@ -335,7 +383,7 @@ atol_newton=1e-12
 rtol_newton=1e-6
 tol_time=1e-6
 
-$exec --inputsPath=$inputs --tol-time=$tol_time --atol-newton=$atol_newton --rtol-newton=$rtol_newton --dtmin=$dtmin --max-newton-iterations=$max_newton_iterations --output_frequency=$save --dtmax=$dtmax --tend=$tend --max-time-iterations=$max_time_iterations
+@exec --inputsPath=@inputs --tol-time=@tol_time --atol-newton=@atol_newton --rtol-newton=@rtol_newton --dtmin=@dtmin --max-newton-iterations=@max_newton_iterations --output_frequency=@save --dtmax=@dtmax --tend=@tend --max-time-iterations=@max_time_iterations
 ````
 
 In the above bash script the "inputs" variables is the path to where the inputs files are located in this case (\verb|TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0|). In this directory, the gas reaction mechanism is defined in "chem.inp" and the thermal properties in "therm.dat". Additionally, "sample.dat" contains the initial conditions for the simulation.
@@ -357,9 +405,9 @@ where MF\_SPECIES1 respresents the mass fraction of species \#1, and so forth. F
 
 
 
-![Temperature and $CH_4$, $O_2$, $CO$ mass fraction](Figures/gri3.0_OneSample/TempMassFraction2.jpg)
+![Temperature and $CH_4$, $O_2$, $CO$ mass fraction](src/markdown/Figures/gri3.0_OneSample/TempMassFraction2.jpg)
 
-![Temperature and $OH$, $H$, $H2$ mass fraction](Figures/gri3.0_OneSample/TempMassFraction3.jpg)
+![Temperature and $OH$, $H$, $H2$ mass fraction](src/markdown/Figures/gri3.0_OneSample/TempMassFraction3.jpg)
 
 The ignition delay time values based on the two alternative computations discussed above are $1.100791$s and $1.100854$s, respectively. The scripts to setup and run this example and the jupyter-notebook used to create these figures can be found under "TCHEM_INSTALL_PATH/example/runs/gri3.0_IgnitionZeroD".
 
@@ -369,7 +417,7 @@ The following figure shows the ignition delay time as a function of the initial 
 
 We also provide a jupyter-notebook to produce the sample file "sample.dat" and to generate the figure presented above.
 
-![Ignition Delta time](Figures/gri3.0_IgnDelay/Gri3IgnDelayTime.jpg)
+![Ignition Delta time](src/markdown/Figures/gri3.0_IgnDelay/Gri3IgnDelayTime.jpg)
 Figure. Ignition delay times [s] at P=1 atm for several CH$_4$/air equivalence ratio $\phi$ and initial temperature values. Results are based on the GRI-Mech v3.0 kinetic model.
 
 
@@ -384,14 +432,14 @@ The data produced by this example is located at "TCHEM_INSTALL_PATH/example/runs
 The following figures show ignition delay times results for the conditions specified above. These figures were generated with the jupyter notebook shared in the results directory.
 
 
-![Ignition delay time (s) of isooctane at 10 atm](Figures/isoOctane/TempvsEquiRatio900IsoOctane10atm.jpg)
+![Ignition delay time (s) of isooctane at 10 atm](src/markdown/Figures/isoOctane/TempvsEquiRatio900IsoOctane10atm.jpg)
 Figure.  Ignition delay times [s] at 10atm for several equivalence ratio (vertical axes) and temperature (hori- zontal axes) values for iso-Octane/air mixtures
 
-![Ignition delay time (s) of isooctane at 16 atm](Figures/isoOctane/TempvsEquiRatio900IsoOctane16atm.jpg)
+![Ignition delay time (s) of isooctane at 16 atm](src/markdown/Figures/isoOctane/TempvsEquiRatio900IsoOctane16atm.jpg)
 Figure.  Ignition delay times [s] at  16atm  for several equivalence ratio (vertical axes) and temperature (hori- zontal axes) values for iso-Octane/air mixtures
 
-![Ignition delay time (s) of isooctane at 34 atm](Figures/isoOctane/TempvsEquiRatio900IsoOctane34atm.jpg)
+![Ignition delay time (s) of isooctane at 34 atm](src/markdown/Figures/isoOctane/TempvsEquiRatio900IsoOctane34atm.jpg)
 Figure.  Ignition delay times [s] at  34atm  for several equivalence ratio (vertical axes) and temperature (hori- zontal axes) values for iso-Octane/air mixtures
 
-![Ignition delay time (s) of isooctane at 45 atm](Figures/isoOctane/TempvsEquiRatio900IsoOctane45atm.jpg)
+![Ignition delay time (s) of isooctane at 45 atm](src/markdown/Figures/isoOctane/TempvsEquiRatio900IsoOctane45atm.jpg)
 Figure.  Ignition delay times [s] at  45 atm  for several equivalence ratio (vertical axes) and temperature (hori- zontal axes) values for iso-Octane/air mixtures

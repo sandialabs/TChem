@@ -192,10 +192,10 @@ export LAPACKE_INSTALL_PATH=/where/you/install/lapacke
 Clone Kokkos, Tines and TChem repositories.
 
 ```
-git clone https://github.com/sandialabs/TChem.git ${TCHEM_REPOSITORY_PATH};
-git clone https://github.com/kokkos/kokkos.git ${KOKKOS_REPOSITORY_PATH};
-git clone https://github.com/sandialabs/Tines.git ${TINES_REPOSITORY_PATH};
-git clone https://github.com/google/googletest.git ${GTEST_REPOSITORY_PATH}
+git clone https://github.com/sandialabs/TChem.git @{TCHEM_REPOSITORY_PATH};
+git clone https://github.com/kokkos/kokkos.git @{KOKKOS_REPOSITORY_PATH};
+git clone https://github.com/sandialabs/Tines.git @{TINES_REPOSITORY_PATH};
+git clone https://github.com/google/googletest.git @{GTEST_REPOSITORY_PATH}
 ```
 
 Here, we compile and install the TPLs separately; then, compile TChem against those installed TPLs.
@@ -208,27 +208,27 @@ Here, we compile and install the TPLs separately; then, compile TChem against th
 
 #### 2.2.1\. Kokkos
 
-This example build Kokkos on Intel Sandybridge architectures and install it to ``${KOKKOS_INSTALL_PATH}``. For more details, see [Kokkos github pages](https://github.com/kokkos/kokkos).
+This example build Kokkos on Intel Sandybridge architectures and install it to ``@{KOKKOS_INSTALL_PATH}``. For more details, see [Kokkos github pages](https://github.com/kokkos/kokkos).
 
 ```
-cd ${KOKKOS_BUILD_PATH}
+cd @{KOKKOS_BUILD_PATH}
 cmake \
-    -D CMAKE_INSTALL_PREFIX="${KOKKOS_INSTALL_PATH}" \
-    -D CMAKE_CXX_COMPILER="${CXX}"  \
+    -D CMAKE_INSTALL_PREFIX="@{KOKKOS_INSTALL_PATH}" \
+    -D CMAKE_CXX_COMPILER="@{CXX}"  \
     -D Kokkos_ENABLE_SERIAL=ON \
     -D Kokkos_ENABLE_OPENMP=ON \
     -D Kokkos_ENABLE_DEPRECATED_CODE=OFF \
     -D Kokkos_ARCH_SNB=ON \
-    ${KOKKOS_REPOSITORY_PATH}
+    @{KOKKOS_REPOSITORY_PATH}
 make -j install
 ```
 
 To compile for NVIDIA GPUs, one can customize the following cmake script. Note that we use Kokkos ``nvcc_wrapper`` as its compiler. The architecture flag indicates that the host architecture is Intel SandyBridge and the GPU architecture is Volta 70 generation. With Kokkko 3.1, the CUDA architecture flag is optional (the script automatically detects a correct CUDA arch flag).
 ```
-cd ${KOKKOS_BUILD_PATH}
+cd @{KOKKOS_BUILD_PATH}
 cmake \
-    -D CMAKE_INSTALL_PREFIX="${KOKKOS_INSTALL_PATH}" \
-    -D CMAKE_CXX_COMPILER="${KOKKOS_REPOSITORY_PATH}/bin/nvcc_wrapper"  \
+    -D CMAKE_INSTALL_PREFIX="@{KOKKOS_INSTALL_PATH}" \
+    -D CMAKE_CXX_COMPILER="@{KOKKOS_REPOSITORY_PATH}/bin/nvcc_wrapper"  \
     -D Kokkos_ENABLE_SERIAL=ON \
     -D Kokkos_ENABLE_OPENMP=ON \
     -D Kokkos_ENABLE_CUDA:BOOL=ON \
@@ -237,7 +237,7 @@ cmake \
     -D Kokkos_ENABLE_DEPRECATED_CODE=OFF \
     -D Kokkos_ARCH_VOLTA70=ON \
     -D Kokkos_ARCH_SNB=ON \
-    ${KOKKOS_REPOSITORY_PATH}
+    @{KOKKOS_REPOSITORY_PATH}
 make -j install
 ```
 
@@ -245,26 +245,26 @@ make -j install
 
 #### 2.2.2\. Tines
 
-Compiling Tines follows Kokkos configuration of which information is available at ``${KOKKOS_INSTALL_PATH}``. The openblas and lapacke libraries are required on a host device providing an optimized version of dense linear algebra library. With an Intel compiler, one can replace these libraries with Intel MKL by adding an option ``TCHEM_ENABLE_MKL=ON`` instead of using openblas and lapacke. On Mac OSX, we use the openblas library managed by **macports**. This version of openblas has different header names and we need to distinguish this version of the code from others which are typically used in linux distributions. To discern the two version of the code, cmake looks for ``cblas_openblas.h`` to tell that the installed version is from MacPort. This mechanism can be broken if MacPort openblas is changed later. The macport openblas version include lapacke interface and one can remove ``LAPACKE_INSTALL_PATH`` from the configure script. Tines also include SACADO (cite Eric P paper).
+Compiling Tines follows Kokkos configuration of which information is available at ``@{KOKKOS_INSTALL_PATH}``. The openblas and lapacke libraries are required on a host device providing an optimized version of dense linear algebra library. With an Intel compiler, one can replace these libraries with Intel MKL by adding an option ``TCHEM_ENABLE_MKL=ON`` instead of using openblas and lapacke. On Mac OSX, we use the openblas library managed by **macports**. This version of openblas has different header names and we need to distinguish this version of the code from others which are typically used in linux distributions. To discern the two version of the code, cmake looks for ``cblas_openblas.h`` to tell that the installed version is from MacPort. This mechanism can be broken if MacPort openblas is changed later. The macport openblas version include lapacke interface and one can remove ``LAPACKE_INSTALL_PATH`` from the configure script. Tines also include SACADO (cite Eric P paper).
 
 ```
 cmake \
-    -D CMAKE_INSTALL_PREFIX=${TINES_INSTALL_PATH} \
-    -D CMAKE_CXX_COMPILER="${CXX}" \
+    -D CMAKE_INSTALL_PREFIX=@{TINES_INSTALL_PATH} \
+    -D CMAKE_CXX_COMPILER="@{CXX}" \
     -D CMAKE_CXX_FLAGS="-g" \
     -D TINES_ENABLE_DEBUG=OFF \
     -D TINES_ENABLE_VERBOSE=OFF \
     -D TINES_ENABLE_TEST=ON \
     -D TINES_ENABLE_EXAMPLE=ON \
-    -D KOKKOS_INSTALL_PATH="${HOME}/Work/lib/kokkos/install/butter/release" \
-    -D GTEST_INSTALL_PATH="${HOME}/Work/lib/gtest/install/butter/release" \
-    -D OPENBLAS_INSTALL_PATH="${OPENBLAS_INSTALL_PATH}" \
-    -D LAPACKE_INSTALL_PATH="${LAPACKE_INSTALL_PATH}" \
-    ${TINES_REPOSITORY_PATH}/src
+    -D KOKKOS_INSTALL_PATH="@{HOME}/Work/lib/kokkos/install/butter/release" \
+    -D GTEST_INSTALL_PATH="@{HOME}/Work/lib/gtest/install/butter/release" \
+    -D OPENBLAS_INSTALL_PATH="@{OPENBLAS_INSTALL_PATH}" \
+    -D LAPACKE_INSTALL_PATH="@{LAPACKE_INSTALL_PATH}" \
+    @{TINES_REPOSITORY_PATH}/src
 make -j install
 ```
 
-For GPUs, the compiler is changed with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX_COMPILER="${KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper"``.
+For GPUs, the compiler is changed with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX_COMPILER="@{KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper"``.
 
 <a name="gtest"></a>
 
@@ -273,11 +273,11 @@ For GPUs, the compiler is changed with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX
 We use GTEST as our testing infrastructure. With the following cmake script, the GTEST can be compiled and installed.
 
 ```
-cd ${GTEST_BUILD_PATH}
+cd @{GTEST_BUILD_PATH}
 cmake \
-    -D CMAKE_INSTALL_PREFIX="${GTEST_INSTALL_PATH}" \
-    -D CMAKE_CXX_COMPILER="${CXX}"  \
-    ${GTEST_REPOSITORY_PATH}
+    -D CMAKE_INSTALL_PREFIX="@{GTEST_INSTALL_PATH}" \
+    -D CMAKE_CXX_COMPILER="@{CXX}"  \
+    @{GTEST_REPOSITORY_PATH}
 make -j install
 ```
 
@@ -287,21 +287,21 @@ make -j install
 
 The following example cmake script compiles TChem on host linking with the libraries described in the above e.g., kokkos, tines, gtest and openblas.
 ```
-cd ${TCHEM_BUILD_PATH}
+cd @{TCHEM_BUILD_PATH}
 cmake \
-    -D CMAKE_INSTALL_PREFIX="${TCHEM_INSTALL_PATH}" \
-    -D CMAKE_CXX_COMPILER="${CXX}" \
+    -D CMAKE_INSTALL_PREFIX="@{TCHEM_INSTALL_PATH}" \
+    -D CMAKE_CXX_COMPILER="@{CXX}" \
     -D CMAKE_BUILD_TYPE=RELEASE \
     -D TCHEM_ENABLE_VERBOSE=OFF \
     -D TCHEM_ENABLE_TEST=ON \
     -D TCHEM_ENABLE_EXAMPLE=ON \
-    -D KOKKOS_INSTALL_PATH="${KOKKOS_INSTALL_PATH}" \
-    -D TINES_INSTALL_PATH="${TINES_INSTALL_PATH}" \
-    -D GTEST_INSTALL_PATH="${GTEST_INSTALL_PATH}" \
-    ${TCHEM_REPOSITORY_PATH}/src
+    -D KOKKOS_INSTALL_PATH="@{KOKKOS_INSTALL_PATH}" \
+    -D TINES_INSTALL_PATH="@{TINES_INSTALL_PATH}" \
+    -D GTEST_INSTALL_PATH="@{GTEST_INSTALL_PATH}" \
+    @{TCHEM_REPOSITORY_PATH}/src
 make -j install
 ```
-For GPUs, we can use the above cmake script replacing the compiler with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX_COMPILER="${KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper"``.
+For GPUs, we can use the above cmake script replacing the compiler with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX_COMPILER="@{KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper"``.
 <a name="inputfiles"></a>
 
 ## 3\. Input Files
@@ -385,14 +385,20 @@ We first present conversion formulas and the gas-phase equation of state, follow
 ### 4.1\. Mass-Molar Conversions
 
 The molar mass of the mixture, <img src="src/markdown/svgs/84c95f91a742c9ceb460a83f9b5090bf.svg?invert_in_darkmode" align=middle width=17.80826024999999pt height=22.465723500000017pt/> is computed as
+
 <p align="center"><img src="src/markdown/svgs/15bbefd6fe070a46e39f5f2ca587ed7d.svg?invert_in_darkmode" align=middle width=268.17991035pt height=59.1786591pt/></p>
+
 where <img src="src/markdown/svgs/1a35cf75b6c416e1e4a2b594e79040e6.svg?invert_in_darkmode" align=middle width=20.88478094999999pt height=22.465723500000017pt/> and <img src="src/markdown/svgs/e0a50ae47e22e126ee04c138a9fc9abe.svg?invert_in_darkmode" align=middle width=16.80942944999999pt height=22.465723500000017pt/> are the mole and mass fractions, respectively, of species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/>, and <img src="src/markdown/svgs/b09bc86177601e586d14fb48ca4cb31d.svg?invert_in_darkmode" align=middle width=22.79116289999999pt height=22.465723500000017pt/> is the molecular weight of species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/>. Mass and mole fractions can be computed from each other as
+
 <p align="center"><img src="src/markdown/svgs/9e95c5a8ca5130aad552b63e4d7d342f.svg?invert_in_darkmode" align=middle width=232.75112024999999pt height=16.438356pt/></p>
+
 The the molar concentration of species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/> is given by <img src="src/markdown/svgs/854ee57c45dfe5541364c526c63fc0c7.svg?invert_in_darkmode" align=middle width=177.94164629999997pt height=24.65753399999998pt/>, and the molar concentration of the mixture is given by
+
 <p align="center"><img src="src/markdown/svgs/cbfe59f451914a48a7d1311e40487eeb.svg?invert_in_darkmode" align=middle width=112.8186543pt height=49.96363845pt/></p>
 
 
 For problems that include heterogenous chemistry, the site fractions <img src="src/markdown/svgs/3173677423a86e28caa6d954dbc490ff.svg?invert_in_darkmode" align=middle width=18.487510799999992pt height=22.465723500000017pt/> describe the composition of species on the surface. The number of surface phases is denoted by <img src="src/markdown/svgs/a90dab66c08841e0f3f61e4042f7733a.svg?invert_in_darkmode" align=middle width=47.25194264999998pt height=22.465723500000017pt/> and the site fractions are normalized with respect to each phase.
+
 <p align="center"><img src="src/markdown/svgs/c57c890612dc428007654e0f248e3dae.svg?invert_in_darkmode" align=middle width=255.29248635000002pt height=52.2439797pt/></p>
 
 Here, <img src="src/markdown/svgs/939bfcf9c5e0a4fc239ac72428ac42d7.svg?invert_in_darkmode" align=middle width=38.30018609999999pt height=22.465723500000017pt/> is the number of species on surface phase <img src="src/markdown/svgs/55a049b8f161ae7cfeb0197d75aff967.svg?invert_in_darkmode" align=middle width=9.86687624999999pt height=14.15524440000002pt/>. TChem currently handles <img src="src/markdown/svgs/034d0a6be0424bffe9a6e7ac9236c0f5.svg?invert_in_darkmode" align=middle width=8.219209349999991pt height=21.18721440000001pt/> surface phase only, <img src="src/markdown/svgs/3b38266cee9b3164990cb71d4d23bd70.svg?invert_in_darkmode" align=middle width=78.21064844999998pt height=22.465723500000017pt/>. The surface concentration of surface species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/> is given by
@@ -407,7 +413,9 @@ where <img src="src/markdown/svgs/9458db33d70635758e0914dac4a04f2f.svg?invert_in
 ### 4.2\. Equation of State    
 
 The ideal gas equation of state is used throughout the library,
+
 <p align="center"><img src="src/markdown/svgs/4a6ed8460192dc853d7841074495a0c7.svg?invert_in_darkmode" align=middle width=510.58399589999993pt height=59.1786591pt/></p>
+
 where <img src="src/markdown/svgs/df5a289587a2f0247a5b97c1e8ac58ca.svg?invert_in_darkmode" align=middle width=12.83677559999999pt height=22.465723500000017pt/> is the thermodynamic pressure, <img src="src/markdown/svgs/84c95f91a742c9ceb460a83f9b5090bf.svg?invert_in_darkmode" align=middle width=17.80826024999999pt height=22.465723500000017pt/> and <img src="src/markdown/svgs/b09bc86177601e586d14fb48ca4cb31d.svg?invert_in_darkmode" align=middle width=22.79116289999999pt height=22.465723500000017pt/> are the molecular weights of the mixture and of species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/>, respectively, <img src="src/markdown/svgs/2f118ee06d05f3c2d98361d9c30e38ce.svg?invert_in_darkmode" align=middle width=11.889314249999991pt height=22.465723500000017pt/> is the temperature, and <img src="src/markdown/svgs/607980980b21998a867d017baf966d07.svg?invert_in_darkmode" align=middle width=19.08890444999999pt height=22.731165599999983pt/> is the molar concentration of species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/>.
 
 
@@ -416,32 +424,51 @@ where <img src="src/markdown/svgs/df5a289587a2f0247a5b97c1e8ac58ca.svg?invert_in
 ### 4.3\. Gas-Phase Properties
 
 The standard-state thermodynamic properties for a thermally perfect gas are computed based on NASA polynomials \cite{McBride:1993}. The molar heat capacity at constant pressure for species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/> is computed as
+
 <p align="center"><img src="src/markdown/svgs/9e1bdc871221c59e0d0e089c5c10b9a6.svg?invert_in_darkmode" align=middle width=359.59422674999996pt height=33.62942055pt/></p>
+
 where <img src="src/markdown/svgs/1e438235ef9ec72fc51ac5025516017c.svg?invert_in_darkmode" align=middle width=12.60847334999999pt height=22.465723500000017pt/> the universal gas constant. The molar enthalpy is computed as
+
 <p align="center"><img src="src/markdown/svgs/631987758e054abec9f4bfbf32d108ca.svg?invert_in_darkmode" align=middle width=635.7452095499999pt height=42.79493295pt/></p>
 
 The molar entropy is given by
+
 <p align="center"><img src="src/markdown/svgs/7d5884aeae96235ea7240df02bc3207c.svg?invert_in_darkmode" align=middle width=625.6138844999999pt height=42.79493295pt/></p>
+
 The temperature units are Kelvin in the polynomial expressions above. Other thermodynamics properties are computed based on the polynomial fits above. The molar heat capacity at constant volume <img src="src/markdown/svgs/966dfb743557c8028b07ceaffee38676.svg?invert_in_darkmode" align=middle width=29.907271349999988pt height=22.465723500000017pt/>, the internal energy <img src="src/markdown/svgs/4a5617bf7bfc59a2c01ea4f011dbc8d0.svg?invert_in_darkmode" align=middle width=18.48976799999999pt height=22.465723500000017pt/>, and the Gibbs free energy <img src="src/markdown/svgs/243ff7a534430724ea3bec1ed658c741.svg?invert_in_darkmode" align=middle width=20.190673799999992pt height=22.465723500000017pt/>:
+
 <p align="center"><img src="src/markdown/svgs/62f4549a7d43bae530b2e4900457745a.svg?invert_in_darkmode" align=middle width=367.8139179pt height=18.905967299999997pt/></p>
 
 The mixture properties in molar units are given by
+
 <p align="center"><img src="src/markdown/svgs/cd175e30e5375f7a0712fedd7f396d3e.svg?invert_in_darkmode" align=middle width=535.3380747pt height=49.96363845pt/></p>
+
 where <img src="src/markdown/svgs/1a35cf75b6c416e1e4a2b594e79040e6.svg?invert_in_darkmode" align=middle width=20.88478094999999pt height=22.465723500000017pt/> the mole fraction of species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/>. The entropy and Gibbs free energy for species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/> account for the entropy of mixing and thermodynamic pressure
+
 <p align="center"><img src="src/markdown/svgs/9e9459b17ace4c7311b355cc0844f724.svg?invert_in_darkmode" align=middle width=307.148622pt height=36.09514755pt/></p>
+
 The mixture values for these properties are computed as above
+
 <p align="center"><img src="src/markdown/svgs/0b97fdedec9e3b81bcd7b36e74c3455e.svg?invert_in_darkmode" align=middle width=238.01177894999998pt height=49.96363845pt/></p>
 
 The specific thermodynamic properties in mass units are obtained by dividing the above expression by the species molecular weight, <img src="src/markdown/svgs/b09bc86177601e586d14fb48ca4cb31d.svg?invert_in_darkmode" align=middle width=22.79116289999999pt height=22.465723500000017pt/>,
+
 <p align="center"><img src="src/markdown/svgs/cfaafb368aad9f061dc8cd9d7de657c7.svg?invert_in_darkmode" align=middle width=659.78253165pt height=18.905967299999997pt/></p>
+
 and
+
 <p align="center"><img src="src/markdown/svgs/565d218ec44f03073f47d33fb1bc89ab.svg?invert_in_darkmode" align=middle width=193.10518754999998pt height=16.438356pt/></p>
+
 For the thermodynamic properties in mass units the mixture properties are given by
+
 <p align="center"><img src="src/markdown/svgs/fcf5b27f967e9d70adfae49a1956e74a.svg?invert_in_darkmode" align=middle width=716.2883739pt height=49.96363845pt/></p>
+
 where <img src="src/markdown/svgs/e0a50ae47e22e126ee04c138a9fc9abe.svg?invert_in_darkmode" align=middle width=16.80942944999999pt height=22.465723500000017pt/> the mass fraction of species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/>.
 
 The mixture properties in mass units can also be evaluated from the equivalent molar properties as
+
 <p align="center"><img src="src/markdown/svgs/607e40189eac71b30f6dbf57c6c5b447.svg?invert_in_darkmode" align=middle width=512.4719984999999pt height=17.031940199999998pt/></p>
+
 where <img src="src/markdown/svgs/84c95f91a742c9ceb460a83f9b5090bf.svg?invert_in_darkmode" align=middle width=17.80826024999999pt height=22.465723500000017pt/> is the molecular weight of the mixture.
 <a name="examples"></a>
 
@@ -475,7 +502,9 @@ In this chapter we present reaction rate expressions for gas-phase reactions in 
 ### 5.1\. [Gas-Phase Chemistry](#cxx-api-ReactionRates)
 
 The production rate for species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/> in molar units is written as
+
 <p align="center"><img src="src/markdown/svgs/e13aa4c27397b9f67cb186705363f6b3.svg?invert_in_darkmode" align=middle width=235.62922514999997pt height=47.988758399999995pt/></p>
+
 where <img src="src/markdown/svgs/83f96341b70056c1342f4e593867bf19.svg?invert_in_darkmode" align=middle width=38.90714519999999pt height=22.465723500000017pt/> is the number of reactions and <img src="src/markdown/svgs/8d69b56f74dd3aa880ae9044c2b9ef61.svg?invert_in_darkmode" align=middle width=20.03720234999999pt height=24.7161288pt/> and <img src="src/markdown/svgs/0e34d813eb8572232bb709f72638f649.svg?invert_in_darkmode" align=middle width=20.03720234999999pt height=24.7161288pt/> are the stoichiometric coefficients of species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/> in reaction <img src="src/markdown/svgs/77a3b857d53fb44e33b53e4c8b68351a.svg?invert_in_darkmode" align=middle width=5.663225699999989pt height=21.68300969999999pt/> for the reactant and product side of the reaction, respectively. The rate-of-progress of reaction <img src="src/markdown/svgs/77a3b857d53fb44e33b53e4c8b68351a.svg?invert_in_darkmode" align=middle width=5.663225699999989pt height=21.68300969999999pt/> is <img src="src/markdown/svgs/d2009378d3ea828d5c4239c244cb6b3d.svg?invert_in_darkmode" align=middle width=67.43927849999999pt height=22.465723500000017pt/>, with
 
 <img src="src/markdown/svgs/e680843a73d5214f63af89c487342755.svg?invert_in_darkmode" align=middle width=13.30617584999999pt height=22.465723500000017pt/>|Reaction Type
@@ -486,6 +515,7 @@ where <img src="src/markdown/svgs/83f96341b70056c1342f4e593867bf19.svg?invert_in
 <img src="src/markdown/svgs/7691c53f9aa1213707a59ead5607e1cc.svg?invert_in_darkmode" align=middle width=53.01827685pt height=27.77565449999998pt/> | chemically activated bimolecular reactions
 
 and
+
 <p align="center"><img src="src/markdown/svgs/e731ad6c99fdbf568493d486b38bcf0d.svg?invert_in_darkmode" align=middle width=241.56291225pt height=51.82436325pt/></p>
 
 The above expressions are detailed below.
@@ -495,11 +525,17 @@ The above expressions are detailed below.
 #### 5.1.1\. Forward and Reverse Rate Constants
 
 The forward rate constant has typically an Arrhenius expression,
+
 <p align="center"><img src="src/markdown/svgs/d3b0c006aae01017a67a2471e77eb110.svg?invert_in_darkmode" align=middle width=190.97296845pt height=39.452455349999994pt/></p>
+
 where <img src="src/markdown/svgs/4ebf880807deff5796460f39aea46f80.svg?invert_in_darkmode" align=middle width=16.97969789999999pt height=22.465723500000017pt/>, <img src="src/markdown/svgs/3d13090ef3ed1448f3c4dc166d06ab4d.svg?invert_in_darkmode" align=middle width=13.948864049999989pt height=22.831056599999986pt/>, and <img src="src/markdown/svgs/97790d793f190b3b985b582fea9ceb20.svg?invert_in_darkmode" align=middle width=16.78561829999999pt height=22.465723500000017pt/> are the pre-exponential factor, temperature exponent, and activation energy, respectively, for reaction <img src="src/markdown/svgs/77a3b857d53fb44e33b53e4c8b68351a.svg?invert_in_darkmode" align=middle width=5.663225699999989pt height=21.68300969999999pt/>. For reactions with reverse Arrhenius parameters specified, the reverse rate constant <img src="src/markdown/svgs/d99ec1601508d72f39e8f229c0784c89.svg?invert_in_darkmode" align=middle width=20.488092899999987pt height=22.831056599999986pt/> is computed similar to <img src="src/markdown/svgs/c401619f66d3a4a96392fe1c60a5e6ed.svg?invert_in_darkmode" align=middle width=21.73055114999999pt height=22.831056599999986pt/>. If the reverse Arrhenius parameters are not specified, <img src="src/markdown/svgs/d99ec1601508d72f39e8f229c0784c89.svg?invert_in_darkmode" align=middle width=20.488092899999987pt height=22.831056599999986pt/> is computed as
+
 <p align="center"><img src="src/markdown/svgs/900a2560791ec74560b5de36b95f985b.svg?invert_in_darkmode" align=middle width=104.6960574pt height=17.8538118pt/></p>
+
 where <img src="src/markdown/svgs/402a64748a7c548103e8a6157b535764.svg?invert_in_darkmode" align=middle width=25.308656999999986pt height=22.465723500000017pt/> is the equilibrium constant (in concentration units) for reaction <img src="src/markdown/svgs/77a3b857d53fb44e33b53e4c8b68351a.svg?invert_in_darkmode" align=middle width=5.663225699999989pt height=21.68300969999999pt/>
+
 <p align="center"><img src="src/markdown/svgs/1182793fd8c0d5cf203436e2b98a19a9.svg?invert_in_darkmode" align=middle width=492.43297455pt height=59.1786591pt/></p>
+
 When computing the equilibrium constant, the atmospheric pressure, <img src="src/markdown/svgs/6619f6364c444f53aaaeb589c503980d.svg?invert_in_darkmode" align=middle width=65.27339939999999pt height=22.465723500000017pt/>atm, and the universal gas constant <img src="src/markdown/svgs/1e438235ef9ec72fc51ac5025516017c.svg?invert_in_darkmode" align=middle width=12.60847334999999pt height=22.465723500000017pt/> are converted to cgs units, dynes/cm<img src="src/markdown/svgs/e18b24c87a7c52fd294215d16b42a437.svg?invert_in_darkmode" align=middle width=6.5525476499999895pt height=26.76175259999998pt/> and erg/(mol.K), respectively.
 
 Note: If a reaction is irreversible, <img src="src/markdown/svgs/7f87b958a998866226cc01233172402e.svg?invert_in_darkmode" align=middle width=45.97403579999999pt height=22.831056599999986pt/>.
@@ -512,6 +548,7 @@ If the expression "+M" is present in the reaction string, some of the species mi
 
 
 <p align="center"><img src="src/markdown/svgs/d87720ec5bd4c339560b90876020eeb3.svg?invert_in_darkmode" align=middle width=121.08558330000001pt height=51.82436325pt/></p>
+
 where <img src="src/markdown/svgs/8175b4b012861c57d7f99a503fdcaa72.svg?invert_in_darkmode" align=middle width=21.27105584999999pt height=14.15524440000002pt/> is the efficiency of species <img src="src/markdown/svgs/36b5afebdba34564d884d347484ac0c7.svg?invert_in_darkmode" align=middle width=7.710416999999989pt height=21.68300969999999pt/> in reaction <img src="src/markdown/svgs/77a3b857d53fb44e33b53e4c8b68351a.svg?invert_in_darkmode" align=middle width=5.663225699999989pt height=21.68300969999999pt/> and <img src="src/markdown/svgs/0983467432bb3b4f9708f334be19484b.svg?invert_in_darkmode" align=middle width=17.92738529999999pt height=22.731165599999983pt/> is the concentration of species <img src="src/markdown/svgs/36b5afebdba34564d884d347484ac0c7.svg?invert_in_darkmode" align=middle width=7.710416999999989pt height=21.68300969999999pt/>. <img src="src/markdown/svgs/8175b4b012861c57d7f99a503fdcaa72.svg?invert_in_darkmode" align=middle width=21.27105584999999pt height=14.15524440000002pt/> coefficients are set to 1 unless specified in the kinetic model description.
 
 <a name="pressure-dependentreactions"></a>
@@ -531,17 +568,26 @@ The following expressions are employed to compute the <img src="src/markdown/svg
 <img src="src/markdown/svgs/e7c6f613d22ebb4044633031821c56e2.svg?invert_in_darkmode" align=middle width=224.14090379999993pt height=35.5436301pt/> | SRI reaction
 
 * For the Troe form, <img src="src/markdown/svgs/dc3da706b6c446fa1688c99721a8004b.svg?invert_in_darkmode" align=middle width=35.774184599999984pt height=22.465723500000017pt/>, <img src="src/markdown/svgs/53d147e7f3fe6e47ee05b88b166bd3f6.svg?invert_in_darkmode" align=middle width=12.32879834999999pt height=22.465723500000017pt/>, and <img src="src/markdown/svgs/61e84f854bc6258d4108d08d4c4a0852.svg?invert_in_darkmode" align=middle width=13.29340979999999pt height=22.465723500000017pt/> are
+
 <p align="center"><img src="src/markdown/svgs/103d55e68b9a670bd7dabe5f14c12b76.svg?invert_in_darkmode" align=middle width=454.85663354999997pt height=39.452455349999994pt/></p>
+
 <p align="center"><img src="src/markdown/svgs/f4f27006386e8ea611bad44a2da0fd14.svg?invert_in_darkmode" align=middle width=606.28904985pt height=15.43376505pt/></p>
+
 Parameters <img src="src/markdown/svgs/44bc9d542a92714cac84e01cbbb7fd61.svg?invert_in_darkmode" align=middle width=8.68915409999999pt height=14.15524440000002pt/>, <img src="src/markdown/svgs/f53bd91c343fed10d5c829d244104c4d.svg?invert_in_darkmode" align=middle width=32.09489414999999pt height=22.63846199999998pt/>, <img src="src/markdown/svgs/e8d7ad864665e4937272cf42ee61b3de.svg?invert_in_darkmode" align=middle width=18.62450534999999pt height=22.63846199999998pt/>, and <img src="src/markdown/svgs/a0f611fb7f1a79d56d386bd563021941.svg?invert_in_darkmode" align=middle width=25.359699749999994pt height=22.63846199999998pt/> are provided (in this order) in the kinetic model description for each Troe-type reaction. If <img src="src/markdown/svgs/a0f611fb7f1a79d56d386bd563021941.svg?invert_in_darkmode" align=middle width=25.359699749999994pt height=22.63846199999998pt/> is omitted, only the first two terms are used to compute <img src="src/markdown/svgs/dc3da706b6c446fa1688c99721a8004b.svg?invert_in_darkmode" align=middle width=35.774184599999984pt height=22.465723500000017pt/>.
 * For the SRI form exponent <img src="src/markdown/svgs/cbfb1b2a33b28eab8a3e59464768e810.svg?invert_in_darkmode" align=middle width=14.908688849999992pt height=22.465723500000017pt/> is computed as
+
 <p align="center"><img src="src/markdown/svgs/c3ba58a2116b314428261bf36e9116b5.svg?invert_in_darkmode" align=middle width=196.82641439999998pt height=42.80407395pt/></p>
+
 Parameters <img src="src/markdown/svgs/44bc9d542a92714cac84e01cbbb7fd61.svg?invert_in_darkmode" align=middle width=8.68915409999999pt height=14.15524440000002pt/>, <img src="src/markdown/svgs/4bdc8d9bcfb35e1c9bfb51fc69687dfc.svg?invert_in_darkmode" align=middle width=7.054796099999991pt height=22.831056599999986pt/>, <img src="src/markdown/svgs/3e18a4a28fdee1744e5e3f79d13b9ff6.svg?invert_in_darkmode" align=middle width=7.11380504999999pt height=14.15524440000002pt/>, <img src="src/markdown/svgs/2103f85b8b1477f430fc407cad462224.svg?invert_in_darkmode" align=middle width=8.55596444999999pt height=22.831056599999986pt/>, and <img src="src/markdown/svgs/8cd34385ed61aca950a6b06d09fb50ac.svg?invert_in_darkmode" align=middle width=7.654137149999991pt height=14.15524440000002pt/> are provided in the kinetic model description for each SRI-type reaction. If <img src="src/markdown/svgs/2103f85b8b1477f430fc407cad462224.svg?invert_in_darkmode" align=middle width=8.55596444999999pt height=22.831056599999986pt/> and <img src="src/markdown/svgs/8cd34385ed61aca950a6b06d09fb50ac.svg?invert_in_darkmode" align=middle width=7.654137149999991pt height=14.15524440000002pt/> are omitted, these parameters are set to <img src="src/markdown/svgs/4cfe92e893a7541f68473ecb08419237.svg?invert_in_darkmode" align=middle width=38.69280359999998pt height=22.831056599999986pt/> and <img src="src/markdown/svgs/a959dddbf8d19a8a7e96404006dc8941.svg?invert_in_darkmode" align=middle width=37.79097794999999pt height=21.18721440000001pt/>.
 
 Miller~\cite{PLOGprinceton} has developed an alternative expression for the pressure dependence for pressure fall-off reactions that cannot be fitted with a single Arrhenius rate expression. This approach employs linear interpolation of <img src="src/markdown/svgs/9ed7bbf06bf98221bc2cbe38991f9f8a.svg?invert_in_darkmode" align=middle width=45.70312064999999pt height=22.831056599999986pt/> as a function of pressure for reaction <img src="src/markdown/svgs/77a3b857d53fb44e33b53e4c8b68351a.svg?invert_in_darkmode" align=middle width=5.663225699999989pt height=21.68300969999999pt/> as follows
+
 <p align="center"><img src="src/markdown/svgs/309712647dd768282d52b8dd39b58e39.svg?invert_in_darkmode" align=middle width=492.30777915pt height=41.6135775pt/></p>
+
 Here, <img src="src/markdown/svgs/365a2e8e2120634e7f4a962f13a3acac.svg?invert_in_darkmode" align=middle width=225.82180829999996pt height=37.80850590000001pt/> is the Arrhenius rate corresponding to pressure <img src="src/markdown/svgs/c59566c48fcebc8309e5140360f10c00.svg?invert_in_darkmode" align=middle width=12.49435604999999pt height=14.15524440000002pt/>. For <img src="src/markdown/svgs/fefb7c0bcbb6c76c07b05834d0106b0d.svg?invert_in_darkmode" align=middle width=45.01131029999999pt height=17.723762100000005pt/> the Arrhenius rate is set to <img src="src/markdown/svgs/21663a2f28e9f47c55377a9395652923.svg?invert_in_darkmode" align=middle width=76.65731039999999pt height=22.831056599999986pt/>, and similar for <img src="src/markdown/svgs/86f1d37bd3330b95361d54e5c11db386.svg?invert_in_darkmode" align=middle width=53.256447749999985pt height=17.723762100000005pt/> where <img src="src/markdown/svgs/3bf9c1fe4273ed003fd49e744378a5ac.svg?invert_in_darkmode" align=middle width=17.85866609999999pt height=22.465723500000017pt/> is the number of pressures for which the Arrhenius factors are provided, for reaction <img src="src/markdown/svgs/77a3b857d53fb44e33b53e4c8b68351a.svg?invert_in_darkmode" align=middle width=5.663225699999989pt height=21.68300969999999pt/>. This formulation can be combined with 3<img src="src/markdown/svgs/a8306226788e6b4f1c4e0e15bb3b0120.svg?invert_in_darkmode" align=middle width=12.39732779999999pt height=27.91243950000002pt/> body information, e.g. <img src="src/markdown/svgs/a5dda47c08c32d1164e21afd3abdd059.svg?invert_in_darkmode" align=middle width=52.51947854999999pt height=22.731165599999983pt/>. For PLOG reactions for which there are multiple PLOG entries for each pressure value, the forward rate constants are evaluated as
+
 <p align="center"><img src="src/markdown/svgs/280943022dbad51a4baf31c4d0a1a165.svg?invert_in_darkmode" align=middle width=272.72186204999997pt height=52.40844344999999pt/></p>
+
 where <img src="src/markdown/svgs/585ac9d79cca22956fc68f669c65228a.svg?invert_in_darkmode" align=middle width=94.54797659999998pt height=22.465723500000017pt/> is the index for the entries corresponding to pressure <img src="src/markdown/svgs/c59566c48fcebc8309e5140360f10c00.svg?invert_in_darkmode" align=middle width=12.49435604999999pt height=14.15524440000002pt/>.
 
 <a name="noteonunitsfornetproductionrates"></a>
@@ -635,23 +681,39 @@ For solving a stiff time ODEs, a time step size is limited by a stability condit
 #### 6.1.1\. TrBDF2
 
 For example, we consider a following system of time Ordinary Differential Equations (ODEs).
+
 <p align="center"><img src="src/markdown/svgs/9cb6870639f4f8d4b71c445b605f53a5.svg?invert_in_darkmode" align=middle width=96.28770359999999pt height=33.81208709999999pt/></p>
+
 As its name states, the method advances the solution from <img src="src/markdown/svgs/ec9b770ea2cbdbac68a649eb61dc4a33.svg?invert_in_darkmode" align=middle width=14.06212004999999pt height=20.221802699999984pt/> to an intermediate time <img src="src/markdown/svgs/3abdd595ccbe5b3eef81089fede47357.svg?invert_in_darkmode" align=middle width=118.53961514999999pt height=22.465723500000017pt/> by applying the Trapezoidal rule.
+
 <p align="center"><img src="src/markdown/svgs/a5fd4aa9e45e5866babfe2736b61748e.svg?invert_in_darkmode" align=middle width=233.40216734999998pt height=33.62942055pt/></p>
+
 Next, it uses BDF2 to march the solution from <img src="src/markdown/svgs/5b625c0326733d4bfe04746b6e14c83c.svg?invert_in_darkmode" align=middle width=31.766240549999992pt height=20.221802699999984pt/> to <img src="src/markdown/svgs/360b4a8d967ba9ef8f3bfcd5fb238d4c.svg?invert_in_darkmode" align=middle width=108.05557289999999pt height=22.465723500000017pt/> as follows.
+
 <p align="center"><img src="src/markdown/svgs/f4d2281e9236da3cc558a8d0cd5580ee.svg?invert_in_darkmode" align=middle width=373.4322504pt height=39.887022449999996pt/></p>
+
 We solve the above non-linear equations iteratively using the Newton method. The Newton equation of the first Trapezoidal step is described:
+
 <p align="center"><img src="src/markdown/svgs/d4c05753fd1972a3aaef1d8590200dbd.svg?invert_in_darkmode" align=middle width=446.23266104999993pt height=49.315569599999996pt/></p>  
+
 Then, the Newton equation of the BDF2 is described as follows.
+
 <p align="center"><img src="src/markdown/svgs/5ea417b3c0dd47c67d057f174c943f25.svg?invert_in_darkmode" align=middle width=649.4946743999999pt height=49.315569599999996pt/></p>
+
 Here, we denote a Jacobian as <img src="src/markdown/svgs/41540fafb1b5307e6a02b1596472aac6.svg?invert_in_darkmode" align=middle width=74.83060199999998pt height=30.648287999999997pt/>. The modified Jacobian's used for solving the Newton equations of the above Trapezoidal rule and the BDF2 are given as follows
+
 <p align="center"><img src="src/markdown/svgs/f29d4c818562bc4d8f98705142861f02.svg?invert_in_darkmode" align=middle width=354.22853234999997pt height=36.82577085pt/></p>
+
 while their right hand sides are defined as
+
 <p align="center"><img src="src/markdown/svgs/14e37c6fd5e3a7d1638340bffa0ae040.svg?invert_in_darkmode" align=middle width=709.0713316499999pt height=40.11819404999999pt/></p>
+
 In this way, a Newton solver can iteratively solves a problem <img src="src/markdown/svgs/e817263b5d8000d92c3d75f9b138d689.svg?invert_in_darkmode" align=middle width=103.03098299999998pt height=24.65753399999998pt/> with updating <img src="src/markdown/svgs/dfd306741f702522fe4be9ab852cf496.svg?invert_in_darkmode" align=middle width=61.45168094999998pt height=22.831056599999986pt/>.
 
 The timestep size <img src="src/markdown/svgs/5a63739e01952f6a63389340c037ae29.svg?invert_in_darkmode" align=middle width=19.634768999999988pt height=22.465723500000017pt/> can be adapted within a range <img src="src/markdown/svgs/1718bcb245ae52092c84f5c0b9f52c0d.svg?invert_in_darkmode" align=middle width=111.69601079999997pt height=24.65753399999998pt/> using a local error estimator.
+
 <p align="center"><img src="src/markdown/svgs/e8a12459baaa129b1feb968f0b2f54db.svg?invert_in_darkmode" align=middle width=597.2284923pt height=40.11819404999999pt/></p>
+
 This error is minimized when using a <img src="src/markdown/svgs/c8c3d28144b9e3c06c085c71e94ebb14.svg?invert_in_darkmode" align=middle width=81.56977454999999pt height=28.511366399999982pt/>.
 
 
@@ -660,9 +722,13 @@ This error is minimized when using a <img src="src/markdown/svgs/c8c3d28144b9e3c
 #### 6.1.2\. Timestep Adaptivity
 
 TChem uses weighted root-mean-square (WRMS) norms evaluating the estimated error. This approach is used in [Sundial package](https://computing.llnl.gov/sites/default/files/public/ida_guide.pdf). A weighting factor is computed as
+
 <p align="center"><img src="src/markdown/svgs/3d93f99936f691f29b73c5c8cc342258.svg?invert_in_darkmode" align=middle width=179.18859584999998pt height=16.438356pt/></p>
+
 and the normalized error norm is computed as follows.
+
 <p align="center"><img src="src/markdown/svgs/298b6d7d16c82457035c96b10fc45e09.svg?invert_in_darkmode" align=middle width=215.89134270000002pt height=49.315569599999996pt/></p>
+
 This error norm close to 1 is considered as *small* and we increase the time step size and if the error norm is bigger than 10, the time step size decreases by half.
 
 <a name="interfacetotimeintegrator"></a>
@@ -1022,7 +1088,7 @@ atol_newton=1e-12
 rtol_newton=1e-6
 tol_time=1e-6
 
-$exec --inputsPath=$inputs --tol-time=$tol_time --atol-newton=$atol_newton --rtol-newton=$rtol_newton --dtmin=$dtmin --max-newton-iterations=$max_newton_iterations --output_frequency=$save --dtmax=$dtmax --tend=$tend --max-time-iterations=$max_time_iterations
+@exec --inputsPath=@inputs --tol-time=@tol_time --atol-newton=@atol_newton --rtol-newton=@rtol_newton --dtmin=@dtmin --max-newton-iterations=@max_newton_iterations --output_frequency=@save --dtmax=@dtmax --tend=@tend --max-time-iterations=@max_time_iterations
 ````
 
 In the above bash script the "inputs" variables is the path to where the inputs files are located in this case (\verb|TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0|). In this directory, the gas reaction mechanism is defined in "chem.inp" and the thermal properties in "therm.dat". Additionally, "sample.dat" contains the initial conditions for the simulation.
@@ -1098,12 +1164,15 @@ The equations for the species mass fractions <img src="src/markdown/svgs/e0a50ae
 
 
 * ***Species equation***
+
 <p align="center"><img src="src/markdown/svgs/f958c3f6ddcee774168d7f634bb7fd4e.svg?invert_in_darkmode" align=middle width=363.26803755pt height=48.95906565pt/></p>
 
 * ***Energy equation***
+
 <p align="center"><img src="src/markdown/svgs/f5eb6315ee2e883d5ee40be1b8ce94e2.svg?invert_in_darkmode" align=middle width=345.32119709999995pt height=48.95906565pt/></p>
 
 * ***Momentum equation***
+
 <p align="center"><img src="src/markdown/svgs/33b9874dd5ee6953d5178354cf563cdf.svg?invert_in_darkmode" align=middle width=393.39680159999995pt height=48.95906565pt/></p>
 
 Where <img src="src/markdown/svgs/17f34be523c24e1ff998fbbaa5d02877.svg?invert_in_darkmode" align=middle width=73.42301669999999pt height=42.44901869999998pt/> and <img src="src/markdown/svgs/03eff197f88c9fadf7abb66be563a57d.svg?invert_in_darkmode" align=middle width=87.64174649999998pt height=24.575218800000012pt/>.
@@ -1115,6 +1184,7 @@ Where <img src="src/markdown/svgs/17f34be523c24e1ff998fbbaa5d02877.svg?invert_in
 where <img src="src/markdown/svgs/17f34be523c24e1ff998fbbaa5d02877.svg?invert_in_darkmode" align=middle width=73.42301669999999pt height=42.44901869999998pt/>, <img src="src/markdown/svgs/03eff197f88c9fadf7abb66be563a57d.svg?invert_in_darkmode" align=middle width=87.64174649999998pt height=24.575218800000012pt/>, <img src="src/markdown/svgs/e17a12c6a00d025727994e7274e45bda.svg?invert_in_darkmode" align=middle width=18.203450099999987pt height=22.465723500000017pt/> is the surface area, <img src="src/markdown/svgs/646ee7344b9ac741f33d392811137c62.svg?invert_in_darkmode" align=middle width=17.01109574999999pt height=22.465723500000017pt/>' is the surface chemistry parameter. In the equations above <img src="src/markdown/svgs/f9298376b5e06f5cb827bee6dbb2ddc6.svg?invert_in_darkmode" align=middle width=14.97150929999999pt height=21.95701200000001pt/> represents the surface chemistry production rate for a gas-phase species <img src="src/markdown/svgs/63bb9849783d01d91403bc9a5fea12a2.svg?invert_in_darkmode" align=middle width=9.075367949999992pt height=22.831056599999986pt/>.
 
 * ***Algebraic constraint***
+
 <p align="center"><img src="src/markdown/svgs/b9cdc3e4cd25484a7fada4f17a3c75f2.svg?invert_in_darkmode" align=middle width=291.67293705pt height=14.611878599999999pt/></p>
 
 Here <img src="src/markdown/svgs/a3be6c1dfffdf48fdac5347cf58d0e51.svg?invert_in_darkmode" align=middle width=38.30018609999999pt height=22.465723500000017pt/> represent all surface species.
@@ -1201,8 +1271,8 @@ Description:
 The following shell script sets the input parameters and runs the PFR example
 
 ```
-exec=$TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
-inputs=$TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
+exec=@TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
+inputs=@TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
 Area=0.00053
 Pcat=0.025977239243415308
 dzmin=1e-12
@@ -1217,7 +1287,7 @@ save=1
 transient_initial_condition=false
 initial_condition=true
 
-$exec --prefixPath=$inputs --initial_condition=$initial_condition --transient_initial_condition=$transient_initial_condition --Area=$Area  --Pcat=$Pcat --tol-z=$tol_z --atol-newton=$atol_newton --rtol-newton=$rtol_newton --dzmin=$dzmin --max-newton-iterations=$max_newton_iterations --output_frequency=$save --dzmax=$dzmax --zend=$zend --max-time-iterations=$max_z_iterations
+@exec --prefixPath=@inputs --initial_condition=@initial_condition --transient_initial_condition=@transient_initial_condition --Area=@Area  --Pcat=@Pcat --tol-z=@tol_z --atol-newton=@atol_newton --rtol-newton=@rtol_newton --dzmin=@dzmin --max-newton-iterations=@max_newton_iterations --output_frequency=@save --dzmax=@dzmax --zend=@zend --max-time-iterations=@max_z_iterations
 ```
 
 We ran the example  in the install directory "TCHEM_INSTALL_PATH/example/runs/PlugFlowReactor/CH4-PTnogas". Thus, all the paths are relative to this directory. This script will run the executable "TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x" with the input files located at "TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/". These files correspond to the gas-phase and surface reaction mechanisms ("chem.inp" and "chemSurf.inp") and their corresponding thermo files ("therm.dat" and "thermSurf.dat").  The operating condition at the inlet of the reactor, i.e. the gas composition, in "sample.dat", and the initial guess for the site fractions, in "inputSurf.dat", are also required. The format and description of these files are presented in [Section](#inputfiles). The gas velocity at the inlet is provided in "inputVelocity.dat".
@@ -1263,18 +1333,18 @@ These samples correspond to combination of values for the molar fraction of  <im
 The bash script to run this problem is :
 
 ````
-exec=$TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
+exec=@TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
 use_prefixPath=false
-inputs=$TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
+inputs=@TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
 inputs_conditions=inputs/
 
-chemfile=$inputs"chem.inp"
-thermfile=$inputs"therm.dat"
-chemSurffile=$inputs"chemSurf.inp"
-thermSurffile=$inputs"thermSurf.dat"
-samplefile=$inputs_conditions"sample.dat"
-inputSurffile=$inputs_conditions"inputSurf.dat"
-inputVelocityfile=$inputs_conditions"inputVelocity.dat"
+chemfile=@inputs"chem.inp"
+thermfile=@inputs"therm.dat"
+chemSurffile=@inputs"chemSurf.inp"
+thermSurffile=@inputs"thermSurf.dat"
+samplefile=@inputs_conditions"sample.dat"
+inputSurffile=@inputs_conditions"inputSurf.dat"
+inputVelocityfile=@inputs_conditions"inputVelocity.dat"
 
 save=1
 dzmin=1e-12
@@ -1290,7 +1360,7 @@ Pcat=0.025977239243415308
 transient_initial_condition=true
 initial_condition=false
 
-$exec --use_prefixPath=$use_prefixPath --chemfile=$chemfile --thermfile=$thermfile --chemSurffile=$chemSurffile --thermSurffile=$thermSurffile --samplefile=$samplefile --inputSurffile=$inputSurffile --inputVelocityfile=$inputVelocityfile --initial_condition=$initial_condition --transient_initial_condition=$transient_initial_condition --Area=$Area  --Pcat=$Pcat --tol-z=$tol_z --atol-newton=$atol_newton --rtol-newton=$rtol_newton --dzmin=$dzmin --max-newton-iterations=$max_newton_iterations --output_frequency=$save --dzmax=$dzmax --zend=$zend --max-time-iterations=$max_z_iterations
+@exec --use_prefixPath=@use_prefixPath --chemfile=@chemfile --thermfile=@thermfile --chemSurffile=@chemSurffile --thermSurffile=@thermSurffile --samplefile=@samplefile --inputSurffile=@inputSurffile --inputVelocityfile=@inputVelocityfile --initial_condition=@initial_condition --transient_initial_condition=@transient_initial_condition --Area=@Area  --Pcat=@Pcat --tol-z=@tol_z --atol-newton=@atol_newton --rtol-newton=@rtol_newton --dzmin=@dzmin --max-newton-iterations=@max_newton_iterations --output_frequency=@save --dzmax=@dzmax --zend=@zend --max-time-iterations=@max_z_iterations
 ````
 
 In the above script we did not use a prefix path ("use_prefixPath=false") instead we provided the name of the inputs files: "chemfile", "thermfile",  "chemSurffile", "thermSurffile", "samplefile", "inputSurffile", "inputVelocityfile". The files for the reaction mechanism ("chem.inp" and "chemSurf.inp") and the thermo files ("therm.dat" and "thermSurf.dat") are located under "TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/". The files with the inlet conditions ("sample.dat", "inputSurf.dat" and"inputVelocity.dat") are located in the "input" directory, located under the run directory. One can set a different path for the input files with the command-line option "use_prefixPath". Additionally, one can also use the option "transient_initial_condition=true", to activate the transient solver to find initial condition for the [PFR](#initialconditionforpfrproblem).

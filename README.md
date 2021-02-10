@@ -192,10 +192,10 @@ export LAPACKE_INSTALL_PATH=/where/you/install/lapacke
 Clone Kokkos, Tines and TChem repositories.
 
 ```
-git clone https://github.com/sandialabs/TChem.git @{TCHEM_REPOSITORY_PATH};
-git clone https://github.com/kokkos/kokkos.git @{KOKKOS_REPOSITORY_PATH};
-git clone https://github.com/sandialabs/Tines.git @{TINES_REPOSITORY_PATH};
-git clone https://github.com/google/googletest.git @{GTEST_REPOSITORY_PATH}
+git clone https://github.com/sandialabs/TChem.git ${TCHEM_REPOSITORY_PATH};
+git clone https://github.com/kokkos/kokkos.git ${KOKKOS_REPOSITORY_PATH};
+git clone https://github.com/sandialabs/Tines.git ${TINES_REPOSITORY_PATH};
+git clone https://github.com/google/googletest.git ${GTEST_REPOSITORY_PATH}
 ```
 
 Here, we compile and install the TPLs separately; then, compile TChem against those installed TPLs.
@@ -208,27 +208,27 @@ Here, we compile and install the TPLs separately; then, compile TChem against th
 
 #### 2.2.1\. Kokkos
 
-This example build Kokkos on Intel Sandybridge architectures and install it to ``@{KOKKOS_INSTALL_PATH}``. For more details, see [Kokkos github pages](https://github.com/kokkos/kokkos).
+This example build Kokkos on Intel Sandybridge architectures and install it to ``${KOKKOS_INSTALL_PATH}``. For more details, see [Kokkos github pages](https://github.com/kokkos/kokkos).
 
 ```
-cd @{KOKKOS_BUILD_PATH}
+cd ${KOKKOS_BUILD_PATH}
 cmake \
-    -D CMAKE_INSTALL_PREFIX="@{KOKKOS_INSTALL_PATH}" \
-    -D CMAKE_CXX_COMPILER="@{CXX}"  \
+    -D CMAKE_INSTALL_PREFIX="${KOKKOS_INSTALL_PATH}" \
+    -D CMAKE_CXX_COMPILER="${CXX}"  \
     -D Kokkos_ENABLE_SERIAL=ON \
     -D Kokkos_ENABLE_OPENMP=ON \
     -D Kokkos_ENABLE_DEPRECATED_CODE=OFF \
     -D Kokkos_ARCH_SNB=ON \
-    @{KOKKOS_REPOSITORY_PATH}
+    ${KOKKOS_REPOSITORY_PATH}
 make -j install
 ```
 
 To compile for NVIDIA GPUs, one can customize the following cmake script. Note that we use Kokkos ``nvcc_wrapper`` as its compiler. The architecture flag indicates that the host architecture is Intel SandyBridge and the GPU architecture is Volta 70 generation. With Kokkko 3.1, the CUDA architecture flag is optional (the script automatically detects a correct CUDA arch flag).
 ```
-cd @{KOKKOS_BUILD_PATH}
+cd ${KOKKOS_BUILD_PATH}
 cmake \
-    -D CMAKE_INSTALL_PREFIX="@{KOKKOS_INSTALL_PATH}" \
-    -D CMAKE_CXX_COMPILER="@{KOKKOS_REPOSITORY_PATH}/bin/nvcc_wrapper"  \
+    -D CMAKE_INSTALL_PREFIX="${KOKKOS_INSTALL_PATH}" \
+    -D CMAKE_CXX_COMPILER="${KOKKOS_REPOSITORY_PATH}/bin/nvcc_wrapper"  \
     -D Kokkos_ENABLE_SERIAL=ON \
     -D Kokkos_ENABLE_OPENMP=ON \
     -D Kokkos_ENABLE_CUDA:BOOL=ON \
@@ -237,7 +237,7 @@ cmake \
     -D Kokkos_ENABLE_DEPRECATED_CODE=OFF \
     -D Kokkos_ARCH_VOLTA70=ON \
     -D Kokkos_ARCH_SNB=ON \
-    @{KOKKOS_REPOSITORY_PATH}
+    ${KOKKOS_REPOSITORY_PATH}
 make -j install
 ```
 
@@ -245,26 +245,26 @@ make -j install
 
 #### 2.2.2\. Tines
 
-Compiling Tines follows Kokkos configuration of which information is available at ``@{KOKKOS_INSTALL_PATH}``. The openblas and lapacke libraries are required on a host device providing an optimized version of dense linear algebra library. With an Intel compiler, one can replace these libraries with Intel MKL by adding an option ``TCHEM_ENABLE_MKL=ON`` instead of using openblas and lapacke. On Mac OSX, we use the openblas library managed by **macports**. This version of openblas has different header names and we need to distinguish this version of the code from others which are typically used in linux distributions. To discern the two version of the code, cmake looks for ``cblas_openblas.h`` to tell that the installed version is from MacPort. This mechanism can be broken if MacPort openblas is changed later. The macport openblas version include lapacke interface and one can remove ``LAPACKE_INSTALL_PATH`` from the configure script. Tines also include SACADO (cite Eric P paper).
+Compiling Tines follows Kokkos configuration of which information is available at ``${KOKKOS_INSTALL_PATH}``. The openblas and lapacke libraries are required on a host device providing an optimized version of dense linear algebra library. With an Intel compiler, one can replace these libraries with Intel MKL by adding an option ``TCHEM_ENABLE_MKL=ON`` instead of using openblas and lapacke. On Mac OSX, we use the openblas library managed by **macports**. This version of openblas has different header names and we need to distinguish this version of the code from others which are typically used in linux distributions. To discern the two version of the code, cmake looks for ``cblas_openblas.h`` to tell that the installed version is from MacPort. This mechanism can be broken if MacPort openblas is changed later. The macport openblas version include lapacke interface and one can remove ``LAPACKE_INSTALL_PATH`` from the configure script. Tines also include SACADO (cite Eric P paper).
 
 ```
 cmake \
-    -D CMAKE_INSTALL_PREFIX=@{TINES_INSTALL_PATH} \
-    -D CMAKE_CXX_COMPILER="@{CXX}" \
+    -D CMAKE_INSTALL_PREFIX=${TINES_INSTALL_PATH} \
+    -D CMAKE_CXX_COMPILER="${CXX}" \
     -D CMAKE_CXX_FLAGS="-g" \
     -D TINES_ENABLE_DEBUG=OFF \
     -D TINES_ENABLE_VERBOSE=OFF \
     -D TINES_ENABLE_TEST=ON \
     -D TINES_ENABLE_EXAMPLE=ON \
-    -D KOKKOS_INSTALL_PATH="@{HOME}/Work/lib/kokkos/install/butter/release" \
-    -D GTEST_INSTALL_PATH="@{HOME}/Work/lib/gtest/install/butter/release" \
-    -D OPENBLAS_INSTALL_PATH="@{OPENBLAS_INSTALL_PATH}" \
-    -D LAPACKE_INSTALL_PATH="@{LAPACKE_INSTALL_PATH}" \
-    @{TINES_REPOSITORY_PATH}/src
+    -D KOKKOS_INSTALL_PATH="${HOME}/Work/lib/kokkos/install/butter/release" \
+    -D GTEST_INSTALL_PATH="${HOME}/Work/lib/gtest/install/butter/release" \
+    -D OPENBLAS_INSTALL_PATH="${OPENBLAS_INSTALL_PATH}" \
+    -D LAPACKE_INSTALL_PATH="${LAPACKE_INSTALL_PATH}" \
+    ${TINES_REPOSITORY_PATH}/src
 make -j install
 ```
 
-For GPUs, the compiler is changed with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX_COMPILER="@{KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper"``.
+For GPUs, the compiler is changed with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX_COMPILER="${KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper"``.
 
 <a name="gtest"></a>
 
@@ -273,11 +273,11 @@ For GPUs, the compiler is changed with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX
 We use GTEST as our testing infrastructure. With the following cmake script, the GTEST can be compiled and installed.
 
 ```
-cd @{GTEST_BUILD_PATH}
+cd ${GTEST_BUILD_PATH}
 cmake \
-    -D CMAKE_INSTALL_PREFIX="@{GTEST_INSTALL_PATH}" \
-    -D CMAKE_CXX_COMPILER="@{CXX}"  \
-    @{GTEST_REPOSITORY_PATH}
+    -D CMAKE_INSTALL_PREFIX="${GTEST_INSTALL_PATH}" \
+    -D CMAKE_CXX_COMPILER="${CXX}"  \
+    ${GTEST_REPOSITORY_PATH}
 make -j install
 ```
 
@@ -287,21 +287,21 @@ make -j install
 
 The following example cmake script compiles TChem on host linking with the libraries described in the above e.g., kokkos, tines, gtest and openblas.
 ```
-cd @{TCHEM_BUILD_PATH}
+cd ${TCHEM_BUILD_PATH}
 cmake \
-    -D CMAKE_INSTALL_PREFIX="@{TCHEM_INSTALL_PATH}" \
-    -D CMAKE_CXX_COMPILER="@{CXX}" \
+    -D CMAKE_INSTALL_PREFIX="${TCHEM_INSTALL_PATH}" \
+    -D CMAKE_CXX_COMPILER="${CXX}" \
     -D CMAKE_BUILD_TYPE=RELEASE \
     -D TCHEM_ENABLE_VERBOSE=OFF \
     -D TCHEM_ENABLE_TEST=ON \
     -D TCHEM_ENABLE_EXAMPLE=ON \
-    -D KOKKOS_INSTALL_PATH="@{KOKKOS_INSTALL_PATH}" \
-    -D TINES_INSTALL_PATH="@{TINES_INSTALL_PATH}" \
-    -D GTEST_INSTALL_PATH="@{GTEST_INSTALL_PATH}" \
-    @{TCHEM_REPOSITORY_PATH}/src
+    -D KOKKOS_INSTALL_PATH="${KOKKOS_INSTALL_PATH}" \
+    -D TINES_INSTALL_PATH="${TINES_INSTALL_PATH}" \
+    -D GTEST_INSTALL_PATH="${GTEST_INSTALL_PATH}" \
+    ${TCHEM_REPOSITORY_PATH}/src
 make -j install
 ```
-For GPUs, we can use the above cmake script replacing the compiler with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX_COMPILER="@{KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper"``.
+For GPUs, we can use the above cmake script replacing the compiler with ``nvcc_wrapper`` by adding ``-D CMAKE_CXX_COMPILER="${KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper"``.
 <a name="inputfiles"></a>
 
 ## 3\. Input Files
@@ -1088,7 +1088,7 @@ atol_newton=1e-12
 rtol_newton=1e-6
 tol_time=1e-6
 
-@exec --inputsPath=@inputs --tol-time=@tol_time --atol-newton=@atol_newton --rtol-newton=@rtol_newton --dtmin=@dtmin --max-newton-iterations=@max_newton_iterations --output_frequency=@save --dtmax=@dtmax --tend=@tend --max-time-iterations=@max_time_iterations
+$exec --inputsPath=$inputs --tol-time=$tol_time --atol-newton=$atol_newton --rtol-newton=$rtol_newton --dtmin=$dtmin --max-newton-iterations=$max_newton_iterations --output_frequency=$save --dtmax=$dtmax --tend=$tend --max-time-iterations=$max_time_iterations
 ````
 
 In the above bash script the "inputs" variables is the path to where the inputs files are located in this case (\verb|TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0|). In this directory, the gas reaction mechanism is defined in "chem.inp" and the thermal properties in "therm.dat". Additionally, "sample.dat" contains the initial conditions for the simulation.
@@ -1271,8 +1271,8 @@ Description:
 The following shell script sets the input parameters and runs the PFR example
 
 ```
-exec=@TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
-inputs=@TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
+exec=$TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
+inputs=$TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
 Area=0.00053
 Pcat=0.025977239243415308
 dzmin=1e-12
@@ -1287,7 +1287,7 @@ save=1
 transient_initial_condition=false
 initial_condition=true
 
-@exec --prefixPath=@inputs --initial_condition=@initial_condition --transient_initial_condition=@transient_initial_condition --Area=@Area  --Pcat=@Pcat --tol-z=@tol_z --atol-newton=@atol_newton --rtol-newton=@rtol_newton --dzmin=@dzmin --max-newton-iterations=@max_newton_iterations --output_frequency=@save --dzmax=@dzmax --zend=@zend --max-time-iterations=@max_z_iterations
+$exec --prefixPath=$inputs --initial_condition=$initial_condition --transient_initial_condition=$transient_initial_condition --Area=$Area  --Pcat=$Pcat --tol-z=$tol_z --atol-newton=$atol_newton --rtol-newton=$rtol_newton --dzmin=$dzmin --max-newton-iterations=$max_newton_iterations --output_frequency=$save --dzmax=$dzmax --zend=$zend --max-time-iterations=$max_z_iterations
 ```
 
 We ran the example  in the install directory "TCHEM_INSTALL_PATH/example/runs/PlugFlowReactor/CH4-PTnogas". Thus, all the paths are relative to this directory. This script will run the executable "TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x" with the input files located at "TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/". These files correspond to the gas-phase and surface reaction mechanisms ("chem.inp" and "chemSurf.inp") and their corresponding thermo files ("therm.dat" and "thermSurf.dat").  The operating condition at the inlet of the reactor, i.e. the gas composition, in "sample.dat", and the initial guess for the site fractions, in "inputSurf.dat", are also required. The format and description of these files are presented in [Section](#inputfiles). The gas velocity at the inlet is provided in "inputVelocity.dat".
@@ -1333,18 +1333,18 @@ These samples correspond to combination of values for the molar fraction of  <im
 The bash script to run this problem is :
 
 ````
-exec=@TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
+exec=$TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
 use_prefixPath=false
-inputs=@TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
+inputs=$TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
 inputs_conditions=inputs/
 
-chemfile=@inputs"chem.inp"
-thermfile=@inputs"therm.dat"
-chemSurffile=@inputs"chemSurf.inp"
-thermSurffile=@inputs"thermSurf.dat"
-samplefile=@inputs_conditions"sample.dat"
-inputSurffile=@inputs_conditions"inputSurf.dat"
-inputVelocityfile=@inputs_conditions"inputVelocity.dat"
+chemfile=$inputs"chem.inp"
+thermfile=$inputs"therm.dat"
+chemSurffile=$inputs"chemSurf.inp"
+thermSurffile=$inputs"thermSurf.dat"
+samplefile=$inputs_conditions"sample.dat"
+inputSurffile=$inputs_conditions"inputSurf.dat"
+inputVelocityfile=$inputs_conditions"inputVelocity.dat"
 
 save=1
 dzmin=1e-12
@@ -1360,7 +1360,7 @@ Pcat=0.025977239243415308
 transient_initial_condition=true
 initial_condition=false
 
-@exec --use_prefixPath=@use_prefixPath --chemfile=@chemfile --thermfile=@thermfile --chemSurffile=@chemSurffile --thermSurffile=@thermSurffile --samplefile=@samplefile --inputSurffile=@inputSurffile --inputVelocityfile=@inputVelocityfile --initial_condition=@initial_condition --transient_initial_condition=@transient_initial_condition --Area=@Area  --Pcat=@Pcat --tol-z=@tol_z --atol-newton=@atol_newton --rtol-newton=@rtol_newton --dzmin=@dzmin --max-newton-iterations=@max_newton_iterations --output_frequency=@save --dzmax=@dzmax --zend=@zend --max-time-iterations=@max_z_iterations
+$exec --use_prefixPath=$use_prefixPath --chemfile=$chemfile --thermfile=$thermfile --chemSurffile=$chemSurffile --thermSurffile=$thermSurffile --samplefile=$samplefile --inputSurffile=$inputSurffile --inputVelocityfile=$inputVelocityfile --initial_condition=$initial_condition --transient_initial_condition=$transient_initial_condition --Area=$Area  --Pcat=$Pcat --tol-z=$tol_z --atol-newton=$atol_newton --rtol-newton=$rtol_newton --dzmin=$dzmin --max-newton-iterations=$max_newton_iterations --output_frequency=$save --dzmax=$dzmax --zend=$zend --max-time-iterations=$max_z_iterations
 ````
 
 In the above script we did not use a prefix path ("use_prefixPath=false") instead we provided the name of the inputs files: "chemfile", "thermfile",  "chemSurffile", "thermSurffile", "samplefile", "inputSurffile", "inputVelocityfile". The files for the reaction mechanism ("chem.inp" and "chemSurf.inp") and the thermo files ("therm.dat" and "thermSurf.dat") are located under "TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/". The files with the inlet conditions ("sample.dat", "inputSurf.dat" and"inputVelocity.dat") are located in the "input" directory, located under the run directory. One can set a different path for the input files with the command-line option "use_prefixPath". Additionally, one can also use the option "transient_initial_condition=true", to activate the transient solver to find initial condition for the [PFR](#initialconditionforpfrproblem).

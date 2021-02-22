@@ -16,7 +16,6 @@ IF (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   SET(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}" CACHE PATH "FOO install prefix" FORCE)
 ENDIF()
 
-SET(TCHEM_INSTALL_LIB_PATH     lib    )
 SET(TCHEM_INSTALL_INCLUDE_PATH include/tchem)
 SET(TCHEM_INSTALL_TEST_PATH    unit-test)
 SET(TCHEM_INSTALL_EXAMPLE_PATH example)
@@ -39,6 +38,9 @@ OPTION(TCHEM_ENABLE_PROBLEM_DAE_CSTR "Flag to enable DAE solver in CSTR" OFF)
 OPTION(KOKKOS_INSTALL_PATH "Path to Kokkos installation")
 OPTION(TINES_INSTALL_PATH "Path to Tines installation")
 OPTION(GTEST_INSTALL_PATH "Path to gtest installation")
+
+# option to manually set lib install path
+OPTION(TCHEM_INSTALL_LIB_PATH "Installation directory for libraries" lib)
 
 INCLUDE_DIRECTORIES(${TChem_BINARY_DIR})
 

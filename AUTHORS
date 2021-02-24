@@ -2,5 +2,6 @@ TChem Authors
 =============
 
 * v2: Kyngjoo Kim, Oscar Diaz-Ibarra, Cosmin Safta
+  + Fazle Rob also contributed to the conversion of TChem from C to C++ and the early implementation of Kokkos structures into thermodynamic and reaction rate utilities
 
 * v1: Cosmin Safta, Habib Najm, Omar Knio

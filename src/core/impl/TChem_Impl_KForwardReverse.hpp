@@ -3,8 +3,8 @@ TChem version 2.1.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
 This file is part of TChem. TChem is open-source software: you can redistribute it
@@ -142,8 +142,7 @@ struct KForwardReverse
                   {
                     ki1 = ats<RealType>::log(ki1);
                   }else{
-                    printf("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative value (high range). \n\n");
-                    exit(1);
+                    Kokkos::abort("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative value (high range)");
                   }
 
                   rpp.assign_data(&kmcd.reacPlogPars(j - 1, 0));
@@ -165,9 +164,7 @@ struct KForwardReverse
                   {
                     ki = ats<RealType>::log(ki);
                   }else{
-                    printf("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative value (low range). \n\n");
-                    printf("ki%e pressure %e\n", ki, ats<RealType>::exp(rpp(0)) );
-                    exit(1);
+                    Kokkos::abort("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative value (low range).");
                   }
 
 

@@ -1,5 +1,5 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
@@ -7,9 +7,9 @@ Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS
 Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef __TCHEM_TEST_SURF_KINETICMODEL_HPP__
 #define __TCHEM_TEST_SURF_KINETICMODEL_HPP__
 
@@ -29,13 +27,15 @@ TEST( KineticModelData, constructor ) {
   // gas phase
   /// check echo file
 
-  EXPECT_TRUE(TChem::Test::compareFiles("kmod.echo","input/X/kmod.ref.echo"));
-  EXPECT_TRUE(TChem::Test::compareFiles("kmod.list","input/X/kmod.ref.list"));
+  EXPECT_TRUE(TChem::Test::compareFiles("kmod.echo",_prefixPath+"kmod.ref.echo"));
+  EXPECT_TRUE(TChem::Test::compareFiles("kmod.list",_prefixPath+"kmod.ref.list"));
+  EXPECT_TRUE(TChem::Test::compareFiles("kmod.reactions",_prefixPath+"kmod.ref.reactions"));
 
   //surface phase
 
-  EXPECT_TRUE(TChem::Test::compareFiles("kmodSurf.echo","input/X/kmodSurf.ref.echo"));
-  EXPECT_TRUE(TChem::Test::compareFiles("kmodSurf.list","input/X/kmodSurf.ref.list"));
+  EXPECT_TRUE(TChem::Test::compareFiles("kmodSurf.echo",_prefixPath+"kmodSurf.ref.echo"));
+  EXPECT_TRUE(TChem::Test::compareFiles("kmodSurf.list",_prefixPath+"kmodSurf.ref.list"));
+  EXPECT_TRUE(TChem::Test::compareFiles("kmodSurf.reactions",_prefixPath+"kmodSurf.ref.reactions"));
 
   /// check const data operations on gas phase
   const auto kmcd_device = kmd.createConstData<TChem::     exec_space>();

@@ -13,4 +13,8 @@
 #cmakedefine TCHEM_ENABLE_TPL_KOKKOS
 #cmakedefine TCHEM_ENABLE_TPL_TINES
 
+#if defined (TINES_ENABLE_TPL_YAML)
+#define TCHEM_ENABLE_TPL_YAML_CPP
+#endif
+
 #endif

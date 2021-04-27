@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,10 +18,9 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #include "TChem_KineticModelData.hpp"
 #include "TC_kmodint.hpp"
+
 
 namespace TChem {
 
@@ -194,7 +193,7 @@ KineticModelData::allocateViews(FILE* errfile)
       ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
     reacNprod_ =
       ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
-    reacNuki_ = ordinal_type_2d_dual_view(
+    reacNuki_ = real_type_2d_dual_view(
       do_not_init_tag("KMD::reacNrp"), nReac_, maxSpecInReac_);
     reacSidx_ = ordinal_type_2d_dual_view(
       do_not_init_tag("KMD::reacNrp"), nReac_, maxSpecInReac_);
@@ -326,9 +325,9 @@ KineticModelData::allocateViews(FILE* errfile)
   ///
   /* some arrays */
   /* sum(nu) for each reaction */
-  sigNu_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::sigNu"), nReac_);
+  sigNu_ = real_type_1d_dual_view(do_not_init_tag("KMD::sigNu"), nReac_);
   NuIJ_ =
-    ordinal_type_2d_dual_view(do_not_init_tag("KMD::NuIJ"), nReac_, nSpec_);
+    real_type_2d_dual_view(do_not_init_tag("KMD::NuIJ"), nReac_, nSpec_);
   kc_coeff_ = real_type_1d_dual_view(do_not_init_tag("KMD::kc_coeff"), nReac_);
 
   if (nRealNuReac_ > 0) {
@@ -610,10 +609,7 @@ KineticModelData::initChem()
     printf("kmod.list : Error when interpreting kinetic model  !!!");
     exit(1);
   }
-
-#ifdef TCHEM_ENABLE_VERBOSE
   printf("kmod.list : %s\n", charvar4);
-#endif
 
   fscanf(chemfile, "%d", &maxSpecInReac_);
   fscanf(chemfile, "%d", &maxTbInReac_);
@@ -1030,21 +1026,21 @@ KineticModelData::initChem()
       /* Stoichiometric coefficients */
       for (int i = 0; i < nReac_; i++) {
 
-        int nusumk = 0;
+        double nusumk = 0;
         /* by default reaction has integer stoichiometric coefficients */
         reacScoefHost(i) = -1;
 
         nusumk = 0;
         for (int j = 0; j < maxSpecInReac_; j++) {
-          fscanf(chemfile, "%d", &(reacNukiHost(i, j)));
+          fscanf(chemfile, "%lf", &(reacNukiHost(i, j)));
           fscanf(chemfile, "%d", &(reacSidxHost(i, j)));
           reacSidxHost(i, j) -= 1;
           nusumk += reacNukiHost(i, j);
           /// KJ: this is not necessary
           /// reacNukiDblHost(i,j) = reacNukiHost(i,j);
         }
-        int itemp;
-        fscanf(chemfile, "%d", &itemp);
+        double itemp;
+        fscanf(chemfile, "%lf", &itemp);
         assert(itemp == nusumk);
       }
 
@@ -1067,7 +1063,7 @@ KineticModelData::initChem()
                 reacNprodHost(i));
         for (int j = 0; j < reacNreacHost(i); j++)
           fprintf(echofile,
-                  "%d*%s | ",
+                  "%lf*%s | ",
                   reacNukiHost(i, j),
                   &sNamesHost(reacSidxHost(i, j), 0));
 
@@ -1075,7 +1071,7 @@ KineticModelData::initChem()
         const int joff = maxSpecInReac_ / 2;
         for (int j = 0; j < reacNprodHost(i); j++)
           fprintf(echofile,
-                  "%d*%s | ",
+                  "%lf*%s | ",
                   reacNukiHost(i, j + joff),
                   &sNamesHost(reacSidxHost(i, j + joff), 0));
 
@@ -1174,13 +1170,26 @@ KineticModelData::initChem()
           fprintf(echofile, "High \t");
 
         if (reacPspecHost(i) < 0)
-          fprintf(echofile, "Mixture");
+          fprintf(echofile, "Mixture \n");
         if (reacPspecHost(i) >= 0)
           fprintf(echofile, "%s\n", &sNamesHost(reacPspecHost(i), 0));
       }
       DASHLINE(echofile);
 
     } /* Done if fall-off reactions */
+
+    fprintf(echofile,
+            "Reaction data : Fall off parameters \n");
+    for (int i = 0; i < nFallReac_; i++) {
+     fprintf(echofile, "%-4d\t", reacPfalHost(i) + 1);
+      for (int j = 0; j < nFallPar_; j++) {
+        fprintf(echofile, "%e \t", reacPparHost(i, j));
+      }
+      fprintf(echofile, "\n");
+    }
+    DASHLINE(echofile);
+
+
     if (verboseEnabled)
       printf("KineticModelData::initChem() : Done reading pressure-dependent "
              "reaction data\n");
@@ -1230,31 +1239,6 @@ KineticModelData::initChem()
     }
     if (verboseEnabled)
       printf("KineticModelData::initChem() : Done reading third-body data\n");
-
-    /* Reactions with real stoichiometric coefficients */
-    if (nRealNuReac_ > 0) {
-      int nRealNuReac_again;
-      fscanf(chemfile, "%d", &nRealNuReac_again);
-      assert(nRealNuReac_again == nRealNuReac_);
-
-      for (int i = 0; i < nRealNuReac_; i++) {
-        fscanf(chemfile, "%d", &(reacRnuHost(i)));
-        reacRnuHost(i) -= 1;
-        reacScoefHost(reacRnuHost(i)) = i;
-      }
-
-      /* Real stoichiometric coefficients */
-      for (int i = 0; i < nRealNuReac_; i++) {
-        double dtemp;
-        double nusumk = 0.0;
-        for (int j = 0; j < maxSpecInReac_; j++) {
-          fscanf(chemfile, "%lf", &(reacRealNukiHost(i, j)));
-          nusumk += reacRealNukiHost(i, j);
-        }
-        fscanf(chemfile, "%lf", &dtemp);
-        assert(fabs(dtemp - nusumk) < reacbalance);
-      }
-    }
 
     /* Arbitrary reaction orders */
     if (nOrdReac_ > 0) {
@@ -1323,6 +1307,7 @@ KineticModelData::initChem()
         reacPlogIdxHost(i) -= 1;
         fscanf(chemfile, "%d", &(reacPlogPnoHost(i + 1)));
         reacPlogPnoHost(i + 1) += reacPlogPnoHost(i);
+
       }
 
       /* Plog parameters */
@@ -1333,16 +1318,32 @@ KineticModelData::initChem()
         fscanf(chemfile, "%lf", &(reacPlogParsHost(i, 0)));
         reacPlogParsHost(i, 0) = log(reacPlogParsHost(i, 0));
         fscanf(chemfile, "%lf", &(reacPlogParsHost(i, 1)));
-//        reacPlogParsHost(i, 1) = log(reacPlogParsHost(i, 1));
+        // reacPlogParsHost(i, 1) = log(reacPlogParsHost(i, 1));
         fscanf(chemfile, "%lf", &(reacPlogParsHost(i, 2)));
         fscanf(chemfile, "%lf", &(reacPlogParsHost(i, 3)));
       }
+
+      fprintf(echofile,
+              "Reaction data : PLog off parameters \n");
+      for (int i = 0; i < nPlogReac_; i++) {
+       fprintf(echofile, "%-4d\t", reacPlogIdxHost(i) + 1);
+       fprintf(echofile, "%-4d\t", reacPlogPnoHost(i + 1));
+       fprintf(echofile, "\n");
+      }
+      for (int i = 0; i < reacPlogPnoHost(nPlogReac_); i++) {
+        for (size_t j = 0; j < 4; j++) {
+          fprintf(echofile, "%lf\t",reacPlogParsHost(i, j));
+        }
+        fprintf(echofile, "\n");
+      }
+
+      DASHLINE(echofile);
 
     } /* Done if nPlogReac > 0 */
 
     fclose(chemfile);
     fclose(errfile);
-    fclose(echofile);
+
 
     /* universal gas constant */
     Runiv_ = RUNIV * 1.0e3; // j/kmol/K
@@ -1361,18 +1362,7 @@ KineticModelData::initChem()
       for (int j = 0; j < reacNprodHost(i); j++)
         sigNuHost[i] += reacNukiHost(i, j + joff);
     }
-    if (nRealNuReac_ > 0) {
-      for (int ir = 0; ir < nRealNuReac_; ir++) {
-        int irR = reacRnuHost(ir);
-        /* reactants */
-        for (int j = 0; j < reacNreacHost(irR); j++)
-          sigRealNuHost(ir) += reacRealNukiHost(ir, j);
-        /* products */
-        const int joff = reacNreacHost(irR);
-        for (int j = 0; j < reacNprodHost(irR); j++)
-          sigRealNuHost(ir) += reacRealNukiHost(ir, j + joff);
-      }
-    }
+
 
     /* NuIJ=NuII''-NuIJ' */
     for (int j = 0; j < nReac_; j++) {
@@ -1391,25 +1381,6 @@ KineticModelData::initChem()
       }
     }
 
-    if (nRealNuReac_ > 0) {
-      for (int j = 0; j < nRealNuReac_; j++) {
-        /* reactants */
-        int jR = reacRnuHost(j);
-        for (int i = 0; i < reacNreacHost(jR); i++) {
-          int kspec = reacSidxHost(jR, i);
-          RealNuIJHost(j, kspec) += reacRealNukiHost(j, i);
-        }
-        /* products */
-        // indxR = j *TC_maxSpecInReac_+TC_maxSpecInReac_/2 ;  // Bugfix Cosmin
-        // 2016/12/28
-        const int ioff_j = reacNreacHost(jR);
-        const int ioff_jR = maxSpecInReac_ / 2;
-        for (int i = 0; i < reacNprodHost(jR); i++) {
-          int kspec = reacSidxHost(jR, i + ioff_jR);
-          RealNuIJHost(j, kspec) += reacRealNukiHost(j, i + ioff_j);
-        }
-      }
-    }
 
     /* Store coefficients for kc */
     for (int i = 0; i < nReac_; i++) {
@@ -1422,21 +1393,6 @@ KineticModelData::initChem()
     /* done */
     isInit_ = 1;
 
-    /* Reactions with real stoichiometric coefficients */
-    if (nRealNuReac_ > 0) {
-
-      for (int i = 0; i < nRealNuReac_; i++) {
-        fprintf(echofile, "%d\n", reacRnuHost(i));
-      }
-
-      /* Real stoichiometric coefficients */
-      for (int i = 0; i < nRealNuReac_; i++) {
-        for (int j = 0; j < maxSpecInReac_; j++) {
-          fprintf(echofile, "%f ", reacRealNukiHost(i, j));
-        }
-        fprintf(echofile, "\n");
-      }
-    }
 
     // count elements that are present in gas species
     NumberofElementsGas_ = 0;
@@ -1448,6 +1404,8 @@ KineticModelData::initChem()
         }
       }
     }
+
+    fclose(echofile);
 
     /// Raise modify flags for all modified dual views
     eNames_.modify_host();
@@ -2018,6 +1976,20 @@ KineticModelData::modifyArrheniusForwardParametersBegin() {
   reacArhenFor_.modify_host();
 }
 
+void
+KineticModelData::modifyArrheniusForwardSurfaceParametersBegin() {
+  /// back up data (soft copy and reference counting keep the memory)
+  auto reacArhenFor = TCsurf_reacArhenFor_.view_host();
+
+  /// create a new allocation and copy the content of the previous arhenius parameters
+  TCsurf_reacArhenFor_ = real_type_2d_dual_view
+    (do_not_init_tag("KMD::reacArhenFor"), reacArhenFor.extent(0), reacArhenFor.extent(1));
+  Kokkos::deep_copy(TCsurf_reacArhenFor_.view_host(), reacArhenFor);
+
+  /// raise a flag modify host so that we can transfer data to device
+  TCsurf_reacArhenFor_.modify_host();
+}
+
 real_type
 KineticModelData::getArrheniusForwardParameter(const int i, const int j) {
   TCHEM_CHECK_ERROR(i >= reacArhenFor_.view_host().extent(0),
@@ -2027,6 +1999,17 @@ KineticModelData::getArrheniusForwardParameter(const int i, const int j) {
 
   /// modify arhenius parameter
   return reacArhenFor_.view_host()(i,j);
+}
+
+real_type
+KineticModelData::getArrheniusForwardSurfaceParameter(const int i, const int j) {
+  TCHEM_CHECK_ERROR(i >= TCsurf_reacArhenFor_.view_host().extent(0),
+		    "Error: indeix i is greater than the view extent(0)");
+  TCHEM_CHECK_ERROR(j >= TCsurf_reacArhenFor_.view_host().extent(1),
+		    "Error: indeix j is greater than the view extent(1)");
+
+  /// modify arhenius parameter
+  return TCsurf_reacArhenFor_.view_host()(i,j);
 }
 
 void
@@ -2041,10 +2024,1859 @@ KineticModelData::modifyArrheniusForwardParameter(const int i, const int j, cons
 }
 
 void
+KineticModelData::modifyArrheniusForwardSurfaceParameter(const int i, const int j, const real_type value) {
+  TCHEM_CHECK_ERROR(i >= TCsurf_reacArhenFor_.view_host().extent(0),
+		    "Error: indeix i is greater than the view extent(0)");
+  TCHEM_CHECK_ERROR(j >= TCsurf_reacArhenFor_.view_host().extent(1),
+		    "Error: indeix j is greater than the view extent(1)");
+
+  /// modify arhenius parameter
+  TCsurf_reacArhenFor_.view_host()(i,j) = value;
+}
+
+void
 KineticModelData::modifyArrheniusForwardParametersEnd() {
   /// device view is now synced with the host view
   reacArhenFor_.sync_device();
 }
 
+void
+KineticModelData::modifyArrheniusForwardSurfaceParametersEnd() {
+  /// device view is now synced with the host view
+  TCsurf_reacArhenFor_.sync_device();
+}
+
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+
+KineticModelData::KineticModelData(const std::string& mechfile, const bool& hasSurface)
+{
+
+
+  YAML::Node doc = YAML::LoadFile(mechfile);
+  int countPhase(0);
+  int surfacePhaseIndex(0);
+  int gasPhaseIndex(0);
+  for (auto const& phase : doc["phases"]) {
+    if (phase["kinetics"].as<std::string>()=="surface") {
+      printf("has a surface phase\n");
+      const std::string phaseName = doc["phases"][countPhase]["name"].as<std::string>();
+      std::cout << "phase name: " << phaseName << "\n";
+      surfacePhaseIndex = countPhase;
+    } else if (phase["kinetics"].as<std::string>()=="gas"){
+      printf("has a gas phase\n");
+      const std::string phaseName = doc["phases"][countPhase]["name"].as<std::string>();
+      std::cout << "phase name: " << phaseName << "\n";
+      gasPhaseIndex = countPhase;
+
+    }
+
+    countPhase++;
+  }
+
+  initChemYaml(doc, gasPhaseIndex);
+  if (hasSurface) {
+    initChemSurfYaml(doc, surfacePhaseIndex);
+  }
+
+
+}
+
+int
+KineticModelData::initChemSurfYaml(YAML::Node& doc, const int&surfacePhaseIndex)
+{
+  #define DASHLINE(file)                                                         \
+    fprintf(file,                                                                \
+            "------------------------------------------------------------"       \
+            "-------------\n")
+
+  //
+  char charvar4[4];
+  double reacbalance;
+
+  TCsurf_maxSpecInReac_ = 0;
+  TCsurf_nNASAinter_ = 0;
+  TCsurf_nCpCoef_ = 0;
+  TCsurf_nArhPar_ = 0;
+  TCsurf_Nspec_ = 0;
+  TCsurf_Nreac_ = 0;
+  TCsurf_NcoverageFactors = 0;
+
+  FILE *chemfile, *echofile, *errfile;
+  /* Retrieve things from kmod.list */
+  echofile = fopen("kmodSurf.echo", "w");
+
+  auto eNamesHost = eNames_.view_host();
+  auto eMassHost = eMass_.view_host();
+  auto sNamesHost = sNames_.view_host();
+
+  auto species_name  = doc["phases"][surfacePhaseIndex]["species"];
+  std::string reactions = "reactions";
+
+  if (doc["phases"][surfacePhaseIndex]["reactions"]) {
+    // std::cout << "reactions: " << doc["phases"][surfacePhaseIndex]["reactions"][0] << "\n";
+    reactions = doc["phases"][surfacePhaseIndex]["reactions"][0].as<std::string>();
+  }
+  auto surface_reactions = doc[reactions];
+
+  TCsurf_Nreac_ = surface_reactions.size();
+  TCsurf_Nspec_ = species_name.size();
+
+  /* Species' name and weights */
+  TCsurf_sNames_ = string_type_1d_dual_view<LENGTHOFSPECNAME + 1>(
+    do_not_init_tag("KMD::TCsurf_sNames_"), TCsurf_Nspec_);
+  TCsurf_sMass_ = real_type_1d_dual_view(do_not_init_tag("KMD::TCsurf_sMass_"),
+                                         TCsurf_Nspec_);
+
+  /* Species' elemental composition */
+  TCsurf_elemcount_ = ordinal_type_2d_dual_view(
+    do_not_init_tag("KMD::elemCount"), TCsurf_Nspec_, nElem_);
+
+  /// Host views to read data from a file
+  auto TCsurf_sNamesHost = TCsurf_sNames_.view_host();
+  auto TCsurf_sMassHost = TCsurf_sMass_.view_host();
+  auto TCsurf_elemCountHost = TCsurf_elemcount_.view_host();
+
+   /*, no of tempfits, phase */
+  TCsurf_sTfit_ = ordinal_type_1d_dual_view(
+      do_not_init_tag("KMD::TCsurf_sTfit_"), TCsurf_Nspec_);
+  TCsurf_sPhase_ = ordinal_type_1d_dual_view(
+    do_not_init_tag("KMD::TCsurf_sPhase_"), TCsurf_Nspec_);
+
+  // surface reactions
+
+  /* Range of temperatures for thermo fits */
+  TCsurf_Tlo_ =
+    real_type_1d_dual_view(do_not_init_tag("KMD::TCsurf_Tlo_"), TCsurf_Nspec_);
+  TCsurf_Tmi_ =
+    real_type_1d_dual_view(do_not_init_tag("KMD::TCsurf_Tmi_"), TCsurf_Nspec_);
+  TCsurf_Thi_ =
+    real_type_1d_dual_view(do_not_init_tag("KMD::TCsurf_Thi_"), TCsurf_Nspec_);
+
+  /* Polynomial coeffs for thermo fits */
+  TCsurf_nNASAinter_ = 2;
+  TCsurf_nCpCoef_ = 5;
+  TCsurf_cppol_ = real_type_3d_dual_view(do_not_init_tag("KMD::TCsurf_cppol_"),
+                                       TCsurf_Nspec_,
+                                       TCsurf_nNASAinter_,
+                                       (TCsurf_nCpCoef_ + 2));
+  //
+  auto TCsurf_sTfitHost = TCsurf_sTfit_.view_host();
+  auto TCsurf_sPhaseHost = TCsurf_sPhase_.view_host();
+
+  auto TCsurf_TloHost = TCsurf_Tlo_.view_host();
+  auto TCsurf_TmiHost = TCsurf_Tmi_.view_host();
+  auto TCsurf_ThiHost = TCsurf_Thi_.view_host();
+  auto TCsurf_cppolHost = TCsurf_cppol_.view_host();
+
+  // species
+  std::map<std::string, int> surf_species_indx;
+  std::map<std::string, int> gas_species_indx;
+
+  for (int i = 0; i < nSpec_; i++) {
+      gas_species_indx.insert(std::pair<std::string, int>(&sNamesHost(i,0), i));
+  }
+
+  {
+    /* Range of temperatures for thermo fits */
+    TCsurf_TthrmMin_ = 1.e-5;
+    TCsurf_TthrmMax_ = 1.e+5;
+
+    int spi(0);
+    auto species = doc["species"];
+    for (auto const& sp : species) {
+      if (sp["name"].as<std::string>() == species_name[spi].as<std::string>())
+      {
+
+        std::string sp_name = species_name[spi].as<std::string>();
+        std::transform(sp_name.begin(),
+        sp_name.end(),sp_name.begin(), ::toupper);
+        surf_species_indx.insert(std::pair<std::string, int>(sp_name, spi));
+
+        char* specNm= &*sp_name.begin();
+        strncat(&TCsurf_sNamesHost(spi, 0), specNm, LENGTHOFSPECNAME);
+
+        auto comp = sp["composition"];
+        for (auto const& element : comp) {
+          std::string first = element.first.as<std::string>();
+          std::transform(first.begin(),
+          first.end(),first.begin(), ::toupper);
+          char* elemNm= &*first.begin();
+
+          for (int j = 0; j < nElem_; j++) {
+            if (strcmp(&eNamesHost(j, 0), elemNm) == 0) {
+              TCsurf_elemCountHost(spi, j) = element.second.as<int>() ;
+              TCsurf_sMassHost(spi) += TCsurf_elemCountHost(spi, j)*eMassHost(j);
+            }
+          }
+        }
+
+        auto temperature_ranges = sp["thermo"]["temperature-ranges"];
+        TCsurf_TloHost(spi) = temperature_ranges[0].as<double>();
+        TCsurf_TmiHost(spi) = temperature_ranges[1].as<double>();
+        TCsurf_ThiHost(spi) = temperature_ranges[2].as<double>();
+        TCsurf_TthrmMin_ = std::min(TCsurf_TthrmMin_, TCsurf_TloHost(spi));
+        TCsurf_TthrmMax_ = std::max(TCsurf_TthrmMax_, TCsurf_ThiHost(spi));
+
+        auto data = sp["thermo"]["data"];
+        for (int j = 0; j < TCsurf_nNASAinter_; j++){
+          auto dataIntervale = data[j];
+          for (int k = 0; k < TCsurf_nCpCoef_ + 2; k++)
+            TCsurf_cppolHost(spi, j, k) = dataIntervale[k].as<double>();
+        }
+
+        spi++;
+      }else{
+        std::cout << "Species Name: "<<sp["name"]<< "\n";
+      }
+
+
+    }
+
+
+  }
+
+  if (TCsurf_Nreac_ > 0) {
+    TCsurf_isRev_ = ordinal_type_1d_dual_view(
+      do_not_init_tag("KMD::TCsurf_isRev_"), TCsurf_Nreac_);
+    TCsurf_reacNrp_ = ordinal_type_1d_dual_view(
+      do_not_init_tag("KMD::TCsurf_reacNrp_"), TCsurf_Nreac_);
+    TCsurf_reacNreac_ = ordinal_type_1d_dual_view(
+      do_not_init_tag("KMD::TCsurf_reacNreac_"), TCsurf_Nreac_);
+    TCsurf_reacNprod_ = ordinal_type_1d_dual_view(
+      do_not_init_tag("KMD::TCsurf_reacNprod_"), TCsurf_Nreac_);
+    TCsurf_reacScoef_ = ordinal_type_1d_dual_view(
+      do_not_init_tag("KMD::TCsurf_reacScoef_"), TCsurf_Nreac_);
+
+  }
+
+  auto TCsurf_isRevHost = TCsurf_isRev_.view_host();
+  auto TCsurf_reacNrpHost = TCsurf_reacNrp_.view_host();
+
+  auto TCsurf_reacNreacHost = TCsurf_reacNreac_.view_host();
+  auto TCsurf_reacNprodHost = TCsurf_reacNprod_.view_host();
+
+  std::vector< std::map<std::string, real_type> > productsInfo, reactantsInfo;
+  {
+    int countReac(0);
+    TCsurf_maxSpecInReac_ = 0;
+
+    for (auto const& reaction : surface_reactions) {
+      auto equation = reaction ["equation"].as<std::string>();
+      int isRev(1);
+
+      std::map<std::string, real_type> reactants_sp, products_sp;
+        TCMI_getReactansAndProductosFromEquation(equation,
+      isRev, reactants_sp, products_sp);
+
+      TCsurf_isRevHost(countReac) = isRev;
+
+      TCsurf_reacNrpHost(countReac) = reactants_sp.size() + products_sp.size();
+      /* no of reactants only */
+      TCsurf_reacNreacHost(countReac) = reactants_sp.size();
+      /* no of products */
+      TCsurf_reacNprodHost(countReac) = products_sp.size();
+
+      //check max in reactansts
+      TCsurf_maxSpecInReac_ = TCsurf_maxSpecInReac_ > reactants_sp.size() ?
+                       TCsurf_maxSpecInReac_ : reactants_sp.size();
+
+      //check max in products
+      TCsurf_maxSpecInReac_ = TCsurf_maxSpecInReac_ > products_sp.size() ?
+                       TCsurf_maxSpecInReac_ : products_sp.size();
+
+      productsInfo.push_back(products_sp);
+      reactantsInfo.push_back(reactants_sp);
+
+      auto coverage = reaction["coverage-dependencies"];
+      if (coverage) {
+        for (auto const& sp : coverage) {
+          TCsurf_NcoverageFactors++;
+        }
+      }
+
+    countReac++;
+    }
+  }
+  //twice because we only consider max (products, reactants)
+  TCsurf_maxSpecInReac_ *=2;
+
+  //
+  if (TCsurf_Nreac_ > 0) {
+    TCsurf_reacNuki_ =
+      ordinal_type_2d_dual_view(do_not_init_tag("KMD::TCsurf_reacNuki_"),
+                                TCsurf_Nreac_,
+                                TCsurf_maxSpecInReac_);
+    TCsurf_reacSidx_ =
+      ordinal_type_2d_dual_view(do_not_init_tag("KMD::TCsurf_reacSidx_"),
+                                TCsurf_Nreac_,
+                                TCsurf_maxSpecInReac_);
+    TCsurf_reacSsrf_ =
+      ordinal_type_2d_dual_view(do_not_init_tag("KMD::TCsurf_reacSsrf_"),
+                                TCsurf_Nreac_,
+                                TCsurf_maxSpecInReac_);
+
+    TCsurf_reacArhenFor_ = real_type_2d_dual_view(
+      do_not_init_tag("KMD::TCsurf_reacArhenFor_"), TCsurf_Nreac_, 3);
+
+    TCsurf_isStick_ = ordinal_type_1d_dual_view(
+      do_not_init_tag("KMD::TCsurf_isStick_"), TCsurf_Nreac_);
+
+    TCsurf_isDup_ = ordinal_type_1d_dual_view(
+      do_not_init_tag("KMD::TCsurf_isDup_"), TCsurf_Nreac_);
+
+  //
+  /* surface coverge modification  */
+  coverageFactor_ = coverage_modification_type_1d_dual_view(
+    do_not_init_tag("KMD::coveragefactor"),TCsurf_NcoverageFactors );
+
+  }
+
+
+  auto TCsurf_reacScoefHost = TCsurf_reacScoef_.view_host();
+  auto TCsurf_reacNukiHost = TCsurf_reacNuki_.view_host();
+  auto TCsurf_reacSidxHost = TCsurf_reacSidx_.view_host();
+  auto TCsurf_reacSsrfHost = TCsurf_reacSsrf_.view_host();
+
+  auto TCsurf_reacArhenForHost = TCsurf_reacArhenFor_.view_host();
+
+  auto TCsurf_isStickHost = TCsurf_isStick_.view_host();
+  auto TCsurf_isDupHost = TCsurf_isDup_.view_host();
+
+  // /*I do not need  this on the device */
+  ordinal_type_1d_view_host TCsurf_isCovHost (
+    do_not_init_tag("KMD::TCsurf_isCov_"), TCsurf_Nreac_);
+  //
+  ordinal_type_1d_view_host TCsurf_Cov_CountHost (
+    do_not_init_tag("KMD::TCsurf_Cov_Count_"), TCsurf_Nreac_);
+
+  /* surface coverage modification  */
+  auto coverageFactorHost = coverageFactor_.view_host();
+  std::map<std::string,int>::iterator it;
+
+  /* Stoichiometric coefficients */
+for (int i = 0; i < TCsurf_Nreac_; i++) {
+
+  int nusumk = 0;
+  /* by default reaction has integer stoichiometric coefficients */
+  TCsurf_reacScoefHost(i) = -1;
+
+  int count(0);
+  auto reactants_sp = reactantsInfo[i];
+
+
+  for (auto & reac : reactants_sp)
+  {
+    // is gas ?
+    it = gas_species_indx.find(reac.first);
+    if (it != gas_species_indx.end()) {
+      // gas surface
+      TCsurf_reacSidxHost(i, count) = it->second;
+      TCsurf_reacSsrfHost(i, count) = 0; //gas species
+    } else {
+      //surface surface
+      it = surf_species_indx.find(reac.first);
+      if (it != surf_species_indx.end()) {
+        TCsurf_reacSidxHost(i, count) = it->second;
+        TCsurf_reacSsrfHost(i, count) = 1; //surface surface
+      } else {
+        printf("Yaml Surf : Error when interpreting kinetic model  !!!");
+        printf("species does not exit %s\n", reac.first.c_str() );
+        exit(1);
+      }
+    }
+
+    TCsurf_reacNukiHost(i, count) = -reac.second;
+
+    count++;
+  }
+
+  count = TCsurf_maxSpecInReac_/2;
+  auto products_sp = productsInfo[i];
+
+  for (auto & prod : products_sp)
+  {
+    TCsurf_reacNukiHost(i, count) = prod.second;
+    // is gas ?
+    it = gas_species_indx.find(prod.first);
+    if (it != gas_species_indx.end()) {
+      // gas surface
+      TCsurf_reacSidxHost(i, count) = it->second;
+      TCsurf_reacSsrfHost(i, count) = 0; //gas species
+    } else {
+      //surface surface
+      it = surf_species_indx.find(prod.first);
+      if (it != surf_species_indx.end()) {
+        TCsurf_reacSidxHost(i, count) = it->second;
+        TCsurf_reacSsrfHost(i, count) = 1; //surface surface
+      } else {
+        printf("Yaml Surf : Error when interpreting kinetic model  !!!");
+        printf("species does not exit %s\n", prod.first.c_str() );
+        exit(1);
+
+      }
+    }
+    count++;
+  }
+
+}
+
+int ireac(0);
+int count_cov(0);
+
+for (auto const& reaction : surface_reactions) {
+  //
+  std::string rate_constant_string("rate-constant");
+
+  auto stick = reaction["sticking-coefficient"];
+  if (stick)
+  {
+    rate_constant_string= "sticking-coefficient";
+    TCsurf_isStickHost(ireac) = 1;
+  }
+  auto duplicate = reaction["duplicate"];
+
+  if (duplicate)
+  {
+    if(duplicate.as<bool>()) TCsurf_isDupHost(ireac) = 1;
+  }
+
+  auto coverage = reaction["coverage-dependencies"];
+  if (coverage) {
+    TCsurf_isCovHost(ireac) = 1;
+    int countCovPerReaction(0);
+    for (auto const& sp : coverage) {
+      coverage_modification_type cov;
+      // is gas ?
+      auto sp_name = sp.first.as<std::string>();
+      std::transform(sp_name.begin(),
+      sp_name.end(),sp_name.begin(), ::toupper);
+
+      it = gas_species_indx.find(sp_name);
+      if (it != gas_species_indx.end()) {
+        cov._isgas = 1;
+      } else {
+        //surface surface
+        it = surf_species_indx.find(sp_name);
+        if (it != surf_species_indx.end()) {
+          cov._isgas = 0;
+        } else {
+            printf("Yaml Surf : Error when interpreting kinetic model  !!!");
+            printf("coverage-dependencies::species does not exit %s\n", sp_name.c_str() );
+            exit(1);
+        }
+      }
+
+      cov._species_index = it->second;
+      cov._reaction_index = ireac;
+      cov._eta = sp.second[0].as<double>();
+      cov._mu = sp.second[1].as<double>();
+
+      std::vector<std::string> items;
+      std::string delimiter = " ";
+      auto epsilonWUnits = sp.second[2].as<std::string>();
+      TCMI_parseString(epsilonWUnits, delimiter, items );
+      const double unitFactor =
+        TCMI_unitFactorActivationEnergies(items[1]);
+      cov._epsilon = std::stod(items[0])*unitFactor;
+      coverageFactorHost(count_cov) = cov;
+      count_cov++;
+      countCovPerReaction++;
+
+
+    }
+
+    TCsurf_Cov_CountHost(ireac) = countCovPerReaction;
+
+  }
+
+
+  auto rate_constant = reaction[rate_constant_string];
+  if (rate_constant)
+  {
+    const double Areac = rate_constant["A"].as<double>();
+    TCsurf_reacArhenForHost(ireac, 0) = Areac ;
+
+    const double breac = rate_constant["b"].as<double>();
+    TCsurf_reacArhenForHost(ireac, 1) = breac;
+
+    auto EareacWUnits = rate_constant["Ea"].as<std::string>();
+    std::vector<std::string> items;
+    std::string delimiter = " ";
+    TCMI_parseString(EareacWUnits, delimiter, items );
+    const double unitFactor =
+      TCMI_unitFactorActivationEnergies(items[1]);
+    const double Eareac = std::stod(items[0]);
+    TCsurf_reacArhenForHost(ireac, 2) = Eareac*unitFactor;
+
+ }
+ ireac++;
+}
+
+
+  // stoichiometric matrix only gas species
+  vski_ = ordinal_type_2d_dual_view(
+    do_not_init_tag("KMD::stoichiometric_matrix_gas"), nSpec_, TCsurf_Nreac_);
+  vsurfki_ = ordinal_type_2d_dual_view(
+    do_not_init_tag("KMD::stoichiometric_matrix_surf"),
+    TCsurf_Nspec_,
+    TCsurf_Nreac_);
+
+  /* stoichiometric matrix gas species*/
+  auto vskiHost = vski_.view_host();
+  auto vsurfkiHost = vsurfki_.view_host();
+  // vskiHost stoichiometric matrix gas species in surface reaction mechanism
+  // vsurfkiHost  stoichiometric matrix surface species in surface reaction
+  // mechanism
+  for (ordinal_type i = 0; i < TCsurf_Nreac_; i++) {
+    // reactans
+    for (ordinal_type j = 0; j < TCsurf_reacNreacHost(i); ++j) {
+      const ordinal_type kspec = TCsurf_reacSidxHost(i, j);
+      if (TCsurf_reacSsrfHost(i, j) == 0) { // only gas species
+        vskiHost(kspec, i) = TCsurf_reacNukiHost(i, j);
+      } else if (TCsurf_reacSsrfHost(i, j) == 1) { // only surface species
+        vsurfkiHost(kspec, i) = TCsurf_reacNukiHost(i, j);
+      }
+    }
+
+    const ordinal_type joff = TCsurf_maxSpecInReac_ / 2;
+    for (ordinal_type j = 0; j < TCsurf_reacNprodHost(i); ++j) {
+      const ordinal_type kspec = TCsurf_reacSidxHost(i, j + joff);
+      if (TCsurf_reacSsrfHost(i, j + joff) == 0) { // only gas species
+        vskiHost(kspec, i) = TCsurf_reacNukiHost(i, j + joff);
+      } else if (TCsurf_reacSsrfHost(i, j + joff) ==
+                 1) { // only surface species
+        vsurfkiHost(kspec, i) = TCsurf_reacNukiHost(i, j + joff);
+      }
+    }
+  }
+
+  fprintf(
+    echofile,
+    "kmodSurf.list : Max # of species in a reaction                    : %d\n",
+    TCsurf_maxSpecInReac_);
+  fprintf(
+    echofile,
+    "kmodSurf.list : # of temperature regions for thermo fits          : %d\n",
+    TCsurf_nNASAinter_);
+  fprintf(
+    echofile,
+    "kmodSurf.list : # of polynomial coefficients for thermo fits      : %d\n",
+    TCsurf_nCpCoef_);
+  // fprintf(
+  //   echofile,
+  //   "kmodSurf.list : # of Arrhenius parameters                         : %d\n",
+  //   TCsurf_nArhPar_);
+  fprintf(
+    echofile,
+    "kmodSurf.list : # of species                                      : %d\n",
+    TCsurf_Nspec_);
+  fprintf(
+    echofile,
+    "kmodSurf.list : # of reactions                                    : %d\n",
+    TCsurf_Nreac_);
+  fprintf(echofile,
+          "----------------------------------------------------------"
+          "---------------\n");
+  fflush(echofile);
+  //
+  // fscanf(chemfile, "%lf", &reacbalance);
+  // fprintf(
+  //   echofile,
+  //   "kmodSurf.list : Tolerance for reaction balance                    : %e\n",
+  //   reacbalance);
+  // fprintf(echofile,
+  //         "----------------------------------------------------------"
+  //         "---------------\n");
+  // fflush(echofile);
+
+  TCsurf_siteden_ = doc["phases"][surfacePhaseIndex]["site-density"].as<real_type>();
+  fprintf(
+    echofile,
+    "kmodSurf.list : Site density                                      : %e\n",
+    TCsurf_siteden_);
+  fprintf(echofile,
+          "----------------------------------------------------------"
+          "---------------\n");
+  fflush(echofile);
+  /* stoichiometric matrix gas species*/
+  fprintf(echofile, "No. \t Species \t Mass\n");
+  for (int i = 0; i < TCsurf_Nspec_; i++)
+    fprintf(echofile,
+            "%-3d\t%-32s\t%12.7f\n",
+            i + 1,
+            &TCsurf_sNamesHost(i, 0),
+            TCsurf_sMassHost(i));
+  DASHLINE(echofile);
+  fflush(echofile);
+
+  /* Species' elemental composition */
+
+  fprintf(echofile, "Elemental composition of species\n");
+  fprintf(echofile, "No. \t Species \t\t\t\t Element\n\t\t\t\t\t");
+
+  for (int i = 0; i < nElem_; i++)
+    fprintf(echofile, "%s\t", &eNamesHost(i, 0));
+  fprintf(echofile, "\n");
+
+  for (int i = 0; i < TCsurf_Nspec_; i++) {
+    fprintf(echofile, "%-3d\t%-32s", i + 1, &TCsurf_sNamesHost(i, 0));
+    for (int j = 0; j < nElem_; j++)
+      fprintf(echofile, "%-3d\t", TCsurf_elemCountHost(i, j));
+    fprintf(echofile, "\n");
+  }
+
+  fprintf(echofile, "Range of temperature for thermodynamic fits\n");
+  fprintf(echofile, "No. \t Species \t\t Tlow \tTmid \tThigh\n");
+  for (int i = 0; i < TCsurf_Nspec_; i++) {
+    fprintf(echofile,
+            "%-3d\t%-32s %12.4f\t%12.4f\t%12.4f\n",
+            i + 1,
+            &TCsurf_sNamesHost(i, 0),
+            TCsurf_TloHost(i),
+            TCsurf_TmiHost(i),
+            TCsurf_ThiHost(i));
+  }
+  DASHLINE(echofile);
+
+  fprintf(echofile, "List of coefficients for thermodynamic fits\n");
+
+  for (int i = 0; i < TCsurf_Nspec_; i++) {
+    const auto ptr = &TCsurf_cppolHost(i, 0, 0);
+    fprintf(echofile,
+            "%-4d %-32s\n %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n",
+            i + 1,
+            &TCsurf_sNamesHost(i, 0),
+            ptr[0],
+            ptr[1],
+            ptr[2],
+            ptr[3],
+            ptr[4],
+            ptr[5],
+            ptr[6]);
+    fprintf(echofile,
+            " %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n",
+            ptr[7],
+            ptr[8],
+            ptr[9],
+            ptr[10],
+            ptr[11],
+            ptr[12],
+            ptr[13]);
+  }
+  DASHLINE(echofile);
+  count_cov = 0; // set this value to zero to print out cov parameters in echofile
+  fprintf(echofile, "Reaction data : species and Arrhenius pars\n");
+    for (int i = 0; i < TCsurf_Nreac_; i++) {
+      fprintf(echofile,
+              "%-5d\t%1d\t%2d\t%2d | ",
+              i + 1,
+              TCsurf_isRevHost(i),
+              TCsurf_reacNreacHost(i),
+              TCsurf_reacNprodHost(i));
+      for (int j = 0; j < TCsurf_reacNreacHost(i); j++) {
+        if (TCsurf_reacSsrfHost(i, j) == 1) {
+          fprintf(echofile,
+                  "%d*%s | ",
+                  TCsurf_reacNukiHost(i, j),
+                  &TCsurf_sNamesHost(TCsurf_reacSidxHost(i, j), 0));
+        } else {
+          fprintf(echofile,
+                  "%d*%s | ",
+                  TCsurf_reacNukiHost(i, j),
+                  &sNamesHost(TCsurf_reacSidxHost(i, j), 0));
+        }
+      }
+
+      const int joff = TCsurf_maxSpecInReac_ / 2;
+
+      for (int j = 0; j < TCsurf_reacNprodHost(i); j++)
+        if (TCsurf_reacSsrfHost(i, j + joff) == 1) {
+          fprintf(echofile,
+                  "%d*%s | ",
+                  TCsurf_reacNukiHost(i, j + joff),
+                  &TCsurf_sNamesHost(TCsurf_reacSidxHost(i, j + joff), 0));
+        } else {
+          fprintf(echofile,
+                  "%d*%s | ",
+                  TCsurf_reacNukiHost(i, j + joff),
+                  &sNamesHost(TCsurf_reacSidxHost(i, j + joff), 0));
+        }
+
+      fprintf(echofile,
+              "%16.8e\t%16.8e\t%16.8e",
+              TCsurf_reacArhenForHost(i, 0),
+              TCsurf_reacArhenForHost(i, 1),
+              TCsurf_reacArhenForHost(i, 2));
+
+      if (TCsurf_isDupHost[i] == 1)
+        fprintf(echofile, "  DUPLICATE");
+      if (TCsurf_isStickHost[i] == 1)
+        fprintf(echofile, "  STICK");
+
+      if (TCsurf_isCovHost(i) == 1){
+
+        for (int  k = 0; k < TCsurf_Cov_CountHost(i); k++) {
+          fprintf(echofile, "  \n COV");
+
+          if (coverageFactorHost(count_cov)._isgas){
+            fprintf(echofile," %s\t", &sNamesHost(coverageFactorHost(count_cov)._species_index,0));
+          } else {
+            //surface species
+            fprintf(echofile," %s\t", &TCsurf_sNamesHost(coverageFactorHost(count_cov)._species_index,0));
+          }
+
+          fprintf(echofile,
+                  "%16.8e\t%16.8e\t%16.8e",
+                  coverageFactorHost(count_cov)._eta,
+                  coverageFactorHost(count_cov)._mu,
+                  coverageFactorHost(count_cov)._epsilon);
+          count_cov++;
+        }
+
+      }
+
+      fprintf(echofile, "\n");
+
+    }
+    DASHLINE(echofile);
+    if (verboseEnabled)
+      printf("KineticModelData::initChem() : Done reading reaction data\n");
+
+    fclose(chemfile);
+    fclose(errfile);
+    fclose(echofile);
+
+    /// Raise modify flags for all modified dual views
+    TCsurf_isStick_.modify_host();
+    TCsurf_isDup_.modify_host();
+    TCsurf_reacArhenFor_.modify_host();
+    TCsurf_reacNuki_.modify_host();
+    TCsurf_reacSidx_.modify_host();
+    TCsurf_reacSsrf_.modify_host();
+    TCsurf_reacNreac_.modify_host();
+    TCsurf_reacNprod_.modify_host();
+    TCsurf_reacScoef_.modify_host();
+    TCsurf_reacNrp_.modify_host();
+    TCsurf_isRev_.modify_host();
+    TCsurf_cppol_.modify_host();
+    TCsurf_Tlo_.modify_host();
+    TCsurf_Tmi_.modify_host();
+    TCsurf_Thi_.modify_host();
+    TCsurf_sCharge_.modify_host();
+    TCsurf_sTfit_.modify_host();
+    TCsurf_sPhase_.modify_host();
+    TCsurf_elemcount_.modify_host();
+    TCsurf_sMass_.modify_host();
+    TCsurf_sNames_.modify_host();
+    vski_.modify_host();
+    vsurfki_.modify_host();
+
+    coverageFactor_.modify_host();
+
+
+    syncSurfToDevice();
+
+
+  //
+  return (0);
+}
+int
+KineticModelData::initChemYaml(YAML::Node& doc, const int& gasPhaseIndex)
+{
+  #define DASHLINE(file)                                                         \
+    fprintf(file,                                                                \
+            "------------------------------------------------------------"       \
+            "-------------\n")
+
+  FILE *echofile, *errfile;
+  echofile = fopen("kmod.echo", "w");
+  errfile = fopen("kmod.err", "w");
+
+  /* zero-out variables */
+  isInit_ = 0;
+  Runiv_ = 0.0;
+  Rcal_ = 0.0;
+  Rcgs_ = 0.0;
+
+  /* integers */
+  maxSpecInReac_ = maxTbInReac_ = nNASAinter_ = nCpCoef_ = nArhPar_ = nLtPar_ =
+    0;
+  nFallPar_ = nJanPar_ = maxOrdPar_ = nFit1Par_ = 0;
+  nElem_ = nSpec_ = nReac_ = nRevReac_ = nFallReac_ = nPlogReac_ = nThbReac_ =
+    0;
+  nRealNuReac_ = nOrdReac_ = 0;
+  electrIndx_ = nIonEspec_ = nNASA9coef_ = 0;
+
+  int nLtReac_ = 0, nRltReac_ = 0, nHvReac_ = 0, nIonSpec_ = 0, nJanReac_ = 0,
+      nFit1Reac_ = 0;
+  int nExciReac_ = 0, nMomeReac_ = 0, nXsmiReac_ = 0, nTdepReac_ = 0;
+
+  /* work variables */
+  isInit_ = 0;
+
+
+  // YAML::Node doc = YAML::LoadFile(mechfile);
+  const std::string phaseName = doc["phases"][gasPhaseIndex]["name"].as<std::string>();
+  // std::cout << phaseName << "\n";
+
+  auto units = doc["units"];
+
+  std::cout << "phase name: " << phaseName << "\n";
+
+  auto species_name  = doc["phases"][gasPhaseIndex]["species"];
+  auto elements_name = doc["phases"][gasPhaseIndex]["elements"];
+  std::string reactions = "reactions";
+
+  // std::cout <<reactions[0]<< "\n";
+  if (doc["phases"][gasPhaseIndex]["reactions"]) {
+    reactions = doc["phases"][gasPhaseIndex]["reactions"][0].as<std::string>();
+  }
+
+  auto gas_reactions = doc[reactions];
+
+   //
+   nElem_ = elements_name.size();
+   nSpec_ = species_name.size();
+   nReac_ = gas_reactions.size();
+   // nReac_ =
+   fprintf(
+     echofile,
+     "kmod.list : # of elements                                     : %d\n",
+     nElem_);
+   fprintf(
+     echofile,
+     "kmod.list : # of species                                      : %d\n",
+     nSpec_);
+   fprintf(
+     echofile,
+     "kmod.list : # of reactions                                    : %d\n",
+     nReac_);
+
+  /* Elements' name and weights */
+  eNames_ = string_type_1d_dual_view<LENGTHOFELEMNAME + 1>(
+    do_not_init_tag("KMD::eNames"), nElem_);
+  eMass_ = real_type_1d_dual_view(do_not_init_tag("KMD::eMass"), nElem_);
+
+  /* Species' name and weights */
+  sNames_ = string_type_1d_dual_view<LENGTHOFSPECNAME + 1>(
+    do_not_init_tag("KMD::sNames"), nSpec_);
+  sMass_ = real_type_1d_dual_view(do_not_init_tag("KMD::sMass"), nSpec_);
+
+  /* Species' elemental composition */
+  elemCount_ = ordinal_type_2d_dual_view(
+    do_not_init_tag("KMD::elemCount"), nSpec_, nElem_);
+
+  auto eNamesHost = eNames_.view_host();
+  auto eMassHost = eMass_.view_host();
+  auto sNamesHost = sNames_.view_host();
+  auto sMassHost = sMass_.view_host();
+  auto elemCountHost = elemCount_.view_host();
+
+  /* Range of temperatures for thermo fits */
+  Tlo_ = real_type_1d_dual_view(do_not_init_tag("KMD::Tlo"), nSpec_);
+  Tmi_ = real_type_1d_dual_view(do_not_init_tag("KMD::Tmi"), nSpec_);
+  Thi_ = real_type_1d_dual_view(do_not_init_tag("KMD::Thi"), nSpec_);
+
+  auto TloHost = Tlo_.view_host();
+  auto TmiHost = Tmi_.view_host();
+  auto ThiHost = Thi_.view_host();
+
+  int Natoms = 0;
+  elemtable* periodictable = 0;
+
+  /*--------------------Set periodic table--------------------------- */
+  TCKMI_setperiodictable(periodictable, &Natoms, 1);
+  periodictable = (elemtable*)malloc(Natoms * sizeof(elemtable));
+  TCKMI_setperiodictable(periodictable, &Natoms, 2);
+  // species and elements
+
+  std::map<std::string, int> species_indx;
+
+  {
+    // Elements
+    for (int i = 0; i < nElem_; i++) {
+      std::string element_name = elements_name[i].as<std::string>();
+      std::transform(element_name.begin(),
+      element_name.end(),element_name.begin(), ::toupper);
+      char*  elemNm= &*element_name.begin();
+      strncat(&eNamesHost(i, 0),elemNm , LENGTHOFELEMNAME);
+    }
+
+    for (int i = 0; i < nElem_; i++) {
+      int Elem_has_mass(0);
+      for (int j = 0; j < (Natoms); j++) {
+        if (strcmp(&eNamesHost(i, 0), periodictable[j].name) == 0) {
+          eMassHost(i) = periodictable[j].mass;
+          Elem_has_mass=1;
+          break;
+        }
+      }
+      if (Elem_has_mass==0){
+        printf("Element is not part of TChem periodic table: %d %s\n",
+         i, &eNamesHost(i, 0));
+      }
+    }
+
+
+    /* Range of temperatures for thermo fits */
+    TthrmMin_ = 1.e-5;
+    TthrmMax_ = 1.e+5;
+
+    nNASAinter_ = 2;
+    nCpCoef_ = 5;
+
+    /* Polynomial coeffs for thermo fits */
+    cppol_ = real_type_3d_dual_view(
+      do_not_init_tag("KMD::cppol"), nSpec_, nNASAinter_, (nCpCoef_ + 2));
+
+    auto cppolHost = cppol_.view_host();
+
+    int spi(0);
+    auto species = doc["species"];
+    for (auto const& sp : species) {
+
+      if (spi < nSpec_) {
+      if (sp["name"].as<std::string>() == species_name[spi].as<std::string>())
+      {
+
+        std::string sp_name = species_name[spi].as<std::string>();
+        std::transform(sp_name.begin(),
+        sp_name.end(),sp_name.begin(), ::toupper);
+        species_indx.insert(std::pair<std::string, int>(sp_name, spi));
+
+        char* specNm= &*sp_name.begin();
+        strncat(&sNamesHost(spi, 0), specNm, LENGTHOFSPECNAME);
+
+        auto comp = sp["composition"];
+        for (auto const& element : comp) {
+          std::string first = element.first.as<std::string>();
+          std::transform(first.begin(),
+          first.end(),first.begin(), ::toupper);
+          char* elemNm= &*first.begin();
+
+          for (int j = 0; j < nElem_; j++) {
+            if (strcmp(&eNamesHost(j, 0), elemNm) == 0) {
+              elemCountHost(spi, j) = element.second.as<int>() ;
+              sMassHost(spi) += elemCountHost(spi, j)*eMassHost(j);
+            }
+          }
+        }
+
+
+        auto temperature_ranges = sp["thermo"]["temperature-ranges"];
+        TloHost(spi) = temperature_ranges[0].as<double>();
+        TmiHost(spi) = temperature_ranges[1].as<double>();
+        ThiHost(spi) = temperature_ranges[2].as<double>();
+        TthrmMin_ = std::min(TthrmMin_, TloHost(spi));
+        TthrmMax_ = std::max(TthrmMax_, ThiHost(spi));
+
+        /* Polynomial coeffs for thermo fits */
+        auto data = sp["thermo"]["data"];
+        for (int j = 0; j < nNASAinter_; j++){
+          auto dataIntervale = data[j];
+          for (int k = 0; k < nCpCoef_ + 2; k++)
+            cppolHost(spi, j, k) = dataIntervale[k].as<double>();
+        }
+
+        spi++;
+      }//else{
+      //   std::cout << "Species Name: "<<sp["name"]<< "\n";
+      // }
+    }else{
+      break;
+    }
+    }
+
+
+
+    fprintf(echofile, "No. \t Element \t Mass\n");
+    for (int i = 0; i < nElem_; i++)
+      fprintf(echofile,
+              "%-3d\t%-4s\t%f10.7\n",
+              i + 1,
+              &eNamesHost(i, 0),
+              eMassHost(i));
+    DASHLINE(echofile);
+    fflush(echofile);
+
+    fprintf(echofile, "No. \t Species \t Mass\n");
+    for (int i = 0; i < nSpec_; i++)
+      fprintf(echofile,
+              "%-3d\t%-32s\t%12.7f\n",
+              i + 1,
+              &sNamesHost(i, 0),
+              sMassHost(i));
+    DASHLINE(echofile);
+    fflush(echofile);
+
+    fprintf(echofile, "Elemental composition of species\n");
+    fprintf(echofile, "No. \t Species \t\t Element\n\t\t\t\t");
+    for (int i = 0; i < nElem_; i++)
+      fprintf(echofile, "%s\t", &eNamesHost(i, 0));
+    fprintf(echofile, "\n");
+
+    for (int i = 0; i < nSpec_; i++) {
+      fprintf(echofile, "%-3d\t%-32s", i + 1, &sNamesHost(i, 0));
+      for (int j = 0; j < nElem_; j++)
+        fprintf(echofile, "%-3d\t", elemCountHost(i, j));
+      fprintf(echofile, "\n");
+    }
+
+    fprintf(echofile, "Range of temperature for thermodynamic fits\n");
+    fprintf(echofile, "No. \t Species \t\t Tlow \tTmid \tThigh\n");
+    for (int i = 0; i < nSpec_; i++) {
+      fprintf(echofile,
+              "%-3d\t%-32s %12.4f\t%12.4f\t%12.4f\n",
+              i + 1,
+              &sNamesHost(i, 0),
+              TloHost(i),
+              TmiHost(i),
+              ThiHost(i));
+    }
+    DASHLINE(echofile);
+
+    fprintf(echofile, "List of coefficients for thermodynamic fits\n");
+    for (int i = 0; i < nSpec_; i++) {
+      const auto ptr = &cppolHost(i, 0, 0);
+      fprintf(echofile,
+              "%-4d %-32s\n %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n",
+              i + 1,
+              &sNamesHost(i, 0),
+              ptr[0],
+              ptr[1],
+              ptr[2],
+              ptr[3],
+              ptr[4],
+              ptr[5],
+              ptr[6]);
+      fprintf(echofile,
+              " %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n",
+              ptr[7],
+              ptr[8],
+              ptr[9],
+              ptr[10],
+              ptr[11],
+              ptr[12],
+              ptr[13]);
+    }
+    DASHLINE(echofile);
+
+
+  }
+
+
+  /* reaction info */
+  if (nReac_ > 0) {
+    isRev_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::isRev"), nReac_);
+    reacNrp_ =
+      ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
+    reacNreac_ =
+      ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
+    reacNprod_ =
+      ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
+    isDup_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::isDup"), nReac_);
+
+
+  }
+
+
+  // reactions
+  auto isRevHost = isRev_.view_host();
+  auto reacNrpHost = reacNrp_.view_host();
+  auto reacNreacHost = reacNreac_.view_host();
+  auto reacNprodHost = reacNprod_.view_host();
+  auto isDupHost = isDup_.view_host();
+
+  {
+    int countReac(0);
+    maxSpecInReac_ = 0;
+
+    std::vector< std::map<std::string, real_type> > productsInfo, reactantsInfo;
+    for (auto const& reaction : gas_reactions) {
+      auto equation = reaction ["equation"].as<std::string>();
+      int isRev(1);
+      // std::cout << countReac<< " equation  " << equation << "\n";
+
+      std::map<std::string, real_type> reactants_sp, products_sp;
+      TCMI_getReactansAndProductosFromEquation(equation,
+      isRev, reactants_sp, products_sp);
+
+      isRevHost(countReac) = isRev;
+      reacNrpHost(countReac) = reactants_sp.size() + products_sp.size();
+      /* no of reactants only */
+      reacNreacHost(countReac) = reactants_sp.size();
+      /* no of products */
+      reacNprodHost(countReac) = products_sp.size();
+      //check max in reactansts
+      maxSpecInReac_ = maxSpecInReac_ > reactants_sp.size() ?
+                       maxSpecInReac_ : reactants_sp.size();
+
+      //check max in products
+      maxSpecInReac_ = maxSpecInReac_ > products_sp.size() ?
+                       maxSpecInReac_ : products_sp.size();
+
+      productsInfo.push_back(products_sp);
+      reactantsInfo.push_back(reactants_sp);
+      countReac++;
+
+    }
+    //twice because we only consider max (products, reactants)
+    maxSpecInReac_ *=2;
+
+
+    fprintf(
+      echofile,
+      "kmod.list : Max # of species in a reaction                    : %d\n",
+      maxSpecInReac_);
+
+
+    if (nReac_ > 0) {
+      reacSidx_ = ordinal_type_2d_dual_view(
+      do_not_init_tag("KMD::reacNrp"), nReac_, maxSpecInReac_);
+      reacNuki_ = real_type_2d_dual_view(
+      do_not_init_tag("KMD::reacNrp"), nReac_, maxSpecInReac_);
+      reacScoef_ =
+       ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacScoef"), nReac_);
+      reacArhenFor_ =
+        real_type_2d_dual_view(do_not_init_tag("KMD::reacArhenFor"), nReac_, 3);
+    }
+
+    auto reacScoefHost = reacScoef_.view_host();
+    auto reacNukiHost = reacNuki_.view_host();
+    auto reacSidxHost = reacSidx_.view_host();
+
+    std::map<std::string,int>::iterator it;
+
+    /* Stoichiometric coefficients */
+    for (int i = 0; i < nReac_; i++) {
+
+      int nusumk = 0;
+      /* by default reaction has integer stoichiometric coefficients */
+      reacScoefHost(i) = -1;
+
+      int count(0);
+      auto reactants_sp = reactantsInfo[i];
+
+      for (auto & reac : reactants_sp)
+      {
+        it = species_indx.find(reac.first);
+
+        if (it != species_indx.end()) {
+          reacSidxHost(i, count) = it->second;
+        } else{
+          printf("Yaml : Error when interpreting kinetic model  !!!");
+          printf("species does not exit %s\n", reac.first.c_str() );
+          exit(1);
+        }
+
+        reacNukiHost(i, count) = -reac.second;
+
+        count++;
+      }
+
+      count = maxSpecInReac_/2;
+      auto products_sp = productsInfo[i];
+
+      for (auto & prod : products_sp)
+      {
+
+        it = species_indx.find(prod.first);
+
+        if (it != species_indx.end()) {
+          reacSidxHost(i, count) = it->second;
+        } else{
+          printf("Yaml : Error when interpreting kinetic model  !!!");
+          printf("species does not exit %s\n", prod.first.c_str() );
+          exit(1);
+        }
+
+        reacNukiHost(i, count) = prod.second;
+        count++;
+      }
+
+    }
+
+    /* Arrhenius parameters */
+    auto reacArhenForHost = reacArhenFor_.view_host();
+
+    int i(0);
+    nFallPar_ = 3; //default value is 3
+    const double unitFactor =
+    TCMI_unitFactorActivationEnergies
+    (units["activation-energy"].as<std::string>());
+
+    for (auto const& reaction : gas_reactions)
+    {
+
+      std::string rate_constant_string("rate-constant");
+
+      auto type = reaction["type"];
+      if (type)
+      {
+        std::string reaction_type = reaction["type"].as<std::string>();
+        if (reaction_type == "falloff")
+        {
+          rate_constant_string = "high-P-rate-constant";
+          nFallReac_++;
+          nThbReac_++;
+
+        }
+
+        if (reaction_type == "three-body")
+        {
+          nThbReac_++;
+        }
+
+        if (reaction_type == "pressure-dependent-Arrhenius")
+        {
+          nPlogReac_++;
+        }
+
+
+        if (reaction["Troe"]){
+          nFallPar_ = std::max(nFallPar_,7);
+        }
+
+        if (reaction["SRI"]){
+          nFallPar_ = std::max(nFallPar_,8);
+        }
+        //check number of third-body efficiencies in a reaction
+        if (reaction["efficiencies"])
+        {
+          const int size_of_effi= reaction["efficiencies"].size();
+          maxTbInReac_ = std::max(size_of_effi,maxTbInReac_);
+        }
+
+
+
+      }
+
+      auto rate_constant = reaction[rate_constant_string];
+
+      if (rate_constant)
+      {
+        const double Areac = rate_constant["A"].as<double>();
+        reacArhenForHost(i, 0) = Areac ;
+
+        const double breac = rate_constant["b"].as<double>();
+        reacArhenForHost(i, 1) = breac;
+
+        const double Eareac = rate_constant["Ea"].as<double>();
+        reacArhenForHost(i, 2) = Eareac*unitFactor;
+      }
+
+      auto duplicate = reaction["duplicate"];
+      if (duplicate)
+      {
+        isDupHost(i) = 1;
+      }
+      /* Reactions with reversible Arrhenius parameters given */
+      // to be done
+
+      i++;
+    }
+
+    /* Reactions with reversible Arrhenius parameters given */
+
+    fprintf(
+      echofile,
+      "kmod.list : # of reactions with REV given                     : %d\n",
+      nRevReac_);
+    fprintf(
+      echofile,
+      "kmod.list : # of pressure-dependent reactions                 : %d\n",
+      nFallReac_);
+
+    fprintf(
+      echofile,
+      "kmod.list : # of parameters for pressure-dependent reactions  : %d\n",
+      nFallPar_);
+
+    fprintf(
+      echofile,
+      "kmod.list : # of reactions using third-body efficiencies      : %d\n",
+      nThbReac_);
+    //
+    fprintf(
+      echofile,
+      "kmod.list : Max # of third-body efficiencies in a reaction    : %d\n",
+      maxTbInReac_);
+
+    //
+    fprintf(
+      echofile,
+      "kmod.list : # of PLOG reactions                               : %d\n",
+      nPlogReac_);
+    //
+    fprintf(
+      echofile,
+      "kmod.list : # of reactions with non-int stoichiometric coeffs : %d\n",
+      nRealNuReac_);
+
+    //
+    /* Reactions with real stoichiometric coefficients */
+    if (nRealNuReac_ > 0) {
+      reacRnu_ =
+        ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacRnu"), nRealNuReac_);
+      reacRealNuki_ = real_type_2d_dual_view(
+        do_not_init_tag("KMD::reacRealNuki"), nRealNuReac_, maxSpecInReac_);
+    }
+
+    /* Pressure-dependent reactions */
+    if (nFallReac_ > 0) {
+      reacPfal_ =
+        ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacPfal"), nFallReac_);
+      reacPtype_ =
+        ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacPtype"), nFallReac_);
+      reacPlohi_ =
+        ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacPlohi"), nFallReac_);
+      reacPspec_ =
+        ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacPspec"), nFallReac_);
+      reacPpar_ = real_type_2d_dual_view(
+        do_not_init_tag("KMD::reacPpar"), nFallReac_, nFallPar_);
+    }
+
+    auto reacPfalHost = reacPfal_.view_host();
+    auto reacPtypeHost = reacPtype_.view_host();
+    auto reacPlohiHost = reacPlohi_.view_host();
+    auto reacPspecHost = reacPspec_.view_host();
+    auto reacPparHost = reacPpar_.view_host();
+
+    /* Pressure-dependent reactions */
+    int count_reac(0);
+    int count_falloff(0);
+    for (auto const& reaction : gas_reactions)
+    {
+      auto type = reaction["type"];
+      if (type)
+      {
+        std::string reaction_type = reaction["type"].as<std::string>();
+        if (reaction_type == "falloff")
+        {
+          reacPfalHost(count_falloff) = count_reac;
+          reacPtypeHost(count_falloff)= 1; //default type is Lind
+          reacPlohiHost(count_falloff) = 0; //hard-coded to low. need to fix this
+          reacPspecHost(count_falloff) = -1;//hard-coded for a mixture.
+
+
+          auto rate_constant = reaction["low-P-rate-constant"];
+          const double Areac = rate_constant["A"].as<double>();
+          reacPparHost(count_falloff, 0) = Areac ;
+
+          const double breac = rate_constant["b"].as<double>();
+          reacPparHost(count_falloff, 1) = breac;
+
+          const double Eareac = rate_constant["Ea"].as<double>();
+          reacPparHost(count_falloff, 2) = Eareac*unitFactor;
+
+          auto troe = reaction["Troe"];
+          if (troe){
+            auto size_of_troe = troe.size();
+            if (size_of_troe == 3)
+              reacPtypeHost(count_falloff)= 3; //Troe3
+            //
+            if (size_of_troe == 4)
+              reacPtypeHost(count_falloff)= 4; //Troe4
+
+            //
+            const double A = troe["A"].as<double>();
+            reacPparHost(count_falloff, 3) = A;
+
+            const double T3 = troe["T3"].as<double>();
+            reacPparHost(count_falloff, 4) = T3;
+
+            if (size_of_troe == 3) {
+              const double T1 = troe["T1"].as<double>();
+              reacPparHost(count_falloff, 5) = T1;
+            }
+
+            if (size_of_troe == 4) {
+              const double T1 = troe["T1"].as<double>();
+              reacPparHost(count_falloff, 5) = T1;
+              const double T2 = troe["T2"].as<double>();
+              reacPparHost(count_falloff, 6) = T2;
+
+            }
+
+          }
+
+          auto sri = reaction["SRI"];
+          if (sri) {
+            reacPtypeHost(count_falloff)= 2;
+          }
+          //Cheb I need an example
+
+          count_falloff++;
+        }
+      }
+      count_reac++;
+    }
+
+    fprintf(echofile, "Reaction data : species and Arrhenius pars\n");
+    for (int i = 0; i < nReac_; i++) {
+      fprintf(echofile,
+              "%-5d\t%1d\t%2d\t%2d | ",
+              i + 1,
+              isRevHost(i),
+              reacNreacHost(i),
+              reacNprodHost(i));
+      //
+      for (int j = 0; j < reacNreacHost(i); j++)
+        fprintf(echofile,
+                "%f*%s | ",
+                reacNukiHost(i, j),
+                &sNamesHost(reacSidxHost(i, j), 0));
+
+      /// KJ why do we do this way ?
+      const int joff = maxSpecInReac_ / 2;
+      for (int j = 0; j < reacNprodHost(i); j++)
+        fprintf(echofile,
+                "%f*%s | ",
+                reacNukiHost(i, j + joff),
+                &sNamesHost(reacSidxHost(i, j + joff), 0));
+      //
+      fprintf(echofile,
+              "%16.8e\t%16.8e\t%16.8e",
+              reacArhenForHost(i, 0),
+              reacArhenForHost(i, 1),
+              reacArhenForHost(i, 2));
+
+      if (isDupHost(i) == 1)
+        fprintf(echofile, "  DUPLICATE\n");
+      else
+        fprintf(echofile, "\n");
+
+        if (verboseEnabled)
+
+      printf("KineticModelData::initChem() : Done reading reaction data\n");
+    }
+
+    /* Pressure-dependent reactions */
+    if (nFallReac_ > 0) {
+      fprintf(echofile,
+              "Reaction data : Pressure dependencies for %d reactions :\n",
+              nFallReac_);
+      for (int i = 0; i < nFallReac_; i++) {
+        fprintf(echofile, "%-4d\t", reacPfalHost(i) + 1);
+
+        if (reacPtypeHost(i) == 1)
+          fprintf(echofile, "Lind \t");
+        if (reacPtypeHost(i) == 2)
+          fprintf(echofile, "SRI  \t");
+        if (reacPtypeHost(i) == 3)
+          fprintf(echofile, "Troe3\t");
+        if (reacPtypeHost(i) == 4)
+          fprintf(echofile, "Troe4\t");
+        if (reacPtypeHost(i) == 6)
+          fprintf(echofile, "Cheb \t");
+
+        if (reacPlohiHost(i) == 0)
+          fprintf(echofile, "Low  \t");
+        if (reacPlohiHost(i) == 1)
+          fprintf(echofile, "High \t");
+
+        if (reacPspecHost(i) < 0)
+          fprintf(echofile, "Mixture \n");
+        if (reacPspecHost(i) >= 0)
+          fprintf(echofile, "%s\n", &sNamesHost(reacPspecHost(i), 0));
+      }
+      DASHLINE(echofile);
+
+      fprintf(echofile,
+              "Reaction data : Fall off parameters \n");
+      for (int i = 0; i < nFallReac_; i++) {
+       fprintf(echofile, "%-4d\t", reacPfalHost(i) + 1);
+        for (int j = 0; j < nFallPar_; j++) {
+          fprintf(echofile, "%e \t", reacPparHost(i, j));
+        }
+        fprintf(echofile, "\n");
+      }
+      DASHLINE(echofile);
+    }
+
+
+    /* Third-body reactions */
+    if (nThbReac_ > 0) {
+      reacTbdy_ =
+        ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacTbdy"), nThbReac_);
+      reacTbno_ =
+        ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacTbno"), nThbReac_);
+      reac_to_Tbdy_index_ = ordinal_type_1d_dual_view(
+        do_not_init_tag("KMD::reac_to_Tbdy_index"), nReac_);
+      specTbdIdx_ = ordinal_type_2d_dual_view(
+        do_not_init_tag("KMD::specTbdIdx"), nThbReac_, maxTbInReac_);
+      specTbdEff_ = real_type_2d_dual_view(
+        do_not_init_tag("KMD::specTbdEff"), nThbReac_, maxTbInReac_);
+    }
+
+    auto reacTbdyHost = reacTbdy_.view_host();
+    auto reacTbnoHost = reacTbno_.view_host();
+    auto reac_to_Tbdy_indexHost = reac_to_Tbdy_index_.view_host();
+    auto specTbdIdxHost = specTbdIdx_.view_host();
+    auto specTbdEffHost = specTbdEff_.view_host();
+
+    /* Third-body reactions */
+    count_reac=0;
+    int count_tb(0);
+    for (auto const& reaction : gas_reactions)
+    {
+      auto type = reaction["type"];
+      if (type)
+      {
+        std::string reaction_type = reaction["type"].as<std::string>();
+
+        bool uses_tb_effi(false);
+
+        if (reaction_type == "falloff")
+        {
+          uses_tb_effi=true;
+        }
+
+        if (reaction_type == "three-body")
+        {
+          uses_tb_effi=true;
+        }
+        if (uses_tb_effi)
+        {
+          reacTbdyHost(count_tb) = count_reac;
+          int size_of_effi(0);
+          if (reaction["efficiencies"])
+          {
+            auto efficiencies = reaction["efficiencies"];
+            size_of_effi = efficiencies.size();
+            int count_effi(0);
+            for (auto const& effi : efficiencies)
+            {
+              specTbdEffHost(count_tb, count_effi) = effi.second.as<double>();
+              specTbdIdxHost(count_tb, count_effi) =
+               species_indx[effi.first.as<std::string>()];
+              count_effi++;
+            }
+
+          }
+          reacTbnoHost(count_tb) = size_of_effi;
+          count_tb++;
+        }
+
+      }
+      count_reac++;
+    }
+    /* Third-body reactions */
+    if (nThbReac_ > 0) {
+      int itbdy = 0;
+      Kokkos::deep_copy(reac_to_Tbdy_indexHost, -1);
+      for (int ireac = 0; ireac < nReac_; ireac++)
+        if (itbdy < nThbReac_)
+          if (ireac == reacTbdyHost(itbdy))
+            reac_to_Tbdy_indexHost(ireac) = itbdy++;
+
+    }
+
+    if (nThbReac_ > 0) {
+
+      fprintf(echofile, "Reaction data : Third body efficiencies :\n");
+      for (int i = 0; i < nThbReac_; i++) {
+        fprintf(echofile, "%-4d\t", reacTbdyHost(i) + 1);
+        for (int j = 0; j < reacTbnoHost(i); j++)
+          fprintf(echofile,
+                  "%s->%5.2f, ",
+                  &sNamesHost(specTbdIdxHost(i, j), 0),
+                  specTbdEffHost(i, j));
+        fprintf(echofile, "\n");
+      }
+      DASHLINE(echofile);
+
+    }
+
+    if (verboseEnabled)
+      printf("KineticModelData::initChem() : Done reading third-body data\n");
+
+    /* Reactions with PLOG formulation */
+    if (nPlogReac_ > 0) {
+      reacPlogIdx_ = ordinal_type_1d_dual_view(
+        do_not_init_tag("KMD::reacPlogIdx"), nPlogReac_);
+      reacPlogPno_ = ordinal_type_1d_dual_view(
+        do_not_init_tag("KMD::reacPlogPno"), nPlogReac_ + 1);
+      // KJ: reacPlogPars should be allocated  after reacPlogPno_ is initialized
+      // reacPlogPars_ =
+      // real_type_2d_dual_view(do_not_init_tag("KMD::reacPlogPars"),
+      // reacPlogPno_(nPlogReac_), 4);
+    }
+
+    auto reacPlogIdxHost = reacPlogIdx_.view_host();
+    auto reacPlogPnoHost = reacPlogPno_.view_host();
+
+    /* Reactions with PLOG formulation */
+    if (nPlogReac_ > 0) {
+
+      /* Their indices and no of PLOG intervals */
+      reacPlogPnoHost(0) = 0;
+
+      int count_reac(0);
+      int count_plog(0);
+      std::vector<std::vector<double>> plogParam;
+      for (auto const& reaction : gas_reactions)
+      {
+        auto type = reaction["type"];
+        if (type)
+        {
+          std::string reaction_type = reaction["type"].as<std::string>();
+          if (reaction_type == "pressure-dependent-Arrhenius")
+          {
+            reacPlogIdxHost(count_plog) = count_reac;
+            auto rate_constants = reaction["rate-constants"];
+            reacPlogPnoHost(count_plog + 1) = rate_constants.size();
+            reacPlogPnoHost(count_plog + 1) += reacPlogPnoHost(count_plog);
+
+            for (auto const& param: rate_constants)
+            {
+
+              std::istringstream iss(param["P"].as<std::string>());
+              std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
+                      std::istream_iterator<std::string>{}};
+              const double Plog = std::atof(tokens[0].c_str()) ;
+              std::vector<double> constants;
+              constants.push_back(Plog);
+              constants.push_back(param["A"].as<double>());
+              constants.push_back(param["b"].as<double>());
+              constants.push_back(param["Ea"].as<double>()*unitFactor);
+              plogParam.push_back(constants);
+
+            }
+            count_plog++;
+          }
+
+        }
+
+        count_reac++;
+      }
+
+      /* Plog parameters */
+      reacPlogPars_ = real_type_2d_dual_view(
+        do_not_init_tag("KMD::reacPlogPars"), reacPlogPnoHost(nPlogReac_), 4);
+      auto reacPlogParsHost = reacPlogPars_.view_host();
+
+
+      for (size_t i = 0; i < plogParam.size(); i++) {
+        auto constant = plogParam[i];
+        reacPlogParsHost(i, 0) = log(constant[0]);
+        reacPlogParsHost(i, 1) = constant[1];
+        reacPlogParsHost(i, 2) = constant[2];
+        reacPlogParsHost(i, 3) = constant[3];
+      }
+
+      fprintf(echofile,
+              "Reaction data : PLog off parameters \n");
+      for (int i = 0; i < nPlogReac_; i++) {
+       fprintf(echofile, "%-4d\t", reacPlogIdxHost(i) + 1);
+       fprintf(echofile, "%-4d\t", reacPlogPnoHost(i + 1));
+       fprintf(echofile, "\n");
+      }
+
+      for (int i = 0; i < reacPlogPnoHost(nPlogReac_); i++) {
+        for (size_t j = 0; j < 4; j++) {
+          fprintf(echofile, "%lf\t",reacPlogParsHost(i, j));
+        }
+        fprintf(echofile, "\n");
+      }
+      DASHLINE(echofile);
+
+    }
+
+
+    fclose(errfile);
+
+
+    /* universal gas constant */
+    Runiv_ = RUNIV * 1.0e3; // j/kmol/K
+    Rcal_ = Runiv_ / (CALJO * 1.0e3);
+    Rcgs_ = Runiv_ * 1.e4;
+
+    sigNu_ = real_type_1d_dual_view(do_not_init_tag("KMD::sigNu"), nReac_);
+    NuIJ_ =
+      real_type_2d_dual_view(do_not_init_tag("KMD::NuIJ"), nReac_, nSpec_);
+    kc_coeff_ = real_type_1d_dual_view(do_not_init_tag("KMD::kc_coeff"), nReac_);
+
+    if (nRealNuReac_ > 0) {
+      sigRealNu_ =
+        real_type_1d_dual_view(do_not_init_tag("KMD::sigRealNu"), nRealNuReac_);
+      RealNuIJ_ = real_type_2d_dual_view(
+        do_not_init_tag("KMD::RealNuIJ"), nRealNuReac_, nSpec_);
+    }
+
+
+    auto sigNuHost = sigNu_.view_host();
+    auto NuIJHost = NuIJ_.view_host();
+    auto kc_coeffHost = kc_coeff_.view_host();
+    auto sigRealNuHost = sigRealNu_.view_host();
+    auto RealNuIJHost = RealNuIJ_.view_host();
+
+      /* populate some arrays */
+    /* sum(nu) for each reaction */
+    for (int i = 0; i < nReac_; i++) {
+      /* reactants */
+      for (int j = 0; j < reacNreacHost(i); j++)
+        sigNuHost(i) += reacNukiHost(i, j);
+      /* products */
+      const int joff = maxSpecInReac_ / 2;
+      for (int j = 0; j < reacNprodHost(i); j++)
+        sigNuHost[i] += reacNukiHost(i, j + joff);
+    }
+
+    /* NuIJ=NuII''-NuIJ' */
+    for (int j = 0; j < nReac_; j++) {
+      /* reactants */
+      for (int i = 0; i < reacNreacHost(j); i++) {
+
+        int kspec = reacSidxHost(j, i);
+
+        NuIJHost(j, kspec) += reacNukiHost(j, i);
+      }
+      /* products */
+      const int ioff = maxSpecInReac_ / 2;
+      for (int i = 0; i < reacNprodHost(j); i++) {
+        int kspec = reacSidxHost(j, i + ioff);
+        NuIJHost(j, kspec) += reacNukiHost(j, i + ioff);
+      }
+    }
+
+    /* Store coefficients for kc */
+    for (int i = 0; i < nReac_; i++) {
+      kc_coeffHost(i) =
+        std::pow(ATMPA() * real_type(10) / Rcgs_,sigNuHost(i));
+    }
+
+    /* done */
+    isInit_ = 1;
+
+
+
+
+
+  }
+
+  fclose(echofile);
+
+
+
+  // count elements that are present in gas species
+  NumberofElementsGas_ = 0;
+  for (int i = 0; i < elemCountHost.extent(1); i++) {   // loop over elements
+    for (int j = 0; j < elemCountHost.extent(0); j++) { // loop over species
+      if (elemCountHost(j, i) != 0) {
+        NumberofElementsGas_++;
+        break;
+      }
+    }
+  }
+
+
+  // variable that I am not using yet
+  /* Ionic species */
+  if (nIonEspec_ > 0) {
+    sNion_ =
+      ordinal_type_1d_dual_view(do_not_init_tag("KMD::sNion"), nIonEspec_);
+  }
+
+  /* Reactions with reversible Arrhenius parameters given */
+  if (nRevReac_ > 0) {
+    reacRev_ =
+      ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacRev"), nRevReac_);
+    reacArhenRev_ = real_type_2d_dual_view(
+      do_not_init_tag("KMD::reacArhenRev"), nRevReac_, 3);
+  }
+
+  /* Arbitrary reaction orders */
+  if (nOrdReac_ > 0) {
+    reacAOrd_ =
+      ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacAOrd"), nOrdReac_);
+    specAOidx_ = ordinal_type_2d_dual_view(
+      do_not_init_tag("KMD::specAOidx"), nOrdReac_, maxOrdPar_);
+    specAOval_ = real_type_2d_dual_view(
+      do_not_init_tag("KMD::specAOval"), nOrdReac_, maxOrdPar_);
+  }
+
+  // if (errmsg.length() > 0) {
+  //   fprintf(errfile, "Error: %s\n", errmsg.c_str());
+  //   std::runtime_error("Error: TChem::KineticModelData \n" + errmsg);
+  // }
+
+  auto reacAOrdHost = reacAOrd_.view_host();
+  auto specAOidxHost = specAOidx_.view_host();
+  auto specAOvalHost = specAOval_.view_host();
+
+  auto spec9tHost = spec9t_.view_host();
+  auto spec9nrngHost = spec9nrng_.view_host();
+  auto spec9trngHost = spec9trng_.view_host();
+  auto spec9coefsHost = spec9coefs_.view_host();
+  auto sNionHost = sNion_.view_host();
+
+  /// Raise modify flags for all modified dual views
+  eNames_.modify_host();
+  eMass_.modify_host();
+  sNames_.modify_host();
+  sMass_.modify_host();
+  elemCount_.modify_host();
+  sCharge_.modify_host();
+  sTfit_.modify_host();
+  sPhase_.modify_host();
+  Tlo_.modify_host();
+  Tmi_.modify_host();
+  Thi_.modify_host();
+  cppol_.modify_host();
+  spec9t_.modify_host();
+  spec9nrng_.modify_host();
+  spec9trng_.modify_host();
+  spec9coefs_.modify_host();
+  isRev_.modify_host();
+  reacNrp_.modify_host();
+  reacNreac_.modify_host();
+  reacNprod_.modify_host();
+  reacNuki_.modify_host();
+  reacSidx_.modify_host();
+  reacScoef_.modify_host();
+  reacArhenFor_.modify_host();
+  isDup_.modify_host();
+  reacRev_.modify_host();
+  reacArhenRev_.modify_host();
+
+  sNion_.modify_host();
+
+  reacPfal_.modify_host();
+  reacPtype_.modify_host();
+  reacPlohi_.modify_host();
+  reacPspec_.modify_host();
+  reacPpar_.modify_host();
+
+  reacTbdy_.modify_host();
+  reacTbno_.modify_host();
+  reac_to_Tbdy_index_.modify_host();
+  specTbdIdx_.modify_host();
+  specTbdEff_.modify_host();
+
+  reacRnu_.modify_host();
+  reacRealNuki_.modify_host();
+
+  reacAOrd_.modify_host();
+  specAOidx_.modify_host();
+  specAOval_.modify_host();
+
+  reacPlogIdx_.modify_host();
+  reacPlogPno_.modify_host();
+
+  sigNu_.modify_host();
+
+  sigRealNu_.modify_host();
+  NuIJ_.modify_host();
+  RealNuIJ_.modify_host();
+  kc_coeff_.modify_host();
+
+  /// Sync to device
+  syncToDevice();
+
+  return (0);
+}
+
+#endif
 
 } // end TChem

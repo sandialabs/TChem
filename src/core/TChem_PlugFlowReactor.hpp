@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef __TCHEM_PLUGFLOWREACTOR_HPP__
 #define __TCHEM_PLUGFLOWREACTOR_HPP__
 
@@ -158,6 +156,31 @@ struct PlugFlowReactor
     const KineticModelConstDataDevice& kmcd,
     const KineticSurfModelConstDataDevice& kmcdSurf,
     // const pfr_data_type_0d_view& pfrd,
+    const real_type Area,
+    const real_type Pcat);
+
+  //
+  static void
+  runDeviceBatch( /// thread block size
+    typename UseThisTeamPolicy<exec_space>::type& policy,
+    /// input
+    const real_type_1d_view& tol_newton,
+    const real_type_2d_view& tol_time,
+    const real_type_2d_view& fac,
+    const time_advance_type_1d_view& tadv,
+    const real_type_2d_view& state,
+    const real_type_2d_view& zSurf,
+    const real_type_1d_view& velocity,
+    /// output
+    const real_type_1d_view& t_out,
+    const real_type_1d_view& dt_out,
+    const real_type_2d_view& state_out,
+    const real_type_2d_view& Z_out,
+    const real_type_1d_view& velocity_out,
+    /// const data from kinetic model
+    const Kokkos::View<KineticModelConstDataDevice*,exec_space>& kmcds,
+    const Kokkos::View<KineticSurfModelConstDataDevice*,exec_space>& kmcdSurfs,
+    // const pfr_data_type_0d_view& pfrd_info,
     const real_type Area,
     const real_type Pcat);
 };

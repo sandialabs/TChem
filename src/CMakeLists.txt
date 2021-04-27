@@ -16,6 +16,7 @@ IF (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   SET(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}" CACHE PATH "FOO install prefix" FORCE)
 ENDIF()
 
+SET(TCHEM_INSTALL_LIB_PATH     lib    )
 SET(TCHEM_INSTALL_INCLUDE_PATH include/tchem)
 SET(TCHEM_INSTALL_TEST_PATH    unit-test)
 SET(TCHEM_INSTALL_EXAMPLE_PATH example)
@@ -28,6 +29,7 @@ OPTION(TCHEM_ENABLE_EXAMPLE "Flag to enable unit examples" ON)
 OPTION(TCHEM_ENABLE_VERBOSE "Flag to enable TChem verbose flag" OFF)
 OPTION(TCHEM_ENABLE_DEBUG "Flag to enable TChem debug flag" OFF)
 OPTION(TCHEM_ENABLE_PYTHON "Flag to enable python binding" OFF)
+OPTION(TCHEM_ENABLE_FORTRAN "Flag to enable fortran binding" OFF)
 
 OPTION(TCHEM_ENABLE_PROBLEMS_NUMERICAL_JACOBIAN "Flag to enable numerical jacobian" OFF)
 OPTION(TCHEM_ENABLE_NEWTONSOLVER_USE_WRMS_NORMS "Flag to enable newton solver to use wrms norms" ON)
@@ -39,10 +41,12 @@ OPTION(KOKKOS_INSTALL_PATH "Path to Kokkos installation")
 OPTION(TINES_INSTALL_PATH "Path to Tines installation")
 OPTION(GTEST_INSTALL_PATH "Path to gtest installation")
 
-# option to manually set lib install path
-OPTION(TCHEM_INSTALL_LIB_PATH "Installation directory for libraries" lib)
-
 INCLUDE_DIRECTORIES(${TChem_BINARY_DIR})
+
+# Fortran
+IF (TCHEM_ENABLE_FORTRAN)
+  ENABLE_LANGUAGE(Fortran)  
+ENDIF()
 
 # TChem link libraries for tests
 SET(TCHEM_LINK_LIBRARIES tchem)

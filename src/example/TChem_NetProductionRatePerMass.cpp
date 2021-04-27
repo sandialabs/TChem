@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #include "TChem_NetProductionRatePerMass.hpp"
 #include "TChem_CommandLineParser.hpp"
 #include "TChem_KineticModelData.hpp"
@@ -40,8 +38,9 @@ main(int argc, char* argv[])
   std::string thermFile(prefixPath + "therm.dat");
   std::string inputFile(prefixPath + "input.dat");
   std::string outputFile(prefixPath + "omega.dat");
-  int nBatch(1);
-  bool verbose(true);
+  int nBatch(1), team_size(-1), vector_size(-1);
+  bool verbose(true), use_sample_format(false);
+
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
@@ -54,10 +53,19 @@ main(int argc, char* argv[])
     "inputfile", "Input state file name e.g., input.dat", &inputFile);
   opts.set_option<std::string>(
     "outputfile", "Output omega file name e.g., omega.dat", &outputFile);
+  //
+  opts.set_option<int>(
+    "team_thread_size", "time thread size ", &team_size);
+  //
+  opts.set_option<int>(
+    "vector_thread_size", "vector thread size ", &vector_size);
   opts.set_option<int>(
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
+  //
+  opts.set_option<bool>(
+    "use_sample_format", "If true, input file does not header or format", &use_sample_format);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
 
@@ -71,28 +79,63 @@ main(int argc, char* argv[])
 
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
+    const auto exec_space_instance = TChem::exec_space();
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
     const auto kmcd = kmd.createConstData<TChem::exec_space>();
 
-    /// input: state vectors: temperature, pressure and mass fraction
-    real_type_2d_view state(
-      "StateVector", nBatch, TChem::Impl::getStateVectorSize(kmcd.nSpec));
 
-    /// output: omega, reaction rates
-    real_type_2d_view omega("NetProductionRatePerMass", nBatch, kmcd.nSpec);
+    const ordinal_type stateVecDim =
+      TChem::Impl::getStateVectorSize(kmcd.nSpec);
 
-    /// create a mirror view to store input from a file
-    auto state_host = Kokkos::create_mirror_view(state);
+    real_type_2d_view_host state_host;
 
-    /// input from a file; this is not necessary as the input is created
-    /// by other applications.
-    {
+    if (use_sample_format){
+      // read gas
+      const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
+      Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
+
+      // get species molecular weigths
+      const auto SpeciesMolecularWeights =
+        Kokkos::create_mirror_view(kmcd.sMass);
+      Kokkos::deep_copy(SpeciesMolecularWeights, kmcd.sMass);
+
+      TChem::Test::readSample(inputFile,
+                              speciesNamesHost,
+                              SpeciesMolecularWeights,
+                              kmcd.nSpec,
+                              stateVecDim,
+                              state_host,
+                              nBatch);
+
+    } else{
+      state_host = real_type_2d_view_host("state vector host", nBatch, stateVecDim);
       auto state_host_at_0 = Kokkos::subview(state_host, 0, Kokkos::ALL());
       TChem::Test::readStateVector(inputFile, kmcd.nSpec, state_host_at_0);
       TChem::Test::cloneView(state_host);
+
     }
+
+    real_type_2d_view omega("NetProductionRatePerMass", nBatch, kmcd.nSpec);
+
+    real_type_2d_view state("StateVector Devices", nBatch, stateVecDim);
+
+    using policy_type =
+      typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
+
+    policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
+    const ordinal_type level = 1;
+
+    if (team_size > 0 && vector_size > 0) {
+      policy = policy_type(exec_space_instance, nBatch, team_size, vector_size);
+    }
+
+    const ordinal_type per_team_extent = NetProductionRatePerMass::getWorkSpaceSize(kmcd);
+    ordinal_type per_team_scratch =
+      TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+
 
     Kokkos::Impl::Timer timer;
 
@@ -101,12 +144,12 @@ main(int argc, char* argv[])
     const real_type t_deepcopy = timer.seconds();
 
     timer.reset();
-    TChem::NetProductionRatePerMass::runDeviceBatch(nBatch, state, omega, kmcd);
+    TChem::NetProductionRatePerMass::runDeviceBatch(policy, state, omega, kmcd);
     Kokkos::fence(); /// timing purpose
     const real_type t_device_batch = timer.seconds();
 
     /// show time
-    printf("---------------------------------------------------\n");    
+    printf("---------------------------------------------------\n");
     printf("Testing Arguments: \n batch size %d\n chemfile %s\n thermfile %s\n inputfile %s\n outputfile %s\n verbose %s\n",
            nBatch,
            chemFile.c_str(),

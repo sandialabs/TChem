@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #include "TChem_CommandLineParser.hpp"
 #include "TChem_KineticModelData.hpp"
 #include "TChem_Util.hpp"
@@ -53,14 +51,14 @@ main(int argc, char* argv[])
   /// default inputs
   std::string prefixPath("data/plug-flow-reactor/X/");
   int output_frequency(-1);
-  // std::string chemFile(prefixPath + "chem.inp");
-  // std::string thermFile(prefixPath + "therm.dat");
-  // std::string chemSurfFile(prefixPath + "chemSurf.inp");
-  // std::string thermSurfFile(prefixPath + "thermSurf.dat");
-  // std::string inputFile(prefixPath + "inputGas.dat");
-  // std::string inputFileSurf(prefixPath + "inputSurfGas.dat");
-  // std::string inputFilevelocity(prefixPath + "inputVelocity.dat");
-  // std::string outputFile(prefixPath + "SurfaceRHS.dat");
+
+  std::string chemFile("chem.inp");
+  std::string thermFile("therm.dat");
+  std::string chemSurfFile("chemSurf.inp");
+  std::string thermSurfFile("thermSurf.dat");
+  std::string inputFile("sample.dat");
+  std::string inputFileSurf( "inputSurf.dat");
+  bool use_prefixPath(true);
 
   const real_type zero(0);
   real_type tbeg(0), tend(100);
@@ -80,6 +78,28 @@ main(int argc, char* argv[])
   opts.set_option<int>(
       "output_frequency", "save data at this iterations", &output_frequency);
   opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
+  opts.set_option<bool>(
+      "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
+  opts.set_option<std::string>
+  ("chemfile", "Chem file name e.g., chem.inp",
+  &chemFile);
+
+  opts.set_option<std::string>
+  ("thermfile", "Therm file name e.g., therm.dat", &thermFile);
+
+  opts.set_option<std::string>
+  ("chemSurffile","Chem file name e.g., chemSurf.inp",
+   &chemSurfFile);
+
+  opts.set_option<std::string>
+  ("thermSurffile", "Therm file name e.g.,thermSurf.dat",
+  &thermSurfFile);
+
+  opts.set_option<std::string>
+  ("samplefile", "Input state file name e.g., input.dat", &inputFile);
+
+  opts.set_option<std::string>
+  ("inputSurffile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
   opts.set_option<real_type>("tend", "Time end", &tend);
   opts.set_option<real_type>("dtmin", "Minimum time step size", &dtmin);
   opts.set_option<real_type>("dtmax", "Maximum time step size", &dtmax);
@@ -103,18 +123,22 @@ main(int argc, char* argv[])
     opts.set_option<real_type>(
       "rtol-newton", "Relative tolerence used in newton solver", &rtol_newton);
     opts.set_option<real_type>(
-      "tol-time", "Tolerence used for adaptive time stepping", &rtol_time);  
+      "tol-time", "Tolerence used for adaptive time stepping", &rtol_time);
 
   const bool r_parse = opts.parse(argc, argv);
   if (r_parse)
     return 0; // print help return
-  std::string chemFile(prefixPath + "chem.inp");
-  std::string thermFile(prefixPath + "therm.dat");
-  std::string chemSurfFile(prefixPath + "chemSurf.inp");
-  std::string thermSurfFile(prefixPath + "thermSurf.dat");
-  std::string inputFile(prefixPath + "sample.dat");
-  std::string inputFileSurf(prefixPath + "inputSurf.dat");
-  // std::string outputFile(prefixPath + "SurfaceRHS.dat");
+
+ if ( use_prefixPath ){
+   chemFile      = prefixPath + "chem.inp";
+   thermFile     = prefixPath + "therm.dat";
+   chemSurfFile  = prefixPath + "chemSurf.inp";
+   thermSurfFile = prefixPath + "thermSurf.dat";
+   inputFile     = prefixPath + "sample.dat";
+   inputFileSurf = prefixPath + "inputSurf.dat";
+   printf("Using a prefix path %s \n",prefixPath.c_str() );
+  }
+
 
   Kokkos::initialize(argc, argv);
   {

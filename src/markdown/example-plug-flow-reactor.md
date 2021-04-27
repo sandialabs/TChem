@@ -117,8 +117,8 @@ Description:
 The following shell script sets the input parameters and runs the PFR example
 
 ```
-exec=@TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
-inputs=@TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
+exec=$TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
+inputs=$TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
 Area=0.00053
 Pcat=0.025977239243415308
 dzmin=1e-12
@@ -133,7 +133,7 @@ save=1
 transient_initial_condition=false
 initial_condition=true
 
-@exec --prefixPath=@inputs --initial_condition=@initial_condition --transient_initial_condition=@transient_initial_condition --Area=@Area  --Pcat=@Pcat --tol-z=@tol_z --atol-newton=@atol_newton --rtol-newton=@rtol_newton --dzmin=@dzmin --max-newton-iterations=@max_newton_iterations --output_frequency=@save --dzmax=@dzmax --zend=@zend --max-time-iterations=@max_z_iterations
+$exec --prefixPath=$inputs --initial_condition=$initial_condition --transient_initial_condition=$transient_initial_condition --Area=$Area  --Pcat=$Pcat --tol-z=$tol_z --atol-newton=$atol_newton --rtol-newton=$rtol_newton --dzmin=$dzmin --max-newton-iterations=$max_newton_iterations --output_frequency=$save --dzmax=$dzmax --zend=$zend --max-time-iterations=$max_z_iterations
 ```
 
 We ran the example  in the install directory "TCHEM_INSTALL_PATH/example/runs/PlugFlowReactor/CH4-PTnogas". Thus, all the paths are relative to this directory. This script will run the executable "TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x" with the input files located at "TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/". These files correspond to the gas-phase and surface reaction mechanisms ("chem.inp" and "chemSurf.inp") and their corresponding thermo files ("therm.dat" and "thermSurf.dat").  The operating condition at the inlet of the reactor, i.e. the gas composition, in "sample.dat", and the initial guess for the site fractions, in "inputSurf.dat", are also required. The format and description of these files are presented in [Section](#inputfiles). The gas velocity at the inlet is provided in "inputVelocity.dat".
@@ -156,19 +156,19 @@ The inputs "transient_initial_condition" and "initial_condition" allow us to pic
 The gas-phase and surface mechanisms used in this example represents the catalytic combustion of methane on platinum and was developed by [Blondal and co-workers](https://pubs.acs.org/doi/10.1021/acs.iecr.9b01464). These mechanisms have 15 gas species, 20 surface species, 47 surface reactions and no gas-phase reactions. The total number of ODEs is $18$ and there are $20$ constrains.  One simulation took about 12s to complete on a MacBook Pro with a 3.1GHz Intel Core i7 processor. Time profiles for temperature, density, velocity, mass fractions and site fractions for selected species are presented in the following figures.  Scripts and jupyter notebooks for this example are located under "TCHEM_INSTALL_PATH/example/runs/PlugFlowReactor/CH4-PTnogas".
 
 
-![plot of density, temperature and velocity](src/markdown/Figures/CH4-PTnogas/TempDensVelPFR.jpg)
+![plot of density, temperature and velocity](Figures/CH4-PTnogas/TempDensVelPFR.jpg)
 Figure. Gas Temperature (left axis), velocity and density (both on right axis) along the PFR.   
 
-![mass fraction of a few species](src/markdown/Figures/CH4-PTnogas/gas1.jpg)
+![mass fraction of a few species](Figures/CH4-PTnogas/gas1.jpg)
 Figure. Mass fraction of $\mathrm{CH}_4$, $\mathrm{OH}$ and $\mathrm{CH}_3\mathrm{OH}$.   
 
-![mass fraction of a few species](src/markdown/Figures/CH4-PTnogas/gas2.jpg)
+![mass fraction of a few species](Figures/CH4-PTnogas/gas2.jpg)
 Figure. Mass fractions for $\mathrm{O}_2$, $\mathrm{HCO}$ and $\mathrm{CH}_3\mathrm{OO}$
 
-![site fraction of a few species](src/markdown/Figures/CH4-PTnogas/surf1.jpg)
+![site fraction of a few species](Figures/CH4-PTnogas/surf1.jpg)
 Figure. Site fractions for $\mathrm{X}$ (empty space), $\mathrm{CH_4X}$ and $\mathrm{OHX}$.
 
-![site fraction of a few species](src/markdown/Figures/CH4-PTnogas/surf2.jpg)
+![site fraction of a few species](Figures/CH4-PTnogas/surf2.jpg)
 Figure. Site fractions for $\mathrm{OX}$, $\mathrm{CHX}$, $\mathrm{CHOX}$.
 
 ***Parametric study***
@@ -179,18 +179,18 @@ These samples correspond to combination of values for the molar fraction of  $CH
 The bash script to run this problem is :
 
 ````
-exec=@TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
+exec=$TCHEM_INSTALL_PATH/example/TChem_PlugFlowReactor.x
 use_prefixPath=false
-inputs=@TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
+inputs=$TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/
 inputs_conditions=inputs/
 
-chemfile=@inputs"chem.inp"
-thermfile=@inputs"therm.dat"
-chemSurffile=@inputs"chemSurf.inp"
-thermSurffile=@inputs"thermSurf.dat"
-samplefile=@inputs_conditions"sample.dat"
-inputSurffile=@inputs_conditions"inputSurf.dat"
-inputVelocityfile=@inputs_conditions"inputVelocity.dat"
+chemfile=$inputs"chem.inp"
+thermfile=$inputs"therm.dat"
+chemSurffile=$inputs"chemSurf.inp"
+thermSurffile=$inputs"thermSurf.dat"
+samplefile=$inputs_conditions"sample.dat"
+inputSurffile=$inputs_conditions"inputSurf.dat"
+inputVelocityfile=$inputs_conditions"inputVelocity.dat"
 
 save=1
 dzmin=1e-12
@@ -206,35 +206,35 @@ Pcat=0.025977239243415308
 transient_initial_condition=true
 initial_condition=false
 
-@exec --use_prefixPath=@use_prefixPath --chemfile=@chemfile --thermfile=@thermfile --chemSurffile=@chemSurffile --thermSurffile=@thermSurffile --samplefile=@samplefile --inputSurffile=@inputSurffile --inputVelocityfile=@inputVelocityfile --initial_condition=@initial_condition --transient_initial_condition=@transient_initial_condition --Area=@Area  --Pcat=@Pcat --tol-z=@tol_z --atol-newton=@atol_newton --rtol-newton=@rtol_newton --dzmin=@dzmin --max-newton-iterations=@max_newton_iterations --output_frequency=@save --dzmax=@dzmax --zend=@zend --max-time-iterations=@max_z_iterations
+$exec --use_prefixPath=$use_prefixPath --chemfile=$chemfile --thermfile=$thermfile --chemSurffile=$chemSurffile --thermSurffile=$thermSurffile --samplefile=$samplefile --inputSurffile=$inputSurffile --inputVelocityfile=$inputVelocityfile --initial_condition=$initial_condition --transient_initial_condition=$transient_initial_condition --Area=$Area  --Pcat=$Pcat --tol-z=$tol_z --atol-newton=$atol_newton --rtol-newton=$rtol_newton --dzmin=$dzmin --max-newton-iterations=$max_newton_iterations --output_frequency=$save --dzmax=$dzmax --zend=$zend --max-time-iterations=$max_z_iterations
 ````
 
 In the above script we did not use a prefix path ("use_prefixPath=false") instead we provided the name of the inputs files: "chemfile", "thermfile",  "chemSurffile", "thermSurffile", "samplefile", "inputSurffile", "inputVelocityfile". The files for the reaction mechanism ("chem.inp" and "chemSurf.inp") and the thermo files ("therm.dat" and "thermSurf.dat") are located under "TCHEM_INSTALL_PATH/example/data/plug-flow-reactor/CH4-PTnogas/". The files with the inlet conditions ("sample.dat", "inputSurf.dat" and"inputVelocity.dat") are located in the "input" directory, located under the run directory. One can set a different path for the input files with the command-line option "use_prefixPath". Additionally, one can also use the option "transient_initial_condition=true", to activate the transient solver to find initial condition for the [PFR](#initialconditionforpfrproblem).
 
 The following figures show temperature, gas-phase species mass fractions and surface species site fractions corresponding to the example presented above.
 
-![Temperature](src/markdown/Figures/CH4-PTnogas_SA/TempSamplesPFR.jpg)
+![Temperature](Figures/CH4-PTnogas_SA/TempSamplesPFR.jpg)
 Figure. Gas temperature for 8 sample.
 
-![$O_2$](src/markdown/Figures/CH4-PTnogas_SA/O2SamplesPFR.jpg)
+![$O_2$](Figures/CH4-PTnogas_SA/O2SamplesPFR.jpg)
 Figure. Mass fraction $O_2$ for 8 sample.
 
-![$CH4_2$](src/markdown/Figures/CH4-PTnogas_SA/CH4SamplesPFR.jpg)
+![$CH4_2$](Figures/CH4-PTnogas_SA/CH4SamplesPFR.jpg)
 Figure. Mass fraction $CH_4$ for 8 sample.
 
-![$CO$](src/markdown/Figures/CH4-PTnogas_SA/COSamplesPFR.jpg)
+![$CO$](Figures/CH4-PTnogas_SA/COSamplesPFR.jpg)
 Figure. Mass fraction $CO$ for 8 sample.
 
-![$OH$](src/markdown/Figures/CH4-PTnogas_SA/OHSamplesPFR.jpg)
+![$OH$](Figures/CH4-PTnogas_SA/OHSamplesPFR.jpg)
 Figure. Mass fraction $OH$ for 8 sample.
 
-![$X$](src/markdown/Figures/CH4-PTnogas_SA/XSamplesPFR.jpg)
+![$X$](Figures/CH4-PTnogas_SA/XSamplesPFR.jpg)
 Figure. Site fraction $X$ for 8 sample.
 
-![$OX$](src/markdown/Figures/CH4-PTnogas_SA/OXSamplesPFR.jpg)
+![$OX$](Figures/CH4-PTnogas_SA/OXSamplesPFR.jpg)
 Figure. Site fraction $OX$ for 8 sample.
 
-![$CH4X$](src/markdown/Figures/CH4-PTnogas_SA/CH4XSamplesPFR.jpg)
+![$CH4X$](Figures/CH4-PTnogas_SA/CH4XSamplesPFR.jpg)
 Figure. Site fraction $CH_4X$ for 8 sample.
 
 ## Initial Condition for PFR Problem
@@ -245,7 +245,7 @@ $$ \frac{dZ_k}{dt}= \frac{\dot{s}_k}{\Gamma} \quad  k \text{ correspond to surfa
  In the [first method](#cxx-api-SimpleSurface), the ODE system is solved until reaches steady state. This is presented at "TCHEM_REPOSITORY_PATH/src/example/TChem_SimpleSurface.cpp". The following figure shows three surface species, the other species have values lower than 1e-4. This result shows the time to reach stable state is only of 1e-4 s. In the PFR example presented above, this option can be used setting  "transient_initial_condition=true" and  "initial_condition=false".
 
 
- ![site fraction of a few species](src/markdown/Figures/X/SimpleSurface.jpg)
+ ![site fraction of a few species](Figures/X/SimpleSurface.jpg)
  Figure.Site fractions for $\mathrm{X}$ (empty space), $\mathrm{OX}$ and $\mathrm{COX}$. We start this simulation with an empty surface ($\mathrm{X}=1$).
 
 

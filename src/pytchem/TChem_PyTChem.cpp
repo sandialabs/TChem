@@ -1,25 +1,3 @@
-/* =====================================================================================
-TChem version 2.1.0
-Copyright (2020) NTESS
-https://github.com/sandialabs/TChem
-
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
-certain rights in this software.
-
-This file is part of TChem. TChem is open-source software: you can redistribute it
-and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
-provided under the main directory
-
-Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
-           Kyungjoo Kim at <kyukim@sandia.gov>, or
-           Oscar Diaz-Ibarra at <odiazib@sandia.gov>
-
-Sandia National Laboratories, Livermore, CA, USA
-===================================================================================== */
-
-
 #ifndef __TCHEM_PYTCHEM__
 #define __TCHEM_PYTCHEM__
 
@@ -61,27 +39,10 @@ public:
   ~TChemDriver() {
     delete _obj;
   }
-  void createKineticModel(const std::string& chem_file, const std::string& therm_file) {
-    _obj->createKineticModel(chem_file, therm_file);
-  }
-  void setNumberOfSamples(const int n_sample) {
-    _obj->setNumberOfSamples(n_sample);
-  }
-  int getNumberOfSamples() const {
-    return _obj->getNumberOfSamples();
-  }
-  int getLengthOfStateVector() const {
-    return _obj->getLengthOfStateVector();
-  }
-  int getNumerOfSpecies() const {
-    return _obj->getNumerOfSpecies();
-  }
-  int getNumerOfReactions() const {
-    return _obj->getNumerOfReactions();
-  }
-  void createStateVector() {
-    _obj->createStateVector();
-  }
+
+  ///
+  /// copy utils
+  ///
   void copyToNonConstView(py::array_t<real_type> a, typename TChem::Driver::real_type_1d_view_host b) {
     py::buffer_info buf = a.request();
     TCHEM_CHECK_ERROR(buf.ndim != 1, "Error: input state is not rank 1 array");
@@ -95,6 +56,7 @@ public:
     for (int ii=0;ii<m;++ii)
       tgt(ii) = src[ii*ss];
   }
+
   void copyFromConstView(typename TChem::Driver::real_type_1d_const_view_host a, py::array_t<real_type> b) {
     py::buffer_info buf = b.request();
     TCHEM_CHECK_ERROR(buf.ndim != 1, "Error: input state is not rank 1 array");
@@ -108,6 +70,7 @@ public:
     for (int ii=0;ii<m;++ii)
       tgt[ii*ts] = src(ii);
   }
+
   void copyToNonConstView(py::array_t<real_type> a, typename TChem::Driver::real_type_2d_view_host b) {
     py::buffer_info buf = a.request();
     TCHEM_CHECK_ERROR(buf.ndim != 2, "Error: input state is not rank 2 array");
@@ -126,6 +89,7 @@ public:
       tgt(ii,jj) = src[ii*ss0+jj*ss1];
     });
   }
+
   void copyFromConstView(typename TChem::Driver::real_type_2d_const_view_host a, py::array_t<real_type> b) {
     py::buffer_info buf = b.request();
     TCHEM_CHECK_ERROR(buf.ndim != 2, "Error: input state is not rank 2 array");
@@ -144,6 +108,59 @@ public:
       tgt[ii*ts0+jj*ts1] = src(ii,jj);
     });
   }
+
+  ///
+  /// kinetic model interface
+  /// - when a kinetic model recreate, all view objects are freed.
+  void createKineticModel(const std::string& chem_file, const std::string& therm_file) {
+    _obj->createKineticModel(chem_file, therm_file);
+  }
+  
+  int getNumberOfSpecies() const {
+    return _obj->getNumberOfSpecies();
+  }
+  
+  int getNumberOfReactions() const {
+    return _obj->getNumberOfReactions();
+  }
+
+  ///
+  /// batch parallel
+  /// - when a new batch size is set, all view objects are freed.
+  void setNumberOfSamples(const int n_sample) {
+    _obj->setNumberOfSamples(n_sample);
+  }
+  
+  int getNumberOfSamples() const {
+    return _obj->getNumberOfSamples();
+  }
+
+  ///
+  /// state vector setup helper
+  ///
+  int getLengthOfStateVector() const {
+    return _obj->getLengthOfStateVector();
+  }
+
+  int getSpeciesIndex(const std::string& species_name) const {
+    return _obj->getSpeciesIndex(species_name);
+  }
+
+  int getStateVariableIndex(const std::string& var_name) {
+    const int varIndex = _obj->getStateVariableIndex(var_name);
+    if (varIndex == -1) {
+      printf("!!! WARNING variable with name %s does not exit in state vector\n",(var_name).c_str() );
+    }
+    return varIndex;
+  }
+
+  ///
+  /// state vector
+  ///
+  void createStateVector() {
+    _obj->createStateVector();
+  }
+
   void setStateVectorSingle(const int i, py::array_t<real_type> src) {
     TCHEM_CHECK_ERROR(!_obj->isStateVectorCreated(), "Error: state vector is not created");
 
@@ -152,6 +169,7 @@ public:
 
     copyToNonConstView(src, tgt);
   }
+
   py::array_t<real_type> getStateVectorSingle(const int i) {
     TCHEM_CHECK_ERROR(!_obj->isStateVectorCreated(), "Error: state vector is not created");
     typename TChem::Driver::real_type_1d_const_view_host src;
@@ -162,6 +180,7 @@ public:
     copyFromConstView(src, tgt);
     return tgt;
   }
+
   void setStateVectorAll(py::array_t<real_type> src) {
     TCHEM_CHECK_ERROR(!_obj->isStateVectorCreated(), "Error: state vector is not created");
 
@@ -170,6 +189,7 @@ public:
 
     copyToNonConstView(src, tgt);
   }
+
   py::array_t<real_type> getStateVectorAll() {
     TCHEM_CHECK_ERROR(!_obj->isStateVectorCreated(), "Error: state vector is not created");
     typename TChem::Driver::real_type_2d_const_view_host src;
@@ -180,9 +200,14 @@ public:
     copyFromConstView(src, tgt);
     return tgt;
   }
+
+  ///
+  /// net production rate
+  ///
   void createNetProductionRatePerMass() {
     _obj->createNetProductionRatePerMass();
   }
+
   py::array_t<real_type> getNetProductionRatePerMassSingle(const int i) {
     TCHEM_CHECK_ERROR(!_obj->isNetProductionRatePerMassCreated(), "Error: net production rate per mass is not created");
     typename TChem::Driver::real_type_1d_const_view_host src;
@@ -193,6 +218,7 @@ public:
     copyFromConstView(src, tgt);
     return tgt;
   }
+
   py::array_t<real_type> getNetProductionRatePerMassAll() {
     TCHEM_CHECK_ERROR(!_obj->isNetProductionRatePerMassCreated(), "Error: net production rate per mass is not created");
     typename TChem::Driver::real_type_2d_const_view_host src;
@@ -203,9 +229,60 @@ public:
     copyFromConstView(src, tgt);
     return tgt;
   }
+
   void computeNetProductionRatePerMass() {
     _obj->computeNetProductionRatePerMassDevice();
   }
+
+  ///
+  /// homogeneous gas reactor
+  ///
+  void setTimeAdvanceHomogeneousGasReactor(const real_type & tbeg,
+					   const real_type & tend,
+					   const real_type & dtmin,
+					   const real_type & dtmax,
+					   const real_type & max_num_newton_iterations,
+					   const real_type & num_time_iterations_per_interval,
+					   const real_type& atol_newton, const real_type&rtol_newton,
+					   const real_type& atol_time, const real_type& rtol_time) {
+    _obj->setTimeAdvanceHomogeneousGasReactor(tbeg, tend, dtmin, dtmax,
+					      max_num_newton_iterations, num_time_iterations_per_interval,
+					      atol_newton, rtol_newton,
+					      atol_time, rtol_time);
+  }
+
+  real_type computeTimeAdvanceHomogeneousGasReactor() const {
+    return  _obj->computeTimeAdvanceHomogeneousGasReactorDevice();
+  }
+
+  ///
+  /// t and dt accessor
+  ///
+  void unsetTimeAdvance() {
+    _obj->unsetTimeAdvance();
+  }
+
+  py::array_t<real_type> getTimeStep() {
+    typename TChem::Driver::real_type_1d_const_view_host src;
+    _obj->getTimeStepHost(src);
+
+    auto tgt = py::array_t<real_type>(src.extent(0));
+    copyFromConstView(src, tgt);
+    return tgt;
+  }
+
+  py::array_t<real_type> getTimeStepSize() {
+    typename TChem::Driver::real_type_1d_const_view_host src;
+    _obj->getTimeStepSizeHost(src);
+
+    auto tgt = py::array_t<real_type>(src.extent(0));
+    copyFromConstView(src, tgt);
+    return tgt;
+  }
+
+  ///
+  /// view utils
+  ///
   void createAllViews() {
     _obj->createAllViews();
   }
@@ -235,25 +312,34 @@ PYBIND11_MODULE(pytchem, m) {
        "TChemDriver",
        R"pbdoc(A class to manage data movement between numpy to kokkos views in TChem::Driver object)pbdoc")
       .def(py::init<>())
+      //// kinetic model interface
       .def("createKineticModel",
 	   py_overload_cast<const std::string&,const std::string&>()(&TChemDriver::createKineticModel),
 	   py::arg("chemkin_input"), py::arg("thermo_data"),
 	   "Create a kinetic model from CHEMKIN input files")
+      .def("getNumberOfSpecies",
+	   (&TChemDriver::getNumberOfSpecies),
+	   "Get the number of species registered in the kinetic model")
+      .def("getNumberOfReactions",
+	   (&TChemDriver::getNumberOfReactions),
+	   "Get the number of reactions registered in the kinetic model")
+      //// batch parallel interface
       .def("setNumberOfSamples",
 	   (&TChemDriver::setNumberOfSamples), py::arg("number_of_samples"),
 	   "Set the number of samples; this is used for Kokkos view allocation")
       .def("getNumberOfSamples",
 	   (&TChemDriver::getNumberOfSamples),
 	   "Get the number of samples which is currently used in the driver")
+      /// state vector helpers
       .def("getLengthOfStateVector",
 	   (&TChemDriver::getLengthOfStateVector),
 	   "Get the size of state vector i.e., rho, P, T, Y_{0-Nspec-1}")
-      .def("getNumerOfSpecies",
-	   (&TChemDriver::getNumerOfSpecies),
-	   "Get the number of species registered in the kinetic model")
-      .def("getNumerOfReactions",
-	   (&TChemDriver::getNumerOfReactions),
-	   "Get the number of reactions registered in the kinetic model")
+      .def("getSpeciesIndex",
+           (&TChemDriver::getSpeciesIndex),py::arg("species_name"),
+           "Get species index" )
+      .def("getStateVariableIndex",
+           (&TChemDriver::getStateVariableIndex), py::arg("var_name"), "Get state variable index " )
+      /// state vector
       .def("createStateVector",
 	   (&TChemDriver::createStateVector),
 	   "Allocate memory for state vector (# samples, state vector length)")
@@ -269,6 +355,7 @@ PYBIND11_MODULE(pytchem, m) {
       .def("getStateVector",
 	   (&TChemDriver::getStateVectorAll), py::return_value_policy::take_ownership,
 	   "Retrieve state vector for all samples")
+      /// net production rate
       .def("createNetProductionRatePerMass",
 	   (&TChemDriver::createNetProductionRatePerMass),
 	   "Allocate memory for net production rate per mass (# samples, # species)")
@@ -279,8 +366,25 @@ PYBIND11_MODULE(pytchem, m) {
 	   (&TChemDriver::getNetProductionRatePerMassAll), py::return_value_policy::take_ownership,
 	   "Retrieve net production rate for all samples")
       .def("computeNetProductionRatePerMass",
-	   (&TChemDriver::computeNetProductionRatePerMass),
-	   "Compute net production rate")
+	   (&TChemDriver::computeNetProductionRatePerMass), "Compute net production rate")
+      /// homogeneous gas reactor
+      .def("setTimeAdvanceHomogeneousGasReactor",(&TChemDriver::setTimeAdvanceHomogeneousGasReactor),
+           py::arg("tbeg"),  py::arg("tend"), py::arg("dtmin"), py::arg("dtmax"),
+           py::arg("max_num_newton_iterations"), py::arg("num_time_iterations_per_interval"),
+           py::arg("atol_newton"), py::arg("rtol_newton"),
+           py::arg("atol_time"), py::arg("rtol_time"),
+           "Set time advance object for homogeneous gas reactor")
+      .def("computeTimeAdvanceHomogeneousGasReactor",
+           (&TChemDriver::computeTimeAdvanceHomogeneousGasReactor),
+           "Compute Time Advance for a Homogeneous-Gas Reactor ")
+      /// time step accessors
+      .def("getTimeStep",
+	   (&TChemDriver::getTimeStep), py::return_value_policy::take_ownership,
+	   "Retrieve time line of all samples")
+      .def("getTimeStepSize",
+	   (&TChemDriver::getTimeStepSize), py::return_value_policy::take_ownership,
+	   "Retrieve time step sizes of all samples")
+      /// view utils
       .def("createAllViews",
 	   (&TChemDriver::createAllViews),
 	   "Allocate all necessary workspace for this driver")

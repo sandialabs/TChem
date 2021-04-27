@@ -1,5 +1,5 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
@@ -7,9 +7,9 @@ Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS
 Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,13 +18,10 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef __TCHEM_IMPL_KFORWARDREVERSE_HPP__
 #define __TCHEM_IMPL_KFORWARDREVERSE_HPP__
 
 #include "TChem_Impl_SumNuGk.hpp"
-#include "TChem_Impl_SumRealNuGk.hpp"
 #include "TChem_Util.hpp"
 // #define TCHEM_ENABLE_SERIAL_TEST_OUTPUT
 namespace TChem {
@@ -88,11 +85,14 @@ struct KForwardReverse
         ///
         if (plogtest) {
           ordinal_type idx = kmcd.reacPlogPno(iplog);
+          // printf("idx %d\n", idx );
           auto rpp = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
           rpp.assign_data(&kmcd.reacPlogPars(idx, 0));
+          // printf("reacPlogPars %e log %e\n",kmcd.reacPlogPars(idx,0), logP );
           if (logP <= kmcd.reacPlogPars(idx, 0)) {
 
             kfor(i) += rpp(1)*ats<RealType>::exp(rpp(2) * tln - rpp(3) * t_1);
+            // printf("lowest  iplog %d A %e b %e E %e p %e\n", iplog, rpp(1), rpp(2), rpp(3), rpp(0) );
 
             // check if there are intervale with same pressure
             for (ordinal_type inte = idx+1; inte < kmcd.reacPlogPno(iplog +1); inte++) {
@@ -101,16 +101,24 @@ struct KForwardReverse
                 auto rpp2 = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
                 rpp2.assign_data(&kmcd.reacPlogPars(inte, 0));
                 kfor(i) += rpp2(1)*ats<RealType>::exp(rpp2(2) * tln - rpp2(3) * t_1);
+                // printf("lowest inte %d iplog %d A %e b %e E %e p %e\n", inte, iplog, rpp2(1), rpp2(2), rpp2(3), rpp(0) );
               }
             }
 
+            // printf("ki i %d,  ki1 %e, logPi %e, log(A) %e, b %e, Ea %e \n",i,
+            // kfor(i), rpp(0),rpp(1),rpp(2),rpp(3) );
+
           } else {
             idx = kmcd.reacPlogPno(iplog + 1) - 1;
+            // printf("reacPlogPars %e log %e\n",kmcd.reacPlogPars(idx,0), logP
+            // );
             rpp.assign_data(&kmcd.reacPlogPars(idx, 0));
+
             if (logP >= kmcd.reacPlogPars(idx, 0)) {
 
               kfor(i) =
                 rpp(1)*ats<RealType>::exp(rpp(2) * tln - rpp(3) * t_1);
+              // printf("Highest  iplog %d A %e b %e E %e p %e\n", iplog, rpp(1), rpp(2), rpp(3), rpp(0) );
               for (ordinal_type inte =  kmcd.reacPlogPno(iplog); inte < idx; inte++) {
                 //is the next pressure same the highest value of  pressure ?
                 if (rpp(0) == kmcd.reacPlogPars(inte, 0) )
@@ -118,16 +126,31 @@ struct KForwardReverse
                   auto rpp2 = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
                   rpp2.assign_data(&kmcd.reacPlogPars(inte, 0));
                   kfor(i) += rpp2(1)*ats<RealType>::exp( rpp2(2) * tln - rpp2(3) * t_1);
+                  // printf("Highest inte %d iplog %d A %e b %e E %e p %e\n", inte, iplog, rpp2(1), rpp2(2), rpp2(3), rpp(0) );
                 }
               }
+
+
+              // printf("ki i %d,  ki1 %e, logPi %e, log(A) %e, b %e, Ea %e
+              // \n",i, kfor(i), rpp(0),rpp(1),rpp(2),rpp(3) );
             } else {
+              // printf("Reac No %d, kmcd.reacPlogPno(iplog) %d,
+              // kmcd.reacPlogPno(iplog+1)-1 %d \n", i, kmcd.reacPlogPno(iplog),
+              // kmcd.reacPlogPno(iplog+1)-1 );
               for (ordinal_type j = kmcd.reacPlogPno(iplog);
                    j < kmcd.reacPlogPno(iplog + 1);
                    ++j) {
+                // printf("logP %e kmcd.reacPlogPars(j,0)%e \n", logP,
+                // kmcd.reacPlogPars(j,0)  );
                 if (logP <= kmcd.reacPlogPars(j, 0)) {
+                  // printf("between intervals logP %e kmcd.reacPlogPars(j,0) %e
+                  // \n",logP,  kmcd.reacPlogPars(j,0) );
                   rpp.assign_data(&kmcd.reacPlogPars(j, 0));
                   RealType ki1 = rpp(1)*ats<RealType>::exp(rpp(2) * tln - rpp(3) * t_1);
                   const RealType rpp1 = rpp(0);
+                  // printf("high j %d iplog %d A %e b %e E %e p %e\n", j, iplog, rpp(1), rpp(2), rpp(3), rpp(0) );
+
+                  // ordinal_type numberOfInter(0);
                   for (ordinal_type inte = j + 1; inte < kmcd.reacPlogPno(iplog +1); inte++) {
                     //is the next pressure same the highest value of  pressure ?
                     if (rpp1 == kmcd.reacPlogPars(inte, 0) )
@@ -135,6 +158,7 @@ struct KForwardReverse
                       auto rpp2 = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
                       rpp2.assign_data(&kmcd.reacPlogPars(inte, 0));
                       ki1 += rpp2(1)*ats<RealType>::exp(rpp2(2) * tln - rpp2(3) * t_1);
+                      // printf("high inte %d iplog %d A %e b %e E %e p %e\n", inte, iplog, rpp2(1), rpp2(2), rpp2(3), rpp(0) );
                     }
                   }
 
@@ -145,9 +169,13 @@ struct KForwardReverse
                     Kokkos::abort("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative value (high range)");
                   }
 
+                  // printf("ki1 i %d,  ki1 %e, logPi %e, log(A) %e, b %e, Ea %e
+                  // \n",i, ki1, rpp(0),rpp(1),rpp(2),rpp(3) );
                   rpp.assign_data(&kmcd.reacPlogPars(j - 1, 0));
                   RealType ki = rpp(1)*ats<RealType>::exp(rpp(2) * tln - rpp(3) * t_1);
-
+                  // printf("ki i %d,  ki1 %e, logPi %e, log(A) %e, b %e, Ea %e
+                  // \n",i, ki, rpp(0),rpp(1),rpp(2),rpp(3) );
+                  // printf("low j %d iplog %d A %e b %e E %e p %e\n", j, iplog, rpp(1), rpp(2), rpp(3), rpp(0) );
                   for (ordinal_type inte = kmcd.reacPlogPno(iplog); inte < j-1; inte++)
                   {
 
@@ -156,13 +184,14 @@ struct KForwardReverse
                     {
                       auto rpp2 = Kokkos::subview(kmcd.reacPlogPars, 0, Kokkos::ALL());
                       rpp2.assign_data(&kmcd.reacPlogPars(inte, 0));
-                      ki += rpp2(1)*ats<RealType>::exp(rpp2(2) * tln - rpp2(3) * t_1);
+                      // printf("low inte %d iplog %d A %e b %e E %e p %e\n", inte, iplog, rpp2(1), rpp2(2), rpp2(3), rpp(0) );
+                      ki += rpp2(1)*ats<real_type>::exp(rpp2(2) * tln - rpp2(3) * t_1);
                     }
                   }
 
                   if (ki > 0)
                   {
-                    ki = ats<RealType>::log(ki);
+                    ki = ats<real_type>::log(ki);
                   }else{
                     Kokkos::abort("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative value (low range).");
                   }
@@ -170,6 +199,7 @@ struct KForwardReverse
 
                   kfor(i) = ats<RealType>::exp(
                     ki + (logP - rpp(0)) * (ki1 - ki) / (rpp1 - rpp(0)));
+                  // printf("Reacton No %d  kfor PLOG %e\n",i, kfor(i) );
                   break;
                 }
               } /* Done loop over all intervals */
@@ -204,12 +234,9 @@ struct KForwardReverse
           } /* done if section for reverse Arhenius parameters */
           else {
             /* no, need to compute equilibrium constant */
-            const ordinal_type ir = kmcd.reacScoef(i);
-            const real_type sumNuGk =
-              ir == -1 ? SumNuGk::serial_invoke(RealType(),i, gk, kmcd)
-                       : SumRealNuGk::serial_invoke(RealType(),i, ir, gk, kmcd);
-            const real_type kc =
-              kmcd.kc_coeff(i) * ats<real_type>::exp(sumNuGk);
+            const RealType sumNuGk = SumNuGk::serial_invoke(RealType(),i, gk, kmcd);
+            const RealType kc =
+              kmcd.kc_coeff(i) * ats<RealType>::exp(sumNuGk);
             krev(i) = kfor(i) / kc;
           } /* done if section for equilibrium constant */
         }   /* done if reaction is reversible */
@@ -384,9 +411,7 @@ struct KForwardReverseDerivative
           else {
             /* no, need to compute equilibrium constant */
             const ordinal_type ir = kmcd.reacScoef(i);
-            const real_type sumNuGkp =
-              ir == -1 ? SumNuGk::serial_invoke(real_type(), i, gkp, kmcd)
-                       : SumRealNuGk::serial_invoke(real_type(), i, ir, gkp, kmcd);
+            const real_type sumNuGkp = SumNuGk::serial_invoke(real_type(),i, gkp, kmcd);
             krevp(i) = kforp(i) - sumNuGkp;
           } /* done if section for equilibrium constant */
         }

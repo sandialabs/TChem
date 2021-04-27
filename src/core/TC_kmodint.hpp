@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef TCkmodintHSeen
 #define TCkmodintHSeen
 
@@ -131,7 +129,7 @@ typedef struct
   int isfit1set; /*  FIT1 parameters set */
 
   int spec[2 * NSPECREACMAX];     /* List of species */
-  int nuki[2 * NSPECREACMAX];     /* Stoichiometric coefficients (integer) */
+  double nuki[2 * NSPECREACMAX];     /* Stoichiometric coefficients (integer) */
   double rnuki[2 * NSPECREACMAX]; /* Stoichiometric coefficients (real) */
 
   double arhenfor[3]; /* Arrhenius parameters (forward) */
@@ -184,6 +182,26 @@ TCKMI_getelements(char* linein,
 
 void
 TCKMI_resetelemdata(element* currentelem);
+
+void
+TCMI_getnames(std::string& line,
+                  std::vector<std::string>& items );
+
+//
+void
+TCMI_parseString(std::string& line,
+                 std::string& delimiter,
+                 std::vector<std::string>& items );
+
+void
+TCMI_getReactansAndProductosFromEquation
+(std::string& equation,
+int& isRev,
+std::map<std::string, real_type>& reactantsMap,
+std::map<std::string, real_type>& productsMap);
+
+double
+TCMI_unitFactorActivationEnergies(std::string units);
 
 int
 TCKMI_setelementmass(element* listelem,

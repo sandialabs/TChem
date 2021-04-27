@@ -109,10 +109,10 @@ where $W$ is the molecular weight of the mixture.
 
 A example to compute $c_{p}$ and $h$ in mass base is at "example/TChem_ThermalProperties.cpp". Enthalpy per species and the mixture enthalpy are computed with this [function call](#cxx-api-EnthalpyMass). Heat capacity per species and mixture with this [function call](#cxx-api-SpecificHeatCapacityPerMass). This example can be used in bath mode, and several sample are compute in one run. The next two figures were compute with 40000 samples changing temperature and equivalent ratio for methane/air mixtures.
 
-![Enthalpy](src/markdown/Figures/gri3.0_OneSample/MixtureEnthalpy.jpg)
+![Enthalpy](Figures/gri3.0_OneSample/MixtureEnthalpy.jpg)
 Figure. Mixture Enthalpy compute with gri3.0 mechanism.
 
-![SpecificHeatCapacity](src/markdown/Figures/gri3.0_OneSample/MixtureSpecificHeatCapacity.jpg)
+![SpecificHeatCapacity](Figures/gri3.0_OneSample/MixtureSpecificHeatCapacity.jpg)
 Figure.  Mixutre Specific Heat Capacity $C_p$ compute with gri3.0 mechanism.
 
 

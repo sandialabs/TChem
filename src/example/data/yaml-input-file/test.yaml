@@ -1,0 +1,44 @@
+TChem Simulation:
+  title: Zero D ignition simulation
+  date: Thu, 28 Jan 2021 18:11:40 -0800
+FileNames:
+  chem: chem.inp
+  thermo: term.dat
+TimeIntegration:
+  tbegin: 0
+  tend: 1
+  dtmin: 1e-10
+  dtmax: 0.01
+  absolute_tolerance_newton: 1e-16
+  relative_tolerance_newton: 1e-08
+  relative_tolerance_time: 1e-06
+  absolute_tolerance_time: 1e-12
+  max_newton_iterations: 20
+  max_time_iterations: 100
+OutputFile:
+  file_name: IgnSolution.dat
+  output_frequency: 10
+IgnitionDelayTime:
+  threshold_temperature: 1500
+  compute_only_ignition_delay_time: 'false'
+  file_name_second_derivative: IgnitionDelayTime.dat
+  file_name_Tthreshold: IgnitionDelayTimeTthreshold.dat
+SimulationSettings:
+  verbose: 'false'
+  team_size: -1
+  vector_size: -1
+DesignOfExperiment:
+  variables: [T, P, H2, O2]
+  condition_No_0: [900.0, 101325.0, 0.12, 0.88]
+  condition_No_1: [800.0, 101325.0, 0.2, 0.8]
+  reaction_index: [1, 2, 3]
+  modifier_pre_exporencial_No_0: [0.9725280816227064, 1.6714319389878598,
+    0.7867946568683561]
+  modifier_temperature_coefficient_No_0: [1.0, 1.0, 1.0]
+  modifier_activation_energy_No_0: [1.2610164696568724, 0.6677671348359489,
+    0.7512403585487895]
+  modifier_pre_exporencial_No_1: [0.815682406187704, 0.7838698012652042,
+    1.3240935813592847]
+  modifier_temperature_coefficient_No_1: [1.0, 1.0, 1.0]
+  modifier_activation_energy_No_1: [0.6469666034570057, 0.6951127694557653,
+    1.2554730848862552]

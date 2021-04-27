@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,13 +18,15 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef __TCHEM_KINETIC_MODELMDATA_HPP__
 #define __TCHEM_KINETIC_MODELMDATA_HPP__
 
 #include "TC_kmodint_surface.hpp"
 #include "TChem_Util.hpp"
+
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+#include "yaml-cpp/yaml.h"
+#endif
 
 namespace TChem {
 
@@ -153,9 +155,9 @@ public:
   // kmcd_ordinal_type_1d_view sTfit;
   // kmcd_ordinal_type_1d_view sPhase;
 
-  kmcd_ordinal_type_2d_view NuIJ;
+  kmcd_real_type_2d_view NuIJ;
   kmcd_ordinal_type_2d_view specTbdIdx;
-  kmcd_ordinal_type_2d_view reacNuki;
+  kmcd_real_type_2d_view reacNuki;
   kmcd_ordinal_type_2d_view reacSidx;
   kmcd_ordinal_type_2d_view specAOidx;
   // kmcd_ordinal_type_2d_view elemCount;
@@ -288,8 +290,8 @@ public:
   ordinal_type_1d_dual_view spec9t_, spec9nrng_;
   real_type_3d_dual_view spec9trng_, spec9coefs_;
 
-  ordinal_type_1d_dual_view sigNu_;
-  ordinal_type_2d_dual_view NuIJ_;
+  real_type_1d_dual_view sigNu_;
+  real_type_2d_dual_view NuIJ_;
   real_type_1d_dual_view sigRealNu_;
   real_type_2d_dual_view RealNuIJ_;
 
@@ -329,7 +331,8 @@ public:
   ordinal_type_1d_dual_view reacNrp_, reacNreac_, reacNprod_, reacScoef_;
 
   /* stoichiometric coeffs and reactants and product indices */
-  ordinal_type_2d_dual_view reacNuki_, reacSidx_;
+  ordinal_type_2d_dual_view reacSidx_;
+  real_type_2d_dual_view reacNuki_;
 
   /* real stoichiometric coeffs */
   ordinal_type nRealNuReac_;
@@ -472,6 +475,9 @@ public:
   void allocateViewsSurf(FILE* errfile);
 
 public:
+  KineticModelData(const std::string& mechfile, const bool& hasSurface=false);
+
+
   KineticModelData(const std::string& mechfile, const std::string& thermofile);
 
   KineticModelData(const std::string& mechfile,
@@ -487,16 +493,26 @@ public:
   ordinal_type initChem();
   ordinal_type initChemSurf();
 
-  /// this modify begin allocate a view to replace the existing reacArhenFor_
-  void modifyArrheniusForwardParametersBegin();
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+  ordinal_type initChemYaml(YAML::Node& doc, const int& gasPhaseIndex);
+  ordinal_type initChemSurfYaml(YAML::Node& doc, const int& surfacePhaseIndex);
+#endif
+/// this modify begin allocate a view to replace the existing reacArhenFor_
+void modifyArrheniusForwardParametersBegin();
 
-  /// change the values as much as a user want within the begin, end clauses
-  real_type getArrheniusForwardParameter(const int i, const int j);
-  void modifyArrheniusForwardParameter(const int i, const int j, const real_type value);
+/// change the values as much as a user want within the begin, end clauses
+real_type getArrheniusForwardParameter(const int i, const int j);
+void modifyArrheniusForwardParameter(const int i, const int j, const real_type value);
 
-  /// this sync the host values to device ; now it is ready to construct a const object
-  void modifyArrheniusForwardParametersEnd();
+/// this sync the host values to device ; now it is ready to construct a const object
+void modifyArrheniusForwardParametersEnd();
 
+void modifyArrheniusForwardSurfaceParametersBegin();
+
+real_type getArrheniusForwardSurfaceParameter(const int i, const int j);
+void modifyArrheniusForwardSurfaceParameter(const int i, const int j, const real_type value);
+
+void modifyArrheniusForwardSurfaceParametersEnd();
 
   /// copy only things needed; we need to review what is actually needed for
   /// computations
@@ -688,6 +704,21 @@ createKineticModelConstData(Kokkos::View<KineticModelData*,Kokkos::HostSpace> km
   return r_val;
 }
 
+template<typename SpT>
+static inline
+Kokkos::View<KineticSurfModelConstData<SpT>*,SpT>
+createKineticSurfModelConstData(Kokkos::View<KineticModelData*,Kokkos::HostSpace> kmds) {
+  Kokkos::View<KineticSurfModelConstData<SpT>*,SpT> r_val("KMCD::const data objects", kmds.extent(0));
+  auto r_val_host = Kokkos::create_mirror_view(r_val);
+  Kokkos::parallel_for
+    (Kokkos::RangePolicy<host_exec_space>(0, kmds.extent(0)),
+     KOKKOS_LAMBDA(const int i) {
+      r_val_host(i) = kmds(i).createConstSurfData<SpT>();
+    });
+  Kokkos::deep_copy(r_val, r_val_host);
+  return r_val;
+}
+
 static inline
 void
 KineticModelsModifyWithArrheniusForwardParameters(Kokkos::View<KineticModelData*,Kokkos::HostSpace> kmds,
@@ -748,7 +779,100 @@ KineticModelsModifyWithArrheniusForwardParameters(Kokkos::View<KineticModelData*
 
 }
 
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+static inline
+void
+KineticModelsModifyWithArrheniusForwardParameters(Kokkos::View<KineticModelData*,Kokkos::HostSpace> kmds,
+  const YAML::Node& parameters, const ordinal_type& nBatch )
+{
 
+
+  const auto reacIndx = parameters["reaction_index"];
+  const ordinal_type NreacWModification = reacIndx.size();
+
+  for (int p=0;p<nBatch;++p) {
+    /// use reference so that we modify an object in the view
+    auto& kmd_at_p = kmds(p);
+    kmd_at_p.modifyArrheniusForwardParametersBegin();
+
+    auto pre_exporencial_factor =
+    parameters["modifier_pre_exporencial_No_"+std::to_string(p)];
+    auto temperature_coefficient_factor =
+    parameters["modifier_temperature_coefficient_No_"+std::to_string(p)];
+    auto activation_energy_factor =
+    parameters["modifier_activation_energy_No_"+std::to_string(p)];
+
+    /// this should be some range value that a user want to modify
+    for (ordinal_type ireac = 0; ireac < NreacWModification; ireac++) {
+
+      const ordinal_type reacIndx_ireac = reacIndx[ireac].as<ordinal_type>();
+      const real_type pre_exporencial = kmd_at_p.getArrheniusForwardParameter(reacIndx_ireac, 0);
+      const real_type temperature_coefficient = kmd_at_p.getArrheniusForwardParameter(reacIndx_ireac, 1);
+      const real_type activation_energy = kmd_at_p.getArrheniusForwardParameter(reacIndx_ireac, 2);
+
+      kmd_at_p.modifyArrheniusForwardParameter(reacIndx_ireac, 0,
+        pre_exporencial_factor[ireac].as<real_type>() * pre_exporencial);
+      kmd_at_p.modifyArrheniusForwardParameter(reacIndx_ireac, 1,
+        temperature_coefficient_factor[ireac].as<real_type>() * temperature_coefficient);
+      kmd_at_p.modifyArrheniusForwardParameter(reacIndx_ireac, 2,
+        activation_energy_factor[ireac].as<real_type>() * activation_energy);
+
+      }
+    kmd_at_p.modifyArrheniusForwardParametersEnd();
+
+
+  }
+
+}
+
+
+
+static inline
+void
+KineticModelsModifyWithArrheniusForwardSurfaceParameters(Kokkos::View<KineticModelData*,Kokkos::HostSpace> kmds,
+  const YAML::Node& parameters, const ordinal_type& nBatch )
+{
+
+  const auto reacIndx = parameters["reaction_index"];
+  const ordinal_type NreacWModification = reacIndx.size();
+
+
+
+  for (int p=0;p<nBatch;++p) {
+    /// use reference so that we modify an object in the view
+    auto& kmd_at_p = kmds(p);
+    kmd_at_p.modifyArrheniusForwardSurfaceParametersBegin();
+
+    auto pre_exporencial_factor =
+    parameters["modifier_pre_exporencial_No_"+std::to_string(p)];
+    auto temperature_coefficient_factor =
+    parameters["modifier_temperature_coefficient_No_"+std::to_string(p)];
+    auto activation_energy_factor =
+    parameters["modifier_activation_energy_No_"+std::to_string(p)];
+
+    /// this should be some range value that a user want to modify
+    for (ordinal_type ireac = 0; ireac < NreacWModification; ireac++) {
+      const ordinal_type reacIndx_ireac = reacIndx[ireac].as<ordinal_type>();
+      const real_type pre_exporencial = kmd_at_p.getArrheniusForwardSurfaceParameter(reacIndx_ireac, 0);
+      const real_type temperature_coefficient = kmd_at_p.getArrheniusForwardSurfaceParameter(reacIndx_ireac, 1);
+      const real_type activation_energy = kmd_at_p.getArrheniusForwardSurfaceParameter(reacIndx_ireac, 2);
+
+      kmd_at_p.modifyArrheniusForwardSurfaceParameter(reacIndx_ireac, 0,
+        pre_exporencial_factor[ireac].as<real_type>() * pre_exporencial);
+      kmd_at_p.modifyArrheniusForwardSurfaceParameter(reacIndx_ireac, 1,
+        temperature_coefficient_factor[ireac].as<real_type>() * temperature_coefficient);
+      kmd_at_p.modifyArrheniusForwardSurfaceParameter(reacIndx_ireac, 2,
+        activation_energy_factor[ireac].as<real_type>() * activation_energy);
+
+    }
+    kmd_at_p.modifyArrheniusForwardSurfaceParametersEnd();
+
+
+  }
+
+}
+
+#endif
 
 
 } // namespace TChem

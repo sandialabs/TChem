@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef __TCHEM_IMPL_TCSTR_SMAT_HPP__
 #define __TCHEM_IMPL_TCSTR_SMAT_HPP__
 
@@ -131,7 +129,7 @@ struct TransientContStirredTankReactorSmatrix
         },
         sumEnerP);
 
-      Smat(0, i) = (sumEnerP + sumEnerR) * ConEnergy;
+      Smat(0, i) = (sumEnerP + sumEnerR) * ConEnergy * cstr.isoThermic ;
 
 
       // species equations
@@ -237,8 +235,8 @@ struct TransientContStirredTankReactorSmatrix
 
         // energy
         //hA\sum_sk W/cp rho V => AH/cp/rho V Wvki
-        Ssmat(0, i) = (sumWkVkiR + sumWkVkiP) * ConEnergySurf
-        + (sumWkVkiPh+sumWkVkiRh)* ConEnergySurf/enthapyMix;
+        Ssmat(0, i) = ( (sumWkVkiR + sumWkVkiP) * ConEnergySurf
+        + (sumWkVkiPh+sumWkVkiRh)* ConEnergySurf/enthapyMix ) * cstr.isoThermic ;
 
 
     } /* done loop over all reactions */
@@ -293,8 +291,8 @@ struct TransientContStirredTankReactorSmatrix
                              update += hks(k) * Ys(k) * sumSpecSurf(i);
 
                            },sumhkYkvik);
-    //sum_{k=1}^{kg} (hk*Yk*A*sk*wk) // 
-    real_type val = sumhkYkvik/cpmix;
+    //sum_{k=1}^{kg} (hk*Yk*A*sk*wk) //
+    real_type val = cstr.isoThermic * sumhkYkvik/cpmix;
     Kokkos::atomic_fetch_add(&Ssmat(0, i), val);
 
     }

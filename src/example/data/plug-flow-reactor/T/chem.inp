@@ -1,0 +1,14 @@
+ELEMENTS
+A /2./
+B /3./ 
+C /4./
+P /1./
+END
+SPECIES
+A B C AB CB             
+END
+REACTIONS
+A + B=AB                                .9600E+15   -.200  16625.0
+C + B=CB                                .9600E+15   -.200  16625.0
+END
+

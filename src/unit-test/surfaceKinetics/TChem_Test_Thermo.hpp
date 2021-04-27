@@ -1,5 +1,5 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
@@ -7,9 +7,9 @@ Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS
 Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef __TCHEM_TEST_SURF_THERMO_HPP__
 #define __TCHEM_TEST_SURF_THERMO_HPP__
 
@@ -86,16 +84,16 @@ TEST( Thermo, hostBatch ) {
  }
  /// compare with ref
  EXPECT_TRUE(TChem::Test::compareFiles("HostBatch-Gk.txt",
- _prefixPath + "Gk.txt"));
+ _prefixPath + "Gk.ref.txt"));
 
  EXPECT_TRUE(TChem::Test::compareFiles("HostBatch-GkSurf.txt",
- _prefixPath + "GkSurf.txt"));
+ _prefixPath + "GkSurf.ref.txt"));
 
  EXPECT_TRUE(TChem::Test::compareFiles("HostBatch-Enthalpy.txt",
- _prefixPath + "Enthalpy.txt"));
+ _prefixPath + "Enthalpy.ref.txt"));
 
  EXPECT_TRUE(TChem::Test::compareFiles("HostBatch-EnthalpySurf.txt",
- _prefixPath + "EnthalpySurf.txt"));
+ _prefixPath + "EnthalpySurf.ref.txt"));
 
 }
 
@@ -175,16 +173,16 @@ TEST( Thermo, deviceBatch ) {
  }
  /// compare with ref
  EXPECT_TRUE(TChem::Test::compareFiles("DeviceBatch-Gk.txt",
- _prefixPath + "Gk.txt"));
+ _prefixPath + "Gk.ref.txt"));
 
  EXPECT_TRUE(TChem::Test::compareFiles("DeviceBatch-GkSurf.txt",
- _prefixPath + "GkSurf.txt"));
+ _prefixPath + "GkSurf.ref.txt"));
 
  EXPECT_TRUE(TChem::Test::compareFiles("DeviceBatch-Enthalpy.txt",
- _prefixPath + "Enthalpy.txt"));
+ _prefixPath + "Enthalpy.ref.txt"));
 
  EXPECT_TRUE(TChem::Test::compareFiles("DeviceBatch-EnthalpySurf.txt",
- _prefixPath + "EnthalpySurf.txt"));
+ _prefixPath + "EnthalpySurf.ref.txt"));
 
 }
 

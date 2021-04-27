@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 /*! \file TC_kmodint.c
 
     \brief Collection of functions used to parse kinetic models from files
@@ -186,6 +184,7 @@ TCKMI_getthermo9(char* singleword,
                  int* iread,
                  int* ierror);
 
+#define VERBOSE
 
 //#include "TC_getthc9.c"
 
@@ -286,7 +285,7 @@ TC_kmodint_(char* mechfile, char* thermofile)
   /* Integer flags */
   int ierror, iread, ithermo, iremove;
 
-#ifdef TCHEM_ENABLE_VERBOSE
+#ifdef VERBOSE
   printf("\n");
   printf("       _                           _  _         _      \n");
   printf("      | | __ _ __ ___    ___    __| |(_) _ __  | |_    \n");
@@ -296,7 +295,7 @@ TC_kmodint_(char* mechfile, char* thermofile)
   printf("                                                       \n\n");
 #endif
 
-#ifdef TCHEM_ENABLE_VERBOSE
+#ifdef VERBOSE
   printf("Reading kinetic model from : %s\n", mechfile);
   printf("      and thermo data from : %s\n", thermofile);
 #endif
@@ -1264,6 +1263,284 @@ TCKMI_checkthermo(species* listspec, int* Nspec)
   return (allthermo);
 }
 
+void
+TCMI_getnames(std::string& line, std::vector<std::string>& items ){
+  std::string delimiter = "+";
+  size_t pos = 0;
+  while ((pos = line.find(delimiter)) != std::string::npos) {
+    items.push_back(line.substr(0, pos));
+    line.erase(0, pos + delimiter.length());
+  }
+    items.push_back(line);
+}
+
+void
+TCMI_parseString(std::string& line, std::string& delimiter, std::vector<std::string>& items ){
+  size_t pos = 0;
+  while ((pos = line.find(delimiter)) != std::string::npos) {
+    items.push_back(line.substr(0, pos));
+    line.erase(0, pos + delimiter.length());
+  }
+    items.push_back(line);
+}
+
+
+void
+TCMI_getReactansAndProductosFromEquation
+(std::string& equationOriginal,
+int& isRev,
+std::map<std::string, real_type>& reactantsMap,
+std::map<std::string, real_type>& productsMap
+)
+{
+  std::vector<std::string> reactants_sp;
+  std::vector<std::string> products_sp;
+  std::string equation = equationOriginal;
+  equation.erase(remove_if(equation.begin(),
+   equation.end(), isspace), equation.end());
+
+  std::transform(equation.begin(),
+  equation.end(),equation.begin(), ::toupper);
+
+  std::map<std::string, double> realCoefMap;
+
+  // order is important here:
+  std::string delimiter;
+  if (equation.find("<=>") != std::string::npos ) {
+      delimiter = "<=>";
+  } else if   (equation.find("=>") != std::string::npos ) {
+      delimiter = "=>";
+      isRev = 0;
+  } else if   (equation.find("=") != std::string::npos ) {
+      delimiter = "=";
+  }
+
+  std::string toErase ="(+M)";
+  size_t posErase = equation.find(toErase);
+  //reactans
+  if (posErase != std::string::npos)
+  {
+    // std::cout << "before +M!:" << equation << '\n';
+    equation.erase(posErase,toErase.length());
+
+    //check one more time
+    //products
+    posErase = equation.find(toErase);
+    if (posErase != std::string::npos) {
+      equation.erase(posErase,toErase.length());
+
+    }
+    // std::cout << "After +M!:" << equation << '\n';
+
+  }
+
+  // printf("equation %s\n",equation.c_str() );
+
+  const size_t posp = equation.length();
+  const size_t pos = equation.find(delimiter);
+  std::string reactants = equation.substr(0, pos );
+
+  std::string products = equation.substr(pos + delimiter.length() , posp   );
+
+  // printf("reactants %s\n",reactants.c_str() );
+  // printf("products %s\n",products.c_str() );
+  bool hasRealCoef(false);
+  int ipos = strcspn(&equation[0], ".");
+  if (ipos < (int)strlen(&equation[0]))
+    hasRealCoef = true;
+  // if  (hasRealCoef)
+    // printf("equation has real coefficients %d\n",hasRealCoef);
+
+  std::vector<std::string> reactants_list;
+  TCMI_getnames(reactants, reactants_list );
+  double coeff(0);
+  char stoicoeff[LENGTHOFSPECNAME];
+  // int  ipos;
+  for (size_t k = 0; k < reactants_list.size(); k++) {
+    std::string  reactant = reactants_list[k] ;
+
+    // printf("Reactants %s\n",reactant.c_str() );
+
+    if (reactant != "M"){
+    TCKMI_findnonnum(&reactant[0],&ipos);
+    if (ipos > 0)
+    {
+      //there is a number in front of the species name
+      memset(stoicoeff, 0, LENGTHOFSPECNAME);
+      strncpy(stoicoeff, &reactant[0], ipos);
+      reactant.erase(0,ipos);
+          //check if number is integer or real
+      ipos = strcspn(stoicoeff, ".");
+
+      if (ipos < (int)strlen(stoicoeff))
+      {
+        coeff = atof(stoicoeff);
+        reactants_sp.push_back(reactant);
+      }
+      else
+      {
+        coeff = atoi(stoicoeff);
+        for (int i = 0; i < coeff; i++)
+        {
+          reactants_sp.push_back(reactant);
+        }
+      }
+
+      }
+    else
+    {
+      reactants_sp.push_back(reactant);
+      coeff =1;
+    }
+    if (hasRealCoef){
+      // realCoef.push_back(coeff);
+      realCoefMap.insert(std::pair<std::string, real_type>(reactant, coeff));
+          // printf("has real coef %d %f\n",hasRealCoef, coeff );
+    }
+    }
+
+  }
+
+  std::vector<std::string> products_list;
+
+  TCMI_getnames(products, products_list );
+  for (size_t k = 0; k < products_list.size(); k++)
+  {
+    std::string  product = products_list[k] ;
+    // printf("Product %s\n",product.c_str() );
+    if (product != "M"){
+    TCKMI_findnonnum(&product[0],&ipos);
+    if (ipos > 0)
+    {
+       //there is a number in front of the species name
+       memset(stoicoeff, 0, LENGTHOFSPECNAME);
+       strncpy(stoicoeff, &product[0], ipos);
+       product.erase(0,ipos);
+
+       //check if number is integer or real
+       ipos = strcspn(stoicoeff, ".");
+       // double coeff(0);
+       if (ipos < (int)strlen(stoicoeff))
+       {
+         coeff = atof(stoicoeff);
+         products_sp.push_back(product);
+       }
+       else
+       {
+         coeff = atoi(stoicoeff);
+         for (int i = 0; i < coeff; i++)
+         {
+           products_sp.push_back(product);
+          }
+
+        }
+
+        }
+    else
+    {
+          products_sp.push_back(product);
+          coeff=1;
+          // if (hasRealCoef)
+          //   realCoef.push_back(1);
+        }
+
+    if (hasRealCoef){
+      // realCoef.push_back(coeff);
+      realCoefMap.insert(std::pair<std::string, double>(product, coeff));
+      // printf("has real coef %d %f\n",hasRealCoef, coeff );
+    }
+    }
+
+  }
+
+  for (auto & sp : products_sp)
+  {
+    auto result = productsMap.insert(std::pair<std::string, int>(sp, 1));
+    if (result.second == false)
+        result.first->second++;
+  }
+
+  for (auto & sp : reactants_sp)
+  {
+    auto result = reactantsMap.insert(std::pair<std::string, int>(sp, 1));
+    if (result.second == false)
+        result.first->second++;
+  }
+  // if there is a least one real coefficient in the reaction all integer coefficient become zero
+  if (hasRealCoef)
+  {
+    for (auto & reac : reactantsMap )
+    {
+      reac.second = realCoefMap[reac.first];
+      // realCoef.push_back(realCoefMap[reac.first]);
+      // printf("sp: %s coef: %e\n",reac.first, realCoefMap[reac.first]  );
+    }
+
+    for (auto & prod : productsMap)
+    {
+     prod.second = realCoefMap[prod.first];
+     // realCoef.push_back(realCoefMap[prod.first]);
+     // printf("sp: %s coef: %f\n", prod.first.c_str(), realCoefMap[prod.first]  );
+    }
+  }
+
+
+}
+
+double
+TCMI_unitFactorActivationEnergies(std::string unitsOriginal)
+{
+  /* Activation energies */
+  double factor(1.0);
+  std::string units = unitsOriginal;
+  std::transform(units.begin(),
+  units.end(),units.begin(), ::toupper);
+
+
+  if (units != "KELV")
+  {
+  if (units == "CAL/MOL")
+    /* Found calories for activation energies, need to rescale */
+    factor = CALJO / RUNIV;
+    /*    factor = 4.184/8.31451 ; */
+
+  else if (units == "KCAL/MOL")
+      /* Found kcalories for activation energies, need to rescale */
+      factor = CALJO / RUNIV * 1000.0;
+
+  else if (units == "JOUL/MOL")
+
+      /* Found Joules for activation energies, need to rescale */
+      factor = 1.0 / RUNIV;
+  //
+  else if (units == "J/MOL")
+
+      /* Found Joules for activation energies, need to rescale */
+      factor = 1.0 / RUNIV;
+
+  else if (units ==  "KJOU/MOL")
+
+      /* Found kJoules for activation energies, need to rescale */
+      factor = 1000.0 / RUNIV;
+  //
+  else if (units ==  "KJ/MOL")
+
+      /* Found kJoules for activation energies, need to rescale */
+      factor = 1000.0 / RUNIV;
+
+    else if (units == "EVOL/MOL")
+
+      /* Found electron Volts for activation energies, need to rescale */
+      factor = EVOLT / KBOLT;
+
+    else {
+      printf("!!! Found unknown activation energy units for reaction ");
+      return 10;
+    }
+    }
+    return factor;
+
+}
 /* ------------------------------------------------------------------------- */
 /**
  * \brief Reads thermodynamic properties (NASA polynomials) from the
@@ -2056,12 +2333,16 @@ TCKMI_getreacline(char* linein,
   }
 
   /* Check if the reaction has real coeffs -> look for decimal points */
+  /* make all coef real, I changed the type for int coef to real OD
+   There was a differences in TChem C version between int and real coeffs in how we compute power,
+   however, we do not have this difference in TChem++, thus, we decided to delete the int coef.
+  */
   ipos = strcspn(reac, ".");
   if (ipos < (int)strlen(reac))
-    listreac[*Nreac].isreal = 1;
+    listreac[*Nreac].isreal = 0;
   ipos = strcspn(prod, ".");
   if (ipos < (int)strlen(prod))
-    listreac[*Nreac].isreal = 1;
+    listreac[*Nreac].isreal = 0;
 
   /* Start looking for species in the strings of reactants and products */
   for (j = 0; j < 2; j++) {
@@ -2173,7 +2454,7 @@ TCKMI_getreacline(char* linein,
 
       } /* Done if section for wavelength */
       else {
-        int istcoeff = 1;
+        double istcoeff = 1.0;
         double rstcoeff = 1.0;
         /* Check for numbers */
         len1 = strlen(specname);
@@ -2184,10 +2465,11 @@ TCKMI_getreacline(char* linein,
           memset(stoicoeff, 0, LENGTHOFSPECNAME);
           strncpy(stoicoeff, specname, ipos);
           /* found number */
-          if (listreac[*Nreac].isreal == 1)
-            rstcoeff = atof(stoicoeff);
-          else
-            istcoeff = atoi(stoicoeff);
+          // if (listreac[*Nreac].isreal == 1)
+          //   rstcoeff = atof(stoicoeff);
+          // else
+          //   istcoeff = atoi(stoicoeff);
+          istcoeff = atof(stoicoeff);
         }
 
         if (j == 0) {
@@ -3392,7 +3674,7 @@ TCKMI_verifyreac(element* listelem,
 
   } /* Done outer loop */
 
-#ifdef TCHEM_ENABLE_VERBOSE
+#ifdef VERBOSE
   printf("!!! There are %d errors in the kinetic model \n", icount);
 #endif
 
@@ -3549,12 +3831,15 @@ TCKMI_saveRectionEquations(species* listspec,
   for (int i = 0; i < *Nreac; i++) {
     /* Output reactant string */
     for (int j = 0; j < listreac[i].inreac; j++) {
-      if (listreac[i].isreal > 0)
-        fprintf(fileascii, "%f", -listreac[i].rnuki[j]);
-      else {
-        if (-listreac[i].nuki[j] != 1)
-          fprintf(fileascii, "%d", -listreac[i].nuki[j]);
+      if (-listreac[i].nuki[j] != 1){
+        const int value(listreac[i].nuki[j]);
+        if (value == listreac[i].nuki[j] ){
+          fprintf(fileascii, "%d", -value);
+        } else {
+          fprintf(fileascii, "%.4f", -listreac[i].nuki[j]);
+        }
       }
+
       fprintf(fileascii, "%s", listspec[listreac[i].spec[j]].name);
 
       if (j != listreac[i].inreac - 1)
@@ -3584,12 +3869,15 @@ TCKMI_saveRectionEquations(species* listspec,
 
     /* Output product string */
     for (int j = 0; j < listreac[i].inprod; j++) {
-      if (listreac[i].isreal > 0)
-        fprintf(fileascii, "%f", listreac[i].rnuki[NSPECREACMAX + j]);
-      else {
-        if (listreac[i].nuki[NSPECREACMAX + j] != 1)
-          fprintf(fileascii, "%d", listreac[i].nuki[NSPECREACMAX + j]);
-      }
+        if (listreac[i].nuki[NSPECREACMAX + j] != 1){
+          const int value(listreac[i].nuki[NSPECREACMAX + j]);
+          if ( value == listreac[i].nuki[NSPECREACMAX + j] ){
+            fprintf(fileascii, "%d", value);
+          } else {
+            fprintf(fileascii, "%.4f", listreac[i].nuki[NSPECREACMAX + j]);
+          }
+
+        }
       fprintf(
         fileascii, "%s", listspec[listreac[i].spec[NSPECREACMAX + j]].name);
 
@@ -3699,12 +3987,14 @@ TCKMI_outform(element* listelem,
 
     /* Output reactant string */
     for (j = 0; j < listreac[i].inreac; j++) {
-      if (listreac[i].isreal > 0)
-        fprintf(fileascii, "%f", -listreac[i].rnuki[j]);
-      else {
-        if (-listreac[i].nuki[j] != 1)
-          fprintf(fileascii, "%d", -listreac[i].nuki[j]);
+      if (-listreac[i].nuki[j] != 1){
+        const int value(listreac[i].nuki[j]);
+        if (value == listreac[i].nuki[j])
+          fprintf(fileascii, "%d", -value);
+        else
+          fprintf(fileascii, "%f", -listreac[i].nuki[j]);
       }
+
       fprintf(fileascii, "%s", listspec[listreac[i].spec[j]].name);
 
       if (j != listreac[i].inreac - 1)
@@ -3734,12 +4024,16 @@ TCKMI_outform(element* listelem,
 
     /* Output product string */
     for (j = 0; j < listreac[i].inprod; j++) {
-      if (listreac[i].isreal > 0)
-        fprintf(fileascii, "%f", listreac[i].rnuki[NSPECREACMAX + j]);
-      else {
-        if (listreac[i].nuki[NSPECREACMAX + j] != 1)
-          fprintf(fileascii, "%d", listreac[i].nuki[NSPECREACMAX + j]);
+
+      if (listreac[i].nuki[NSPECREACMAX + j] != 1){
+        const int value(listreac[i].nuki[NSPECREACMAX + j]);
+        if (value == listreac[i].nuki[NSPECREACMAX + j])
+          fprintf(fileascii, "%d", value);
+        else
+          fprintf(fileascii, "%f", listreac[i].nuki[NSPECREACMAX + j]);
+
       }
+
       fprintf(
         fileascii, "%s", listspec[listreac[i].spec[NSPECREACMAX + j]].name);
 
@@ -4242,21 +4536,21 @@ TCKMI_outunform(element* listelem,
 
     /* Stoichiometric coefficients */
     for (i = 0; i < (*Nreac); i++) {
-      int nusumk = 0;
+      double nusumk = 0;
       for (j = 0; j < maxSpecInReac; j++) {
         if (j < maxSpecInReac / 2) {
-          fprintf(filelist, "%12d\n", listreac[i].nuki[j]);
+          fprintf(filelist, "%12f\n", listreac[i].nuki[j]);
           fprintf(filelist, "%12d\n", listreac[i].spec[j] + 1);
           nusumk += listreac[i].nuki[j];
         } else {
           int j1;
           j1 = j - maxSpecInReac / 2;
-          fprintf(filelist, "%12d\n", listreac[i].nuki[NSPECREACMAX + j1]);
+          fprintf(filelist, "%12f\n", listreac[i].nuki[NSPECREACMAX + j1]);
           fprintf(filelist, "%12d\n", listreac[i].spec[NSPECREACMAX + j1] + 1);
           nusumk += listreac[i].nuki[NSPECREACMAX + j1];
         }
       }
-      fprintf(filelist, "%12d\n", nusumk);
+      fprintf(filelist, "%12f\n", nusumk);
 
     } /* Done with stoichimetric coefficients */
 
@@ -5938,12 +6232,12 @@ TCKMI_outmath(element* listelem,
       /* Stoichiometric coefficients */
       for (j = 0; j < maxSpecInReac; j++) {
         if (j < maxSpecInReac / 2) {
-          fprintf(fout, " %10d", listreac[i].nuki[j]);
+          fprintf(fout, " %10f", listreac[i].nuki[j]);
           fprintf(fout, " %10d", listreac[i].spec[j] + 1);
         } else {
           int j1;
           j1 = j - maxSpecInReac / 2;
-          fprintf(fout, " %10d", listreac[i].nuki[NSPECREACMAX + j1]);
+          fprintf(fout, " %10f", listreac[i].nuki[NSPECREACMAX + j1]);
           fprintf(fout, " %10d", listreac[i].spec[NSPECREACMAX + j1] + 1);
         }
       }

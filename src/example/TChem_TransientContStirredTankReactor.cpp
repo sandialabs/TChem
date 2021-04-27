@@ -1,5 +1,5 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
@@ -7,9 +7,9 @@ Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS
 Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #include "TChem_CommandLineParser.hpp"
 #include "TChem_KineticModelData.hpp"
 #include "TChem_Util.hpp"
@@ -84,6 +82,8 @@ main(int argc, char* argv[])
   int output_frequency(-1);
 
   bool use_prefixPath(true);
+  bool isoThermic(false);
+  bool saveInitialCondition(true);
 
 #if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
   bool transient_initial_condition(false);
@@ -102,6 +102,9 @@ main(int argc, char* argv[])
   opts.set_option<real_type>("Acat", "Catalytic area [m2]", &Acat);
   opts.set_option<real_type>("Vol", "Reactor Volumen [m3]", &Vol);
   opts.set_option<real_type>("mdotIn", "Inlet mass flow rate [kg/s]", &mdotIn);
+  opts.set_option<bool>("isoThermic", "if True, reaction is isotermic", &isoThermic);
+  opts.set_option<bool>("save_initial_condition", "if True, solution containts initial condition", &saveInitialCondition);
+
 
 #if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
   opts.set_option<bool>(
@@ -526,6 +529,8 @@ main(int argc, char* argv[])
         cstr.Vol    = Vol; // volumen of reactor m3
         cstr.Acat   = Acat; // Catalytic area m2: chemical active area
         cstr.pressure = state_host(0, 1);
+        cstr.isoThermic = 1;
+        if (isoThermic) cstr.isoThermic = 0; // 0 constant temperature
         // cstr.temperature = state_host(0, 2);
 
         cstr.Yi = real_type_1d_view("Mass fraction at inlet", kmcd.nSpec);
@@ -603,12 +608,15 @@ main(int argc, char* argv[])
           // save initial condition
           Kokkos::deep_copy(siteFraction_host, siteFraction);
 
-          writeState(-1,
+          if (saveInitialCondition)
+          {
+            writeState(-1,
                      t_host,
                      dt_host,
                      state_host,
                      siteFraction_host,
                      fout);
+          }
         }
 
 

@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef __TCHEM_IMPL_RATEOFPROGRESS_HPP__
 #define __TCHEM_IMPL_RATEOFPROGRESS_HPP__
 
@@ -57,8 +55,6 @@ struct RateOfProgress
       ordinal_type irnu(0), iord(0);
       for (ordinal_type i = 0; i < kmcd.nReac; ++i) {
         /// we compute only one case
-        const bool irnu_flag =
-          irnu < kmcd.nRealNuReac && kmcd.reacRnu(irnu) == i;
         const bool iord_flag = iord < kmcd.nOrdReac && kmcd.reacAOrd(iord) == i;
 
         /// store iterators
@@ -66,7 +62,7 @@ struct RateOfProgress
         iords(i) = iord;
 
         /// increase iterators
-        irnu += irnu_flag && !iord_flag;
+        irnu += !iord_flag;
         iord += iord_flag;
       }
     });
@@ -80,16 +76,14 @@ struct RateOfProgress
         /// we compute only one case
         const ordinal_type irnu = irnus(i), iord = iords(i);
 
-        const bool irnu_flag =
-          irnu < kmcd.nRealNuReac && kmcd.reacRnu(irnu) == i;
         const bool iord_flag = iord < kmcd.nOrdReac && kmcd.reacAOrd(iord) == i;
 
-        if (!irnu_flag && !iord_flag) {
+        if (!iord_flag) {
           /* compute forward rop */
           for (ordinal_type j = 0; j < kmcd.reacNreac(i); ++j) {
             const ordinal_type kspec = kmcd.reacSidx(i, j);
-            const ordinal_type niup =
-              ats<ordinal_type>::abs(kmcd.reacNuki(i, j));
+            const real_type niup =
+              ats<real_type>::abs(kmcd.reacNuki(i, j));
             ropFor_at_i *= ats<real_type>::pow(concX(kspec), niup);
           }
 
@@ -98,44 +92,11 @@ struct RateOfProgress
             const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
             for (ordinal_type j = 0; j < kmcd.reacNprod(i); ++j) {
               const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
-              const ordinal_type nius = kmcd.reacNuki(i, j + joff);
+              const real_type nius = kmcd.reacNuki(i, j + joff);
               ropRev_at_i *= ats<real_type>::pow(concX(kspec), nius);
             }
           }
         }
-
-        /* check for real stoichiometric coefficients */
-        if (irnu_flag && !iord_flag) {
-          /* compute forward rop */
-          for (ordinal_type j = 0; j < kmcd.reacNreac(i); ++j) {
-            const ordinal_type kspec = kmcd.reacSidx(i, j);
-            const real_type niup =
-              ats<real_type>::abs(kmcd.reacRealNuki(irnu, j));
-#ifdef NONNEG
-            const real_type concX_value_at_kspec =
-              ats<real_type>::abs(concX(kspec));
-#else
-                const real_type concX_value_at_kspec = concX(kspec);
-#endif
-            ropFor_at_i *= ats<real_type>::pow(concX_value_at_kspec, niup);
-          }
-
-          if (kmcd.isRev(i)) {
-            const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
-            /* compute reverse rop */
-            for (ordinal_type j = 0; j < kmcd.reacNprod(i); ++j) {
-              const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
-              const real_type nius = kmcd.reacRealNuki(i, j);
-#ifdef NONNEG
-              const real_type concX_value_at_kspec =
-                ats<real_type>::abs(concX(kspec));
-#else
-                  const real_type concX_value_at_kspec = concX(kspec);
-#endif
-              ropRev_at_i *= ats<real_type>::pow(concX_value_at_kspec, nius);
-            }
-          }
-        } /* done if real stoichiometric coefficients */
 
         /* check for arbitrary order reaction */
         if (iord_flag) {
@@ -292,8 +253,8 @@ struct RateOfProgressDerivative
       if (compute_qfor) {
         for (ordinal_type j = 0; j < kmcd.reacNreac(ir); ++j) {
           const ordinal_type kspec = kmcd.reacSidx(ir, j);
-          const ordinal_type niup =
-            ats<ordinal_type>::abs(kmcd.reacNuki(ir, j));
+          const real_type niup =
+            ats<real_type>::abs(kmcd.reacNuki(ir, j));
           if (is == kspec) {
             qfor *=
               real_type(niup) * ats<real_type>::pow(concX(kspec), niup - 1);
@@ -309,7 +270,7 @@ struct RateOfProgressDerivative
           const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
           for (ordinal_type j = 0; j < kmcd.reacNprod(ir); ++j) {
             const ordinal_type kspec = kmcd.reacSidx(ir, joff + j);
-            const ordinal_type nius = kmcd.reacNuki(ir, joff + j);
+            const real_type nius = kmcd.reacNuki(ir, joff + j);
             if (is == kspec) {
               qrev *=
                 real_type(nius) * ats<real_type>::pow(concX(kspec), nius - 1);

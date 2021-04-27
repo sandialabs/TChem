@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef __TCHEM_UTIL_HPP__
 #define __TCHEM_UTIL_HPP__
 
@@ -48,11 +46,15 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "Kokkos_DualView.hpp"
 #include "impl/Kokkos_Timer.hpp"
 
+/// blas
+#include "Tines.hpp"
+
 /// tchem configure header
 #include "TChem_Config.hpp"
 
-/// blas
-#include "Tines.hpp"
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+#include "yaml-cpp/yaml.h"
+#endif
 
 namespace TChem {
 
@@ -119,7 +121,7 @@ static constexpr ordinal_type NUMBEROFELEMINSPEC = 5;
  * \def NTHRDBMAX
  * Maximum number of third body efficiencies
  */
-static constexpr ordinal_type NTHRDBMAX = 10;
+constexpr ordinal_type NTHRDBMAX = 20;
 
 /**
  * \def NPLOGMAX
@@ -1049,6 +1051,56 @@ readStateVector(const std::string& filename,
     std::logic_error("Error: stateVector is not valid");
   }
 }
+
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+
+template<typename KineticModelViewType,
+         typename KineticModel>
+static inline void
+printParametersModelVariation(const std::string& phase_name,
+                              const KineticModel& kmcd,
+                              const KineticModelViewType& kmcds,
+                              const YAML::Node & input_file)
+{
+  if (input_file[phase_name]["PrintParameters"])
+  {
+    // copy orginal parameter
+    printf("Paramters in %s\n",phase_name.c_str() );
+    auto reacArhenFor_host_orginal = Kokkos::create_mirror_view(kmcd.reacArhenFor);
+    Kokkos::deep_copy(reacArhenFor_host_orginal, kmcd.reacArhenFor);
+    auto model_index = input_file[phase_name]["PrintParameters"]["model_index"];
+    auto reaction_index = input_file[phase_name]["PrintParameters"]["reaction_index"];
+    // loop over model index
+    for (auto const& isample : model_index) {
+      auto kmcd_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(),
+                       Kokkos::subview(kmcds, isample.as<ordinal_type>()));
+      // loop over reaction index
+      printf("Sample No %d \n", isample.as<ordinal_type>() );
+
+      for (auto const& ireac_iter : reaction_index) {
+        const auto ireac = ireac_iter.as<ordinal_type>();
+        if (ireac <  kmcd.nReac ) {
+          printf("Reaction Index %d \n", ireac );
+          printf("Before Modification : A %e B %f E/R %f \n", reacArhenFor_host_orginal(ireac,0),
+            reacArhenFor_host_orginal(ireac,1), reacArhenFor_host_orginal(ireac,2) );
+          //
+          printf("After  Modification : A %e B %f E/R %f \n", kmcd_host().reacArhenFor(ireac,0),
+            kmcd_host().reacArhenFor(ireac,1), kmcd_host().reacArhenFor(ireac,2) );
+          //
+          printf("       Modification : A %f B %f E/R %f \n", kmcd_host().reacArhenFor(ireac,0)/reacArhenFor_host_orginal(ireac,0),
+            kmcd_host().reacArhenFor(ireac,1)/reacArhenFor_host_orginal(ireac,1),kmcd_host().reacArhenFor(ireac,2)/reacArhenFor_host_orginal(ireac,2));
+
+        } else {
+          printf("Reaction Index %d does not exits, max index value is %d \n", ireac, kmcd.nReac - 1);
+        }
+
+      }
+
+    }
+  }
+
+}
+#endif
 
 template<typename RealType1DViewHostType>
 static inline void

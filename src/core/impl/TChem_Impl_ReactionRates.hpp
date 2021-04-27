@@ -1,15 +1,15 @@
 /* =====================================================================================
-TChem version 2.1.0
+TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
 
-Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS). 
-Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains 
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
 certain rights in this software.
 
-This file is part of TChem. TChem is open-source software: you can redistribute it
+This file is part of TChem. TChem is open source software: you can redistribute it
 and/or modify it under the terms of BSD 2-Clause License
-(https://opensource.org/licenses/BSD-2-Clause). A copy of the license is also
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
 provided under the main directory
 
 Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
@@ -18,8 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-
-
 #ifndef __TCHEM_IMPL_REACTIONRATES_HPP__
 #define __TCHEM_IMPL_REACTIONRATES_HPP__
 
@@ -164,30 +162,6 @@ struct ReactionRates
         }
       });
 
-    /// 8. check for reactions with real stoichiometric coefficients
-    if (kmcd.nRealNuReac > 0) {
-      member.team_barrier();
-      Kokkos::parallel_for(
-        Kokkos::TeamVectorRange(member, kmcd.nRealNuReac),
-        [&](const ordinal_type& ir) {
-          const ordinal_type i = kmcd.reacRnu(ir);
-          const real_type rop_at_i = rop(i);
-          for (ordinal_type j = 0; j < kmcd.reacNreac(i); ++j) {
-            const ordinal_type kspec = kmcd.reacSidx(i, j);
-            // omega(kspec) += kmcd.reacRealNuki(ir,j)*rop_at_i;
-            const real_type val = kmcd.reacRealNuki(ir, j) * rop_at_i;
-            Kokkos::atomic_fetch_add(&omega(kspec), val);
-          }
-          const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
-          const ordinal_type joff2 = kmcd.reacNreac(i);
-          for (ordinal_type j = 0; j < kmcd.reacNprod(i); ++j) {
-            const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
-            // omega(kspec) += kmcd.reacRealNuki(i,j)*rop_at_i;
-            const real_type val = kmcd.reacRealNuki(ir, j+joff2) * rop_at_i;
-            Kokkos::atomic_fetch_add(&omega(kspec), val);
-          }
-        });
-    }
     member.team_barrier();
 
     /// 9. transform from mole/(cm3.s) to kmol/(m3.s)

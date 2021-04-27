@@ -13,7 +13,10 @@ export TCHEM_INSTALL_PATH=${TCHEM_DEMO_ROOT}/demo
 export GTEST_ROOT_PATH=${TCHEM_DEMO_ROOT}/gtest
 export OPENBLAS_ROOT_PATH=${TCHEM_DEMO_ROOT}/openblas
 export KOKKOS_ROOT_PATH=${TCHEM_DEMO_ROOT}/kokkos
-export KOKKOSKERNELS_ROOT_PATH=${TCHEM_DEMO_ROOT}/kokkoskernels
+export MATHUTILS_ROOT_PATH=${TCHEM_DEMO_ROOT}/mathutils
+
+# this is for Macport
+#export LIBRARY_PATH=${LIBRARY_PTH}:/opt/local/lib
 
 #
 # clone repository
@@ -21,9 +24,13 @@ export KOKKOSKERNELS_ROOT_PATH=${TCHEM_DEMO_ROOT}/kokkoskernels
 git clone https://github.com/google/googletest.git ${GTEST_ROOT_PATH}/master
 git clone https://github.com/xianyi/OpenBLAS.git ${OPENBLAS_ROOT_PATH}/master
 git clone https://github.com/kokkos/kokkos.git ${KOKKOS_ROOT_PATH}/master
-git clone https://github.com/kokkos/kokkos-kernels.git ${KOKKOSKERNELS_ROOT_PATH}/master
-git clone 	https://github.com/sandialabs/TChem.git ${TCHEM_ROOT_PATH}/master
-cd ${TCHEM_ROOT_PATH}/master; git checkout v2.0.0; cd ${TCHEM_DEMO_ROOT}
+git clone kyukim@getz.ca.sandia.gov:/home/gitroot/math_utils ${MATHUTILS_ROOT_PATH}/master
+git clone kyukim@getz.ca.sandia.gov:/home/gitroot/TChem++ ${TCHEM_ROOT_PATH}/master
+cd ${TCHEM_ROOT_PATH}/master;
+#git checkout v2.0.0;
+git checkout --track origin kyungjoo-develop
+git pull
+cd ${TCHEM_DEMO_ROOT}
 
 # compile gtest
 cd ${GTEST_ROOT_PATH}; mkdir build; cd build;
@@ -68,22 +75,25 @@ rm -rf ${KOKKOS_ROOT_PATH}/build
 
 # compile kokkoskernels
 
-cd ${KOKKOSKERNELS_ROOT_PATH}; mkdir build; cd build;
+cd ${MATHUTILS_ROOT_PATH}; mkdir build; cd build;
 
 cmake \
     -D CMAKE_INSTALL_PREFIX=${TCHEM_DEMO_ROOT}/install \
-    -D CMAKE_CXX_COMPILER=${CXX}  \
+    -D CMAKE_CXX_COMPILER=${CXX} \
     -D CMAKE_CXX_FLAGS="-g" \
-    -D KokkosKernels_ENABLE_TESTS:BOOL=OFF \
-    -D KokkosKernels_ENABLE_EXAMPLES:BOOL=OFF \
-    -D KokkosKernels_ENABLE_TPL_LAPACKE:BOOL=ON \
-    -D KokkosKernels_ENABLE_TPL_CBLAS:BOOL=ON \
-    -D KokkosKernels_INST_LAYOUTRIGHT:BOOL=ON \
-    -D CBLAS_INCLUDE_DIRS="/opt/local/include" \
-    -D Kokkos_DIR=${TCHEM_DEMO_ROOT}/install/lib/cmake/Kokkos \
-    ${KOKKOSKERNELS_ROOT_PATH}/master
+    -D CMAKE_EXE_LINKER_FLAGS="" \
+    -D CMAKE_BUILD_TYPE=RELEASE \
+    -D MATHUTILS_ENABLE_DEBUG=OFF \
+    -D MATHUTILS_ENABLE_VERBOSE=ON \
+    -D MATHUTILS_ENABLE_KOKKOS=ON \
+    -D MATHUTILS_ENABLE_TEST=ON \
+    -D MATHUTILS_ENABLE_EXAMPLE=ON \
+    -D KOKKOS_INSTALL_PATH=${TCHEM_DEMO_ROOT}/install \
+    -D GTEST_INSTALL_PATH=${TCHEM_DEMO_ROOT}/install \
+    -D OPENBLAS_INSTALL_PATH=${TCHEM_DEMO_ROOT}/install \
+    ${MATHUTILS_ROOT_PATH}/master
 make -j${JFLAG} install
-rm -rf ${KOKKOSKERNELS_ROOT_PATH}/build
+rm -rf ${MATHUTILS_ROOT_PATH}/build
 
 # compile tchem
 cd ${TCHEM_ROOT_PATH}; mkdir build; cd build;
@@ -95,15 +105,12 @@ cmake \
     -D CMAKE_EXE_LINKER_FLAGS="" \
     -D CMAKE_BUILD_TYPE=RELEASE \
     -D TCHEM_ENABLE_VERBOSE=OFF \
-    -D TCHEM_ENABLE_KOKKOS=ON \
-    -D TCHEM_ENABLE_KOKKOSKERNELS=ON \
     -D TCHEM_ENABLE_TEST=ON \
     -D TCHEM_ENABLE_EXAMPLE=ON \
     -D TCHEM_ENABLE_PROBLEMS_NUMERICAL_JACOBIAN=OFF \
     -D KOKKOS_INSTALL_PATH=${TCHEM_DEMO_ROOT}/install \
-    -D KOKKOSKERNELS_INSTALL_PATH=${TCHEM_DEMO_ROOT}/install \
     -D GTEST_INSTALL_PATH=${TCHEM_DEMO_ROOT}/install \
-    -D OPENBLAS_INSTALL_PATH=${TCHEM_DEMO_ROOT}/install \
+    -D MATHUTILS_INSTALL_PATH=${TCHEM_DEMO_ROOT}/install \
     ${TCHEM_ROOT_PATH}/master/src
 
 make -j${jflag} install

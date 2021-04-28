@@ -65,16 +65,22 @@ namespace TChem {
     Kokkos::deep_copy(_t._dev, tadv_default._tbeg);
     Kokkos::deep_copy(_dt._dev, tadv_default._dtmin);
 
-    Kokkos::parallel_for
-      (Kokkos::RangePolicy<exec_space>(0, _tol_time.extent(0)),
-       KOKKOS_LAMBDA(const ordinal_type &i) {
-	_tol_time(i,0) = atol_time;
-	_tol_time(i,1) = rtol_time;
-	if (i == 0) {
-	  _tol_newton(0) = atol_newton;
-	  _tol_newton(1) = rtol_newton;
-	}
-      });    
+    {
+      auto tol_time = Kokkos::create_mirror_view(Kokkos::HostSpace(), _tol_time);
+      auto tol_newton = Kokkos::create_mirror_view(Kokkos::HostSpace(), _tol_newton);
+      Kokkos::parallel_for
+	(Kokkos::RangePolicy<host_exec_space>(0, _tol_time.extent(0)),
+	 [=](const ordinal_type &i) {
+	   tol_time(i,0) = atol_time;
+	   tol_time(i,1) = rtol_time;
+	   if (i == 0) {
+	     tol_newton(0) = atol_newton;
+	     tol_newton(1) = rtol_newton;
+	   }
+	 });
+      Kokkos::deep_copy(_tol_time, tol_time);
+      Kokkos::deep_copy(_tol_newton, tol_newton);
+    }
   }
 
   void

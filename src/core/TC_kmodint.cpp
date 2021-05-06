@@ -777,7 +777,7 @@ TCKMI_setperiodictable(elemtable* periodictable, int* Natoms, int iflag)
       "PM", "SM", "EU", "GD", "TB", "DY", "HO", "ER", "TM", "YB", "LU", "HF",
       "TA", "W",  "RE", "OS", "IR", "PT", "AU", "HG", "TL", "PB", "BI", "PO",
       "AT", "RN", "FR", "RA", "AC", "TH", "PA", "U",  "NP", "PU", "AM", "CM",
-      "BK", "CF", "ES", "FM", "D",  "E "
+      "BK", "CF", "ES", "FM", "D",  "E"
     };
 
     const double values[natoms] = {
@@ -2365,15 +2365,19 @@ TCKMI_getreacline(char* linein,
     /* Check if any "+"'es are adjacent, if yes, eliminate the ones at the left
      */
     i = 1;
-    while (i < iplus - 1) {
+    while (i <= iplus - 1) {
       if (aplus[i] - aplus[i - 1] == 1) {
         for (j = i - 1; j < iplus - 1; j++)
-          aplus[i] = aplus[i + 1];
+          aplus[j] = aplus[j + 1];
         iplus--;
         i--;
       }
       i++;
     }
+#ifdef DEBUGMSG
+      for (i=0;i<iplus;i++)
+        printf("Aplus_mod=%d out of %d\n",aplus[i],iplus);
+#endif
 
     /* Check if any "+"'es appear at the end */
     while ((iplus > 0) && (aplus[iplus - 1] == len1 - 1))
@@ -3357,14 +3361,6 @@ TCKMI_verifyreac(element* listelem,
           }
         }
       } /* Done summing contributions from products */
-
-#ifdef DEBUGMSG
-      if (i == (*Nreac) - 1)
-        printf("-------------> %d %d %d\n", i, j, isum);
-
-      if (i == (*Nreac) - 1)
-        printf("-------------> %d %d %d\n", i, j, rsum);
-#endif
 
       if (listreac[i].isreal == 1) {
         if (fabs(rsum) > REACBALANCE()) {

@@ -25,6 +25,7 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_SourceTermToyProblem.cpp
   TChem_Driver.cpp
   TChem_Driver_C.cpp
+  TChem_IgnitionZeroD_SourceTermJacobian.cpp
 )
 
 IF (TCHEM_ENABLE_TPL_YAML_CPP)

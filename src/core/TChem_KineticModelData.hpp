@@ -744,7 +744,7 @@ KineticModelsModifyWithArrheniusForwardParameters(Kokkos::View<KineticModelData*
 
   }
   const ordinal_type NTotalItems = valuesFiles.size();
-  const ordinal_type NreacWModification = NTotalItems/(3*nBatch);
+  const ordinal_type NreacWModification = NTotalItems/(3*nBatch + 1);
 
   ordinal_type_1d_view_host reacIndx("reacIndx", NreacWModification);
 

@@ -115,11 +115,11 @@ public:
   void createKineticModel(const std::string& chem_file, const std::string& therm_file) {
     _obj->createKineticModel(chem_file, therm_file);
   }
-  
+
   int getNumberOfSpecies() const {
     return _obj->getNumberOfSpecies();
   }
-  
+
   int getNumberOfReactions() const {
     return _obj->getNumberOfReactions();
   }
@@ -130,7 +130,7 @@ public:
   void setNumberOfSamples(const int n_sample) {
     _obj->setNumberOfSamples(n_sample);
   }
-  
+
   int getNumberOfSamples() const {
     return _obj->getNumberOfSamples();
   }
@@ -232,6 +232,40 @@ public:
 
   void computeNetProductionRatePerMass() {
     _obj->computeNetProductionRatePerMassDevice();
+  }
+
+  // jacobian
+
+  py::array_t<real_type> getJacobianHomogeneousGasReactor() {
+    TCHEM_CHECK_ERROR(!_obj->isJacobianHomogeneousGasReactorCreated(), "Error: net production rate per mass is not created");
+    typename TChem::Driver::real_type_3d_const_view_host src;
+    _obj->getJacobianHomogeneousGasReactorHost(src);
+
+    auto tgt = py::array_t<real_type>(src.span());
+    tgt.resize({src.extent(0), src.extent(1), src.extent(2)});
+
+    // copyFromConstView(src, tgt);
+    return tgt;
+  }
+
+  py::array_t<real_type> getJacobianHomogeneousGasReactorSingle(const int i) {
+    TCHEM_CHECK_ERROR(!_obj->isJacobianHomogeneousGasReactorCreated(), "Error: net production rate per mass is not created");
+    typename TChem::Driver::real_type_2d_const_view_host src;
+    _obj->getJacobianHomogeneousGasReactorHost(i, src);
+
+    auto tgt = py::array_t<real_type>(src.span());
+    tgt.resize({src.extent(0), src.extent(1)});
+
+    copyFromConstView(src, tgt);
+    return tgt;
+  }
+
+  void createJacobianHomogeneousGasReactor() {
+    _obj->createJacobianHomogeneousGasReactor();
+  }
+
+  void computeJacobianHomogeneousGasReactor() {
+    _obj->computeJacobianHomogeneousGasReactorDevice();
   }
 
   ///
@@ -367,6 +401,20 @@ PYBIND11_MODULE(pytchem, m) {
 	   "Retrieve net production rate for all samples")
       .def("computeNetProductionRatePerMass",
 	   (&TChemDriver::computeNetProductionRatePerMass), "Compute net production rate")
+     // jacobian homogeneous gas reactor
+     .def("createJacobianHomogeneousGasReactor",
+    (&TChemDriver::createJacobianHomogeneousGasReactor),
+    "Allocate memory for homogeneous-gas-reactor Jacobian  (# samples, # species + 1  # species + 1)")
+     .def("getJacobianHomogeneousGasReactor",
+    (&TChemDriver::getJacobianHomogeneousGasReactorSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+    "Retrive homogeneous-gas-reactor Jacobian for a single sample")
+    //  .def("getJacobianHomogeneousGasReactor",
+    // (&TChemDriver::getJacobianHomogeneousGasReactor), py::return_value_policy::take_ownership,
+    // "Retrieve homogeneous-gas-reactor Jacobian for all samples")
+
+     .def("computeJacobianHomogeneousGasReactor",
+    (&TChemDriver::computeJacobianHomogeneousGasReactor), "Compute Jacobian matrix for homogeneous gas reactor")
+
       /// homogeneous gas reactor
       .def("setTimeAdvanceHomogeneousGasReactor",(&TChemDriver::setTimeAdvanceHomogeneousGasReactor),
            py::arg("tbeg"),  py::arg("tend"), py::arg("dtmin"), py::arg("dtmax"),

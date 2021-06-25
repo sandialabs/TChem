@@ -28,7 +28,8 @@ int
 main(int argc, char* argv[])
 {
   //#define TCHEM_TEST_DRIVER_NET_PRODUCTION_RATE
-#define TCHEM_TEST_DRIVER_HOMOGENEOUS_BATCH_REACTOR
+// #define TCHEM_TEST_DRIVER_HOMOGENEOUS_BATCH_REACTOR
+#define TCHEM_TEST_DRIVER_JACOBIAN_HOMOGENEOUS_BATCH_REACTOR
 
 
   /// default inputs
@@ -36,6 +37,9 @@ main(int argc, char* argv[])
   std::string prefixPath("data/reaction-rates/");
 #endif
 #if defined(TCHEM_TEST_DRIVER_HOMOGENEOUS_BATCH_REACTOR)
+  std::string prefixPath("data/ignition-zero-d/");
+#endif
+#if defined(TCHEM_TEST_DRIVER_JACOBIAN_HOMOGENEOUS_BATCH_REACTOR)
   std::string prefixPath("data/ignition-zero-d/");
 #endif
   std::string chemFile(prefixPath + "chem.inp");
@@ -78,22 +82,50 @@ main(int argc, char* argv[])
 
     const int nspec = tchem.getNumberOfSpecies();
     typename TChem::Driver::real_type_1d_view_host state("state", tchem.getLengthOfStateVector());
-    TChem::Test::readStateVector(inputFile, nspec, state);    
+    TChem::Test::readStateVector(inputFile, nspec, state);
     for (int i=0;i<nBatch;++i)
       tchem.setStateVectorHost(i, state);
     tchem.showViews("After set state vector");
-    
+
     tchem.computeNetProductionRatePerMassDevice();
     tchem.showViews("After compute net production rate per mass device");
-    
+
     typename TChem::Driver::real_type_1d_const_view_host output;
     tchem.getNetProductionRatePerMassHost(0, output);
     tchem.showViews("After get net production rate per mass host");
-    
+
     TChem::Test::writeReactionRates(outputFile, nspec, output);
   }
 #endif
-  
+
+#if defined(TCHEM_TEST_DRIVER_JACOBIAN_HOMOGENEOUS_BATCH_REACTOR)
+{
+  TChem::Driver tchem;
+  tchem.createKineticModel(chemFile, thermFile);
+  tchem.setNumberOfSamples(nBatch);
+  tchem.createStateVector();
+  //tchem.createNetProductionRatePerMass();
+  tchem.showViews("After creating state vectors and net production rate per mass");
+  const int nspec = tchem.getNumberOfSpecies();
+  typename TChem::Driver::real_type_1d_view_host state("state", tchem.getLengthOfStateVector());
+  TChem::Test::readStateVector(inputFile, nspec, state);
+  for (int i=0;i<nBatch;++i)
+    tchem.setStateVectorHost(i, state);
+  tchem.showViews("After set state vector");
+
+  tchem.computeJacobianHomogeneousGasReactorDevice();
+  tchem.showViews("After compute net production rate per mass device");
+
+  typename TChem::Driver::real_type_2d_const_view_host output;
+  tchem.getJacobianHomogeneousGasReactorHost(0, output);
+  tchem.showViews("After get net production rate per mass host");
+
+  // TChem::Test::writeReactionRates(outputFile, nspec, output);
+
+}
+
+#endif
+
 #if defined(TCHEM_TEST_DRIVER_HOMOGENEOUS_BATCH_REACTOR)
   {
     TChem::Driver tchem;
@@ -104,10 +136,10 @@ main(int argc, char* argv[])
 
     const int nspec = tchem.getNumberOfSpecies();
     typename TChem::Driver::real_type_1d_view_host state("state", tchem.getLengthOfStateVector());
-    TChem::Test::readStateVector(inputFile, nspec, state);    
+    TChem::Test::readStateVector(inputFile, nspec, state);
     for (int i=0;i<nBatch;++i)
       tchem.setStateVectorHost(i, state);
-    
+
     const real_type tbeg(0), tend(1), dtmin(1e-11), dtmax(1e-6);
     const int max_num_newton_iterations(20), num_time_iterations_per_interval(10);
     const real_type atol_newton(1e-8), rtol_newton(1e-5), atol_time(1e-12), rtol_time(1e-8);

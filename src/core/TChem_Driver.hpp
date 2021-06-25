@@ -34,16 +34,19 @@ namespace TChem {
     using real_type_0d_view = TChem::real_type_0d_view;
     using real_type_1d_view = TChem::real_type_1d_view;
     using real_type_2d_view = TChem::real_type_2d_view;
+    using real_type_3d_view = TChem::real_type_3d_view;
 
     using time_advance_type_1d_view = TChem::time_advance_type_1d_view;
 
     using real_type_0d_view_host = typename real_type_0d_view::HostMirror;
     using real_type_1d_view_host = typename real_type_1d_view::HostMirror;
     using real_type_2d_view_host = typename real_type_2d_view::HostMirror;
+    using real_type_3d_view_host = typename real_type_3d_view::HostMirror;
 
     using real_type_0d_const_view_host = typename real_type_0d_view_host::const_type;
     using real_type_1d_const_view_host = typename real_type_1d_view_host::const_type;
     using real_type_2d_const_view_host = typename real_type_2d_view_host::const_type;
+    using real_type_3d_const_view_host = typename real_type_3d_view_host::const_type;
 
     /// this policy is for time integration which can be repeatedly reused
     using policy_type = typename TChem::UseThisTeamPolicy<exec_space>::type;
@@ -57,7 +60,8 @@ namespace TChem {
     using real_type_0d_dual_view = DualViewType<real_type_0d_view>;
     using real_type_1d_dual_view = DualViewType<real_type_1d_view>;
     using real_type_2d_dual_view = DualViewType<real_type_2d_view>;
-      
+    using real_type_3d_dual_view = DualViewType<real_type_3d_view>;
+
   private:
     enum {
       NeedSyncToDevice = 1,
@@ -78,7 +82,7 @@ namespace TChem {
     /// in particular, these dual views are used for pre/post processing
     /// otherwise, view should be used
     ///
-    
+
     /// variables
     ordinal_type _state_need_sync;
     real_type_2d_dual_view _state;
@@ -86,8 +90,11 @@ namespace TChem {
     ordinal_type _net_production_rate_per_mass_need_sync;
     real_type_2d_dual_view _net_production_rate_per_mass;
 
+    ordinal_type _jacobian_homogeneous_gas_reactor_need_sync;
+    real_type_3d_dual_view _jacobian_homogeneous_gas_reactor;
+
     /// time integations
-    time_advance_type_1d_view _tadv;    
+    time_advance_type_1d_view _tadv;
     real_type_2d_view _tol_time ;
     real_type_1d_view _tol_newton ;
     real_type_2d_view _fac ;
@@ -96,19 +103,19 @@ namespace TChem {
     real_type_1d_dual_view _t ;
     real_type_1d_dual_view _dt ;
 
-    /// this is for time integration where the policy is reused 
+    /// this is for time integration where the policy is reused
     policy_type _policy  ;
 
     /// with reactor set function, this flag is on and time advance is ready
     ordinal_type _is_time_advance_set;
-    
+
     void createTeamExecutionPolicy(const ordinal_type& per_team_extent);
     void createTimeAdvance(const ordinal_type& number_of_ODEs, const ordinal_type & number_of_equations );
     void setTimeAdvance(const TChem::time_advance_type& tadv_default,
                         const real_type& atol_newton, const real_type&rtol_newton,
                         const real_type& atol_time, const real_type& rtol_time);
     void freeTimeAdvance();
-    
+
   public:
     Driver();
     Driver(const std::string& chem_file, const std::string& therm_file);
@@ -138,7 +145,7 @@ namespace TChem {
     ///
     /// state vector
     ///
-    bool isStateVectorCreated() const; /// why 
+    bool isStateVectorCreated() const; /// why
     void createStateVector();
     void freeStateVector();
     void setStateVectorHost(const ordinal_type i, const real_type_1d_view_host& state_at_i);
@@ -149,7 +156,7 @@ namespace TChem {
     void getStateVectorNonConstHost(real_type_2d_view_host& view);
 
     ///
-    /// net production rate 
+    /// net production rate
     ///
     bool isNetProductionRatePerMassCreated() const;
     void createNetProductionRatePerMass();
@@ -157,7 +164,18 @@ namespace TChem {
     void getNetProductionRatePerMassHost(const ordinal_type i, real_type_1d_const_view_host& view);
     void getNetProductionRatePerMassHost(real_type_2d_const_view_host& view);
 
+
     void computeNetProductionRatePerMassDevice();
+
+    // Jacobina homogeneous gas reactor
+    bool isJacobianHomogeneousGasReactorCreated() const;
+    void createJacobianHomogeneousGasReactor();
+    void freeJacobianHomogeneousGasReactor();
+    void getJacobianHomogeneousGasReactorHost(const ordinal_type i, real_type_2d_const_view_host& view) ;
+    void getJacobianHomogeneousGasReactorHost(real_type_3d_const_view_host& view);
+    void computeJacobianHomogeneousGasReactorDevice() ;
+
+
 
     ///
     /// time integration
@@ -191,7 +209,7 @@ extern "C" {
 #endif
   void TChem_createKineticModel(const char * chem_file, const char * therm_file);
   bool TChem_isKineticModelCreated();
-  void TChem_freeKineticModel();  
+  void TChem_freeKineticModel();
   int  TChem_getNumberOfSpecies();
   int  TChem_getNumberOfReactions();
 
@@ -209,13 +227,13 @@ extern "C" {
   void TChem_setAllStateVectorHost(real_type * state);
   void TChem_getSingleStateVectorHost(const int i, real_type * view);
   void TChem_getAllStateVectorHost(real_type * view);
-  
+
   bool TChem_isNetProductionRatePerMassCreated();
   void TChem_createNetProductionRatePerMass();
   void TChem_freeNetProductionRatePerMass();
   void TChem_getSingleNetProductionRatePerMassHost(const int i, real_type * view);
   void TChem_getAllNetProductionRatePerMassHost(real_type * view);
-  
+
   void TChem_computeNetProductionRatePerMassDevice();
 
   void TChem_unsetTimeAdvance();
@@ -228,16 +246,16 @@ extern "C" {
 						 const real_type atol_newton, const real_type rtol_newton,
 						 const real_type atol_time, const real_type rtol_time);
   real_type TChem_computeTimeAdvanceHomogeneousGasReactorDevice();
-  
+
   void TChem_getTimeStepHost(real_type * view);
   void TChem_getTimeStepSizeHost(real_type * view);
-  
+
   void TChem_createAllViews();
   void TChem_showAllViews(const char * label);
   void TChem_freeAllViews();
-  
+
 #ifdef __cplusplus
 }
 #endif
-  
+
 #endif

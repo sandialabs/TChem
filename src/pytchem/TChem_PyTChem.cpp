@@ -267,6 +267,39 @@ public:
   void computeJacobianHomogeneousGasReactor() {
     _obj->computeJacobianHomogeneousGasReactorDevice();
   }
+  // rhs
+
+  py::array_t<real_type> getRHS_HomogeneousGasReactor() {
+    TCHEM_CHECK_ERROR(!_obj->isRHS_HomogeneousGasReactorCreated(), "Error: rhs of homogeneous gas reactor is not created");
+    typename TChem::Driver::real_type_2d_const_view_host src;
+    _obj->getRHS_HomogeneousGasReactorHost(src);
+
+    auto tgt = py::array_t<real_type>(src.span());
+    tgt.resize({src.extent(0), src.extent(1)});
+
+    copyFromConstView(src, tgt);
+    return tgt;
+  }
+
+  py::array_t<real_type> getRHS_HomogeneousGasReactorSingle(const int i) {
+    TCHEM_CHECK_ERROR(!_obj->isRHS_HomogeneousGasReactorCreated(), "Error: rhs of homogeneous gas reactor is not created");
+    typename TChem::Driver::real_type_1d_const_view_host src;
+    _obj->getRHS_HomogeneousGasReactorHost(i, src);
+
+    auto tgt = py::array_t<real_type>(src.span());
+    tgt.resize({src.extent(0)});
+
+    copyFromConstView(src, tgt);
+    return tgt;
+  }
+
+  void createRHS_HomogeneousGasReactor() {
+    _obj->createRHS_HomogeneousGasReactor();
+  }
+
+  void computeRHS_HomogeneousGasReactor() {
+    _obj->computeRHS_HomogeneousGasReactorDevice();
+  }
 
   ///
   /// homogeneous gas reactor
@@ -411,9 +444,20 @@ PYBIND11_MODULE(pytchem, m) {
     //  .def("getJacobianHomogeneousGasReactor",
     // (&TChemDriver::getJacobianHomogeneousGasReactor), py::return_value_policy::take_ownership,
     // "Retrieve homogeneous-gas-reactor Jacobian for all samples")
-
      .def("computeJacobianHomogeneousGasReactor",
     (&TChemDriver::computeJacobianHomogeneousGasReactor), "Compute Jacobian matrix for homogeneous gas reactor")
+    // rhs homogeneous gas reactor
+    .def("createRHS_HomogeneousGasReactor",
+   (&TChemDriver::createRHS_HomogeneousGasReactor),
+   "Allocate memory for homogeneous-gas-reactor RHS  (# samples, # species + 1 )")
+    .def("getRHS_HomogeneousGasReactor",
+   (&TChemDriver::getRHS_HomogeneousGasReactorSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+   "Retrive homogeneous-gas-reactor RHS for a single sample")
+    .def("getRHS_HomogeneousGasReactor",
+   (&TChemDriver::getRHS_HomogeneousGasReactor), py::return_value_policy::take_ownership,
+   "Retrieve homogeneous-gas-reactor RHS_ for all samples")
+    .def("computeRHS_HomogeneousGasReactor",
+   (&TChemDriver::computeRHS_HomogeneousGasReactor), "Compute RHS for homogeneous gas reactor")
 
       /// homogeneous gas reactor
       .def("setTimeAdvanceHomogeneousGasReactor",(&TChemDriver::setTimeAdvanceHomogeneousGasReactor),

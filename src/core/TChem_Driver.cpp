@@ -487,6 +487,73 @@ namespace TChem {
     JacobianReduced::runDeviceBatch( _n_sample, _state._dev, _jacobian_homogeneous_gas_reactor._dev, _kmcd_device);
     _jacobian_homogeneous_gas_reactor_need_sync = NeedSyncToHost;
   }
+  // RHS Homogeneous Gas Reactor
+  bool
+  Driver::
+  isRHS_HomogeneousGasReactorCreated() const {
+    return (_rhs_homogeneous_gas_reactor._dev.span() > 0);
+  }
+
+  void
+  Driver::
+  createRHS_HomogeneousGasReactor() {
+    TCHEM_CHECK_ERROR(_n_sample <= 0, "# of samples should be nonzero");
+    TCHEM_CHECK_ERROR(!_kmd_created, "Kinetic mode first needs to be created");
+  const ordinal_type len = _kmcd_device.nSpec + 1;
+  _rhs_homogeneous_gas_reactor._dev = real_type_2d_view("jacobian homogeneous gas reactor dev", _n_sample, len);
+  _rhs_homogeneous_gas_reactor._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _rhs_homogeneous_gas_reactor._dev);
+  _rhs_homogeneous_gas_reactor_need_sync = NoNeedSync;
+}
+
+
+  void
+  Driver::
+  freeRHS_HomogeneousGasReactor() {
+    _rhs_homogeneous_gas_reactor._dev = real_type_2d_view();
+    _rhs_homogeneous_gas_reactor._host = real_type_2d_view_host();
+    _rhs_homogeneous_gas_reactor_need_sync = NoNeedSync;
+  }
+
+  void
+  Driver::
+  getRHS_HomogeneousGasReactorHost(const ordinal_type i, real_type_1d_const_view_host& view) {
+    TCHEM_CHECK_ERROR(_rhs_homogeneous_gas_reactor._dev.span() == 0, "RHS of homogeneous gas reactor should be constructed");
+    if (_rhs_homogeneous_gas_reactor_need_sync == NeedSyncToHost) {
+      Kokkos::deep_copy(_rhs_homogeneous_gas_reactor._host, _rhs_homogeneous_gas_reactor._dev);
+      _rhs_homogeneous_gas_reactor_need_sync = NoNeedSync;
+    }
+    view = real_type_1d_const_view_host(&_rhs_homogeneous_gas_reactor._host(i,0),
+     _rhs_homogeneous_gas_reactor._host.extent(1));
+  }
+
+  void
+  Driver::
+  getRHS_HomogeneousGasReactorHost(real_type_2d_const_view_host& view) {
+    TCHEM_CHECK_ERROR(_rhs_homogeneous_gas_reactor._dev.span() == 0, "State vector should be constructed");
+    if (_rhs_homogeneous_gas_reactor_need_sync == NeedSyncToHost) {
+      Kokkos::deep_copy(_rhs_homogeneous_gas_reactor._host, _rhs_homogeneous_gas_reactor._dev);
+      _rhs_homogeneous_gas_reactor_need_sync = NoNeedSync;
+    }
+    view = real_type_2d_const_view_host(&_rhs_homogeneous_gas_reactor._host(0,0),
+    _jacobian_homogeneous_gas_reactor._host.extent(0), _jacobian_homogeneous_gas_reactor._host.extent(1));
+  }
+
+  void
+  Driver::
+  computeRHS_HomogeneousGasReactorDevice() {
+    TCHEM_CHECK_ERROR(_kmd_created, "Kinetic mode first needs to be created");
+    if (_state_need_sync == NeedSyncToDevice) {
+      Kokkos::deep_copy(_state._dev, _state._host);
+      _state_need_sync = NoNeedSync;
+    }
+    if (_rhs_homogeneous_gas_reactor._dev.span() == 0) {
+      createRHS_HomogeneousGasReactor();
+    }
+
+    SourceTerm::runDeviceBatch( _n_sample, _state._dev, _rhs_homogeneous_gas_reactor._dev, _kmcd_device);
+
+  }
+
 
   void
   Driver::
@@ -572,6 +639,7 @@ namespace TChem {
     createStateVector();
     createNetProductionRatePerMass();
     createJacobianHomogeneousGasReactor();
+    createRHS_HomogeneousGasReactor();
   }
 
   void
@@ -580,6 +648,7 @@ namespace TChem {
     freeStateVector();
     freeNetProductionRatePerMass();
     freeJacobianHomogeneousGasReactor();
+    freeRHS_HomogeneousGasReactor();
   }
 
   void

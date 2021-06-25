@@ -89,9 +89,13 @@ namespace TChem {
 
     ordinal_type _net_production_rate_per_mass_need_sync;
     real_type_2d_dual_view _net_production_rate_per_mass;
-
+    //  jacobian homogeneous gas reactor
     ordinal_type _jacobian_homogeneous_gas_reactor_need_sync;
     real_type_3d_dual_view _jacobian_homogeneous_gas_reactor;
+
+    // rhs homogeneous gas reactor
+    ordinal_type _rhs_homogeneous_gas_reactor_need_sync;
+    real_type_2d_dual_view _rhs_homogeneous_gas_reactor;
 
     /// time integations
     time_advance_type_1d_view _tadv;
@@ -174,6 +178,14 @@ namespace TChem {
     void getJacobianHomogeneousGasReactorHost(const ordinal_type i, real_type_2d_const_view_host& view) ;
     void getJacobianHomogeneousGasReactorHost(real_type_3d_const_view_host& view);
     void computeJacobianHomogeneousGasReactorDevice() ;
+
+    // RHS homogeneous gas reactor
+    bool isRHS_HomogeneousGasReactorCreated() const;
+    void createRHS_HomogeneousGasReactor();
+    void freeRHS_HomogeneousGasReactor();
+    void getRHS_HomogeneousGasReactorHost(const ordinal_type i, real_type_1d_const_view_host& view) ;
+    void getRHS_HomogeneousGasReactorHost(real_type_2d_const_view_host& view);
+    void computeRHS_HomogeneousGasReactorDevice() ;
 
 
 

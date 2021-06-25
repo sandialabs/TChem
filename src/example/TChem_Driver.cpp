@@ -114,7 +114,12 @@ main(int argc, char* argv[])
   tchem.showViews("After set state vector");
 
   tchem.computeJacobianHomogeneousGasReactorDevice();
+  tchem.computeRHS_HomogeneousGasReactorDevice();
+
+
   tchem.showViews("After compute net production rate per mass device");
+
+
 
   typename TChem::Driver::real_type_2d_const_view_host output;
   tchem.getJacobianHomogeneousGasReactorHost(0, output);

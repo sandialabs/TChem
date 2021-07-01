@@ -1,6 +1,8 @@
 #ifndef __TCHEM_CONFIG_H__
 #define __TCHEM_CONFIG_H__
 
+#include "Tines_Config.hpp"
+
 /// tchem control
 #cmakedefine TCHEM_ENABLE_VERBOSE
 #cmakedefine TCHEM_ENABLE_DEBUG

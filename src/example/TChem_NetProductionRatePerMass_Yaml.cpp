@@ -31,7 +31,7 @@ using real_type_2d_view = TChem::real_type_2d_view;
 int
 main(int argc, char* argv[])
 {
-
+  #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
   /// default inputs
   std::string prefixPath("data/reaction-rates/");
   std::string chemFile(prefixPath + "chem.inp");
@@ -166,6 +166,10 @@ main(int argc, char* argv[])
     }
   }
   Kokkos::finalize();
+
+  #else
+ printf("This example requires Yaml ...\n" );
+  #endif
 
   return 0;
 }

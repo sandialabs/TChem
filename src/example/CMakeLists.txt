@@ -26,12 +26,12 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_Driver.cpp
   TChem_Driver_C.cpp
   TChem_IgnitionZeroD_SourceTermJacobian.cpp
+  TChem_NetProductionRatePerMass_Yaml.cpp
 )
 
 IF (TCHEM_ENABLE_TPL_YAML_CPP)
 LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_ThermalProperties_Yaml.cpp
-  TChem_NetProductionRatePerMass_Yaml.cpp
   TChem_NetProductionRateSurfacePerMass_Yaml.cpp
   TChem_PlugFlowReactorModelVariation.cpp
   TChem_TransientContStirredTankReactorModelVariation.cpp

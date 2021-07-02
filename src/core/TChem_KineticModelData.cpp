@@ -2911,9 +2911,25 @@ KineticModelData::initChemYaml(YAML::Node& doc, const int& gasPhaseIndex)
           break;
         }
       }
+
       if (Elem_has_mass==0){
-        printf("Element is not part of TChem periodic table: %d %s\n",
-         i, &eNamesHost(i, 0));
+        // check if element has atomic-weight in yaml file
+        if (doc["elements"]) {
+          for (auto const& it_element : doc["elements"]) {
+            auto name = it_element["symbol"].as<std::string>();
+            std::transform(name.begin(),
+            name.end(),name.begin(), ::toupper);
+            char*  elemNm= &*name.begin();
+            if (strcmp(&eNamesHost(i, 0), elemNm) == 0) {
+              auto value = it_element["atomic-weight"].as<real_type>();
+              eMassHost(i) = value;
+              break;
+            }
+          }
+        } else {
+          printf("Element is not either part of TChem periodic table or yaml input file: %d %s\n",
+           i, &eNamesHost(i, 0));
+        }
       }
     }
 

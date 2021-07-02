@@ -1,0 +1,42 @@
+generator: ck2yaml
+input-files: [chem.inp]
+cantera-version: 2.5.0a4
+date: Thu, 01 Jul 2021 18:04:53 -0700
+
+units: {length: cm, time: s, quantity: mol, activation-energy: cal/mol}
+
+phases:
+- name: gas
+  thermo: ideal-gas
+  elements: [X]
+  species: [X, X2]
+  kinetics: gas
+  state: {T: 300.0, P: 1 atm}
+
+elements:
+- symbol: X
+  atomic-weight: 1.0
+
+species:
+- name: X
+  composition: {X: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [2.5, 0.0, 0.0, 0.0, 0.0, -745.375, 4.37967]
+    - [2.5, 0.0, 0.0, 0.0, 0.0, -745.375, 4.37967]
+- name: X2
+  composition: {X: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [2.5, 0.0, 0.0, 0.0, 0.0, -745.375, 4.37967]
+    - [2.5, 0.0, 0.0, 0.0, 0.0, -745.375, 4.37967]
+
+reactions:
+- equation: X2 => 2 X  # Reaction 1
+  rate-constant: {A: 10.0, b: 1.0, Ea: 1.0}
+- equation: X + X => X2  # Reaction 2
+  rate-constant: {A: 10.0, b: 1.0, Ea: 1.0}

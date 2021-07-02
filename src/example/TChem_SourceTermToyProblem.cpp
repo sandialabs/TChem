@@ -28,6 +28,8 @@ using real_type = TChem::real_type;
 using real_type_1d_view = TChem::real_type_1d_view;
 using real_type_2d_view = TChem::real_type_2d_view;
 
+
+
 int
 main(int argc, char* argv[])
 {
@@ -40,6 +42,7 @@ main(int argc, char* argv[])
   std::string outputFile(prefixPath + "omega.dat");
   int nBatch(1);
   bool verbose(true);
+  bool useYaml(false);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
@@ -58,6 +61,9 @@ main(int argc, char* argv[])
     &nBatch);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
+  //
+  opts.set_option<bool>(
+    "useYaml", "If true, use yaml to parse input file", &useYaml);
 
   const bool r_parse = opts.parse(argc, argv);
   if (r_parse)
@@ -70,9 +76,23 @@ main(int argc, char* argv[])
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
+
+    #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+    TChem::KineticModelData kmd;
+    if (useYaml) {
+      kmd = TChem::KineticModelData(chemFile);
+    } else {
+      kmd = TChem::KineticModelData(chemFile, thermFile);
+    }
+
+    #else
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
+    #endif
+
     const auto kmcd = kmd.createConstData<TChem::exec_space>();
+
+
 
     /// input: state vectors: temperature, pressure and mass fraction
     real_type_2d_view state(

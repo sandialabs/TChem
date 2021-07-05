@@ -96,6 +96,12 @@ namespace TChem {
     // rhs homogeneous gas reactor
     ordinal_type _rhs_homogeneous_gas_reactor_need_sync;
     real_type_2d_dual_view _rhs_homogeneous_gas_reactor;
+    // enthalpy mix
+
+    ordinal_type _enthalpy_mass_need_sync;
+    ordinal_type _enthalpy_mix_mass_need_sync;
+    real_type_2d_dual_view _enthalpy_mass;
+    real_type_1d_dual_view _enthalpy_mix_mass;
 
     /// time integations
     time_advance_type_1d_view _tadv;
@@ -109,6 +115,7 @@ namespace TChem {
 
     /// this is for time integration where the policy is reused
     policy_type _policy  ;
+    policy_type _policy_enthalpy;
 
     /// with reactor set function, this flag is on and time advance is ready
     ordinal_type _is_time_advance_set;
@@ -187,7 +194,14 @@ namespace TChem {
     void getRHS_HomogeneousGasReactorHost(real_type_2d_const_view_host& view);
     void computeRHS_HomogeneousGasReactorDevice() ;
 
-
+    // enthalpy mix
+    bool isEnthapyMassCreated() const;
+    void createEnthapyMass();
+    void freeEnthapyMass();
+    // void getEnthapyMassHost(const ordinal_type i, real_type_1d_const_view_host& view) ;
+    void getEnthapyMassHost(real_type_2d_const_view_host& view);
+    void getEnthapyMixMassHost(real_type_1d_const_view_host& view);
+    void computeEnthapyMassDevice() ;
 
     ///
     /// time integration

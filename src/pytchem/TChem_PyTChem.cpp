@@ -267,7 +267,7 @@ public:
   void computeJacobianHomogeneousGasReactor() {
     _obj->computeJacobianHomogeneousGasReactorDevice();
   }
-  // rhs
+  // rhs homogeneous gas reactor
 
   py::array_t<real_type> getRHS_HomogeneousGasReactor() {
     TCHEM_CHECK_ERROR(!_obj->isRHS_HomogeneousGasReactorCreated(), "Error: rhs of homogeneous gas reactor is not created");
@@ -301,7 +301,40 @@ public:
     _obj->computeRHS_HomogeneousGasReactorDevice();
   }
 
-  ///
+  // enthalpy mix
+
+  py::array_t<real_type> getEnthapyMass() {
+    TCHEM_CHECK_ERROR(!_obj->isEnthapyMassCreated(), "Error: enthalpy is not created");
+    typename TChem::Driver::real_type_2d_const_view_host src;
+    _obj->getEnthapyMassHost(src);
+
+    auto tgt = py::array_t<real_type>(src.span());
+    tgt.resize({src.extent(0), src.extent(1)});
+
+    copyFromConstView(src, tgt);
+    return tgt;
+  }
+
+  py::array_t<real_type> getEnthapyMixMass() {
+    TCHEM_CHECK_ERROR(!_obj->isEnthapyMassCreated(), "Error: enthalpy is not created");
+    typename TChem::Driver::real_type_1d_const_view_host src;
+    _obj->getEnthapyMixMassHost(src);
+
+    auto tgt = py::array_t<real_type>(src.span());
+    tgt.resize({src.extent(0)});
+
+    copyFromConstView(src, tgt);
+    return tgt;
+  }
+
+  void createEnthapyMass() {
+    _obj->createEnthapyMass();
+  }
+
+  void computeEnthapyMass() {
+    _obj->computeEnthapyMassDevice();
+  }
+
   /// homogeneous gas reactor
   ///
   void setTimeAdvanceHomogeneousGasReactor(const real_type & tbeg,
@@ -458,32 +491,44 @@ PYBIND11_MODULE(pytchem, m) {
    "Retrieve homogeneous-gas-reactor RHS_ for all samples")
     .def("computeRHS_HomogeneousGasReactor",
    (&TChemDriver::computeRHS_HomogeneousGasReactor), "Compute RHS for homogeneous gas reactor")
+   // ehthalpy mix
+   .def("createEnthapyMass",
+  (&TChemDriver::createEnthapyMass),
+  "Allocate memory for enthalpy mass  (# samples, # species )")
+   .def("getEnthapyMass",
+  (&TChemDriver::getEnthapyMass), py::return_value_policy::take_ownership,
+  "Retrive enthalpy mass per species for all samples")
+   .def("getEnthapyMixMass",
+  (&TChemDriver::getEnthapyMixMass), py::return_value_policy::take_ownership,
+  "Retrieve mixture enthalpy for all samples")
+   .def("computeEnthapyMass",
+  (&TChemDriver::computeEnthapyMass), "Compute enthalpy mass and mixture enthalpy")
 
-      /// homogeneous gas reactor
-      .def("setTimeAdvanceHomogeneousGasReactor",(&TChemDriver::setTimeAdvanceHomogeneousGasReactor),
-           py::arg("tbeg"),  py::arg("tend"), py::arg("dtmin"), py::arg("dtmax"),
-           py::arg("max_num_newton_iterations"), py::arg("num_time_iterations_per_interval"),
-           py::arg("atol_newton"), py::arg("rtol_newton"),
-           py::arg("atol_time"), py::arg("rtol_time"),
-           "Set time advance object for homogeneous gas reactor")
-      .def("computeTimeAdvanceHomogeneousGasReactor",
-           (&TChemDriver::computeTimeAdvanceHomogeneousGasReactor),
-           "Compute Time Advance for a Homogeneous-Gas Reactor ")
+  /// homogeneous gas reactor
+   .def("setTimeAdvanceHomogeneousGasReactor",(&TChemDriver::setTimeAdvanceHomogeneousGasReactor),
+    py::arg("tbeg"),  py::arg("tend"), py::arg("dtmin"), py::arg("dtmax"),
+    py::arg("max_num_newton_iterations"), py::arg("num_time_iterations_per_interval"),
+    py::arg("atol_newton"), py::arg("rtol_newton"),
+    py::arg("atol_time"), py::arg("rtol_time"),
+     "Set time advance object for homogeneous gas reactor")
+  .def("computeTimeAdvanceHomogeneousGasReactor",
+    (&TChemDriver::computeTimeAdvanceHomogeneousGasReactor),
+    "Compute Time Advance for a Homogeneous-Gas Reactor ")
       /// time step accessors
-      .def("getTimeStep",
-	   (&TChemDriver::getTimeStep), py::return_value_policy::take_ownership,
-	   "Retrieve time line of all samples")
-      .def("getTimeStepSize",
-	   (&TChemDriver::getTimeStepSize), py::return_value_policy::take_ownership,
-	   "Retrieve time step sizes of all samples")
+    .def("getTimeStep",
+	  (&TChemDriver::getTimeStep), py::return_value_policy::take_ownership,
+	  "Retrieve time line of all samples")
+    .def("getTimeStepSize",
+	  (&TChemDriver::getTimeStepSize), py::return_value_policy::take_ownership,
+	  "Retrieve time step sizes of all samples")
       /// view utils
-      .def("createAllViews",
-	   (&TChemDriver::createAllViews),
-	   "Allocate all necessary workspace for this driver")
-      .def("freeAllViews",
-	   (&TChemDriver::freeAllViews),
-	   "Free all necessary workspace for this driver")
-      .def("showViewStatus",
+   .def("createAllViews",
+	 (&TChemDriver::createAllViews),
+	 "Allocate all necessary workspace for this driver")
+    .def("freeAllViews",
+	  (&TChemDriver::freeAllViews),
+	  "Free all necessary workspace for this driver")
+    .def("showViewStatus",
 	   (&TChemDriver::showViewStatus),
 	   "Print member variable view status")
       ;

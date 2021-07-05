@@ -116,7 +116,19 @@ namespace TChem {
     _tol_newton(),
     _fac(),
     _policy(),
-    _is_time_advance_set()
+    _is_time_advance_set(),
+    //  jacobian homogeneous gas reactor
+    _jacobian_homogeneous_gas_reactor_need_sync(0),
+    _jacobian_homogeneous_gas_reactor(),
+    // rhs homogeneous gas reactor
+    _rhs_homogeneous_gas_reactor_need_sync(0),
+    _rhs_homogeneous_gas_reactor(),
+    // enthalpy mix
+    _enthalpy_mass_need_sync(0),
+    _enthalpy_mix_mass_need_sync(0),
+    _enthalpy_mass(),
+    _enthalpy_mix_mass(),
+    _policy_enthalpy()
     {
     }
 
@@ -140,7 +152,19 @@ namespace TChem {
     _tol_newton(),
     _fac(),
     _policy(),
-    _is_time_advance_set()
+    _is_time_advance_set(),
+    //  jacobian homogeneous gas reactor
+    _jacobian_homogeneous_gas_reactor_need_sync(0),
+    _jacobian_homogeneous_gas_reactor(),
+    // rhs homogeneous gas reactor
+    _rhs_homogeneous_gas_reactor_need_sync(0),
+    _rhs_homogeneous_gas_reactor(),
+    // enthalpy mix
+    _enthalpy_mass_need_sync(0),
+    _enthalpy_mix_mass_need_sync(0),
+    _enthalpy_mass(),
+    _enthalpy_mix_mass(),
+    _policy_enthalpy()
     {
       createKineticModel(chem_file, therm_file);
     }
@@ -554,6 +578,90 @@ namespace TChem {
 
   }
 
+  // enthalpy mass
+  bool
+  Driver::
+  isEnthapyMassCreated() const {
+    return (_enthalpy_mass._dev.span() > 0);
+  }
+
+  void
+  Driver::
+  createEnthapyMass() {
+    TCHEM_CHECK_ERROR(_n_sample <= 0, "# of samples should be nonzero");
+    TCHEM_CHECK_ERROR(!_kmd_created, "Kinetic mode first needs to be created");
+  const ordinal_type len = _kmcd_device.nSpec;
+  _enthalpy_mass._dev = real_type_2d_view("jacobian homogeneous gas reactor dev", _n_sample, len);
+  _enthalpy_mass._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _enthalpy_mass._dev);
+  _enthalpy_mix_mass._dev = real_type_1d_view("jacobian homogeneous gas reactor dev", _n_sample);
+  _enthalpy_mix_mass._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _enthalpy_mix_mass._dev);
+  _enthalpy_mass_need_sync = NoNeedSync;
+  _enthalpy_mix_mass_need_sync = NoNeedSync;
+  // create policy for enthalpy
+  const auto exec_space_instance = exec_space();
+  _policy_enthalpy = policy_type(exec_space_instance, _n_sample, Kokkos::AUTO());
+  const ordinal_type level = 1;
+  const ordinal_type per_team_extent = TChem::EnthalpyMass::getWorkSpaceSize(_kmcd_device);
+  const ordinal_type per_team_scratch =
+    TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+  _policy_enthalpy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+}
+
+  void
+  Driver::
+  freeEnthapyMass() {
+    _enthalpy_mass._dev = real_type_2d_view();
+    _enthalpy_mass._host = real_type_2d_view_host();
+    _enthalpy_mix_mass._dev = real_type_1d_view();
+    _enthalpy_mix_mass._host = real_type_1d_view_host();
+    _enthalpy_mass_need_sync = NoNeedSync;
+    _enthalpy_mix_mass_need_sync = NoNeedSync;
+  }
+
+  void
+  Driver::
+  getEnthapyMixMassHost(real_type_1d_const_view_host& view) {
+    TCHEM_CHECK_ERROR(_enthalpy_mix_mass._dev.span() == 0, "enthalpy-mix view should be constructed");
+    if (_enthalpy_mix_mass_need_sync == NeedSyncToHost) {
+      Kokkos::deep_copy(_enthalpy_mix_mass._host, _enthalpy_mix_mass._dev);
+      _enthalpy_mix_mass_need_sync = NoNeedSync;
+    }
+    view = real_type_1d_const_view_host(&_enthalpy_mix_mass._host(0),
+     _enthalpy_mix_mass._host.extent(0));
+  }
+
+  void
+  Driver::
+  getEnthapyMassHost(real_type_2d_const_view_host& view) {
+    TCHEM_CHECK_ERROR(_enthalpy_mass._dev.span() == 0, "enthalpy view should be constructed");
+    if (_enthalpy_mass_need_sync == NeedSyncToHost) {
+      Kokkos::deep_copy(_enthalpy_mass._host, _enthalpy_mass._dev);
+      _enthalpy_mass_need_sync = NoNeedSync;
+    }
+    view = real_type_2d_const_view_host(&_enthalpy_mass._host(0,0),
+    _enthalpy_mass._host.extent(0), _enthalpy_mass._host.extent(1));
+  }
+
+  void
+  Driver::
+  computeEnthapyMassDevice() {
+    TCHEM_CHECK_ERROR(_kmd_created, "Kinetic mode first needs to be created");
+    if (_state_need_sync == NeedSyncToDevice) {
+      Kokkos::deep_copy(_state._dev, _state._host);
+      _state_need_sync = NoNeedSync;
+    }
+    if (_enthalpy_mass._dev.span() == 0) {
+      createEnthapyMass();
+    }
+
+
+    TChem::EnthalpyMass::runDeviceBatch(_policy_enthalpy,
+                                        _state._dev,
+                                        _enthalpy_mass._dev,
+                                        _enthalpy_mix_mass._dev,
+                                        _kmcd_device);
+  }
+
 
   void
   Driver::
@@ -640,6 +748,7 @@ namespace TChem {
     createNetProductionRatePerMass();
     createJacobianHomogeneousGasReactor();
     createRHS_HomogeneousGasReactor();
+    createEnthapyMass();
   }
 
   void
@@ -649,6 +758,7 @@ namespace TChem {
     freeNetProductionRatePerMass();
     freeJacobianHomogeneousGasReactor();
     freeRHS_HomogeneousGasReactor();
+    freeEnthapyMass();
   }
 
   void

@@ -111,6 +111,7 @@ IgnitionZeroD_TemplateRunModelVariation( /// required template arguments
         const RealType0DViewType temperature_out(sv_out_at_i.TemperaturePtr());
         const RealType0DViewType pressure_out(sv_out_at_i.PressurePtr());
         const RealType1DViewType Ys_out = sv_out_at_i.MassFractions();
+        const RealType0DViewType density_out(sv_at_i.DensityPtr());
 
         const ordinal_type m = Impl::IgnitionZeroD_Problem<
 	  typename KineticModelConstViewType::non_const_value_type
@@ -160,6 +161,9 @@ IgnitionZeroD_TemplateRunModelVariation( /// required template arguments
                                  Ys_out(i - 1) = vals(i);
                                }
                              });
+        member.team_barrier();
+        density_out() = Impl::RhoMixMs::team_invoke(member, temperature_out(),
+                                                    pressure_out(), Ys_out, kmcd_at_i);
         member.team_barrier();
       }
       }

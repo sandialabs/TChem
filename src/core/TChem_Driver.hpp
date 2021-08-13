@@ -96,12 +96,18 @@ namespace TChem {
     // rhs homogeneous gas reactor
     ordinal_type _rhs_homogeneous_gas_reactor_need_sync;
     real_type_2d_dual_view _rhs_homogeneous_gas_reactor;
-    // enthalpy mix
 
+    // enthalpy mix
     ordinal_type _enthalpy_mass_need_sync;
     ordinal_type _enthalpy_mix_mass_need_sync;
     real_type_2d_dual_view _enthalpy_mass;
     real_type_1d_dual_view _enthalpy_mix_mass;
+
+    // Forward and reverse constants
+    ordinal_type _kforward_reverse_need_sync;
+    real_type_2d_dual_view _kforward;
+    real_type_2d_dual_view _kreverse;
+    policy_type _policy_KForRev;
 
     /// time integations
     time_advance_type_1d_view _tadv;
@@ -193,6 +199,17 @@ namespace TChem {
     void getRHS_HomogeneousGasReactorHost(const ordinal_type i, real_type_1d_const_view_host& view) ;
     void getRHS_HomogeneousGasReactorHost(real_type_2d_const_view_host& view);
     void computeRHS_HomogeneousGasReactorDevice() ;
+
+    // k forward and reverse
+    bool isReactionRateConstantsCreated() const;
+    void createReactionRateConstants();
+    void freeReactionRateConstants();
+    void getReactionRateConstantsHost(const ordinal_type i,
+                                      real_type_1d_const_view_host& view1,
+                                      real_type_1d_const_view_host& view2) ;
+    void getReactionRateConstantsHost(real_type_2d_const_view_host& view1,
+                                      real_type_2d_const_view_host& view2);
+    void computeReactionRateConstantsDevice() ;
 
     // enthalpy mix
     bool isEnthapyMassCreated() const;

@@ -301,6 +301,68 @@ public:
     _obj->computeRHS_HomogeneousGasReactorDevice();
   }
 
+  // kforward and reverse
+
+  py::array_t<real_type> getForwardReactionRateConstants() {
+    TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
+    typename TChem::Driver::real_type_2d_const_view_host kfor;
+    typename TChem::Driver::real_type_2d_const_view_host krev;
+    _obj->getReactionRateConstantsHost(kfor, krev);
+
+    auto tgt = py::array_t<real_type>(kfor.span());
+    tgt.resize({kfor.extent(0), kfor.extent(1)});
+
+    copyFromConstView(kfor, tgt);
+    return tgt;
+  }
+
+  py::array_t<real_type> getReverseReactionRateConstants() {
+    TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
+    typename TChem::Driver::real_type_2d_const_view_host kfor;
+    typename TChem::Driver::real_type_2d_const_view_host krev;
+    _obj->getReactionRateConstantsHost(kfor, krev);
+
+    auto tgt = py::array_t<real_type>(krev.span());
+    tgt.resize({krev.extent(0), krev.extent(1)});
+
+    copyFromConstView(krev, tgt);
+    return tgt;
+  }
+
+  py::array_t<real_type> getForwardReactionRateConstantsSingle(const int i) {
+    TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
+    typename TChem::Driver::real_type_1d_const_view_host kfor;
+    typename TChem::Driver::real_type_1d_const_view_host krev;
+    _obj->getReactionRateConstantsHost(i, kfor, krev);
+
+    auto tgt = py::array_t<real_type>(kfor.span());
+    tgt.resize({kfor.extent(0)});
+
+    copyFromConstView(kfor, tgt);
+    return tgt;
+  }
+
+  py::array_t<real_type> getReverseReactionRateConstantsSingle(const int i) {
+    TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
+    typename TChem::Driver::real_type_1d_const_view_host kfor;
+    typename TChem::Driver::real_type_1d_const_view_host krev;
+    _obj->getReactionRateConstantsHost(i, kfor, krev);
+
+    auto tgt = py::array_t<real_type>(krev.span());
+    tgt.resize({krev.extent(0)});
+
+    copyFromConstView(krev, tgt);
+    return tgt;
+  }
+
+  void createReactionRateConstants() {
+    _obj->createReactionRateConstants();
+  }
+
+  void computeReactionRateConstants() {
+    _obj->computeReactionRateConstantsDevice();
+  }
+
   // enthalpy mix
 
   py::array_t<real_type> getEnthapyMass() {
@@ -491,6 +553,24 @@ PYBIND11_MODULE(pytchem, m) {
    "Retrieve homogeneous-gas-reactor RHS_ for all samples")
     .def("computeRHS_HomogeneousGasReactor",
    (&TChemDriver::computeRHS_HomogeneousGasReactor), "Compute RHS for homogeneous gas reactor")
+   // kforwar and reverse
+   .def("createReactionRateConstants",
+  (&TChemDriver::createReactionRateConstants),
+  "Allocate memory for forward/reverse rate constants  (# samples, # reactions )")
+   .def("getForwardReactionRateConstants",
+  (&TChemDriver::getForwardReactionRateConstantsSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+  "Retrive forward rate constants for a single sample")
+  .def("getReverseReactionRateConstants",
+ (&TChemDriver::getReverseReactionRateConstantsSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+ "Retrive reverse rate constants for a single sample")
+   .def("getForwardReactionRateConstants",
+  (&TChemDriver::getForwardReactionRateConstants), py::return_value_policy::take_ownership,
+  "Retrieve forward rate constants  for all samples")
+  .def("getReverseReactionRateConstants",
+ (&TChemDriver::getReverseReactionRateConstants), py::return_value_policy::take_ownership,
+ "Retrieve reverse rate constants  for all samples")
+   .def("computeReactionRateConstants",
+  (&TChemDriver::computeReactionRateConstants), "Compute forward/reverse rate constant")
    // ehthalpy mix
    .def("createEnthapyMass",
   (&TChemDriver::createEnthapyMass),

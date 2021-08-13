@@ -36,6 +36,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_InternalEnergyMass.hpp"
 #include "TChem_Jacobian.hpp"
 #include "TChem_JacobianReduced.hpp"
+#include "TChem_KForwardReverse.hpp"
 #include "TChem_KForwardReverseSurface.hpp"
 #include "TChem_KineticModelData.hpp"
 #include "TChem_NetProductionRatePerMass.hpp"

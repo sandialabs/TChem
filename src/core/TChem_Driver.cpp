@@ -128,7 +128,12 @@ namespace TChem {
     _enthalpy_mix_mass_need_sync(0),
     _enthalpy_mass(),
     _enthalpy_mix_mass(),
-    _policy_enthalpy()
+    _policy_enthalpy(),
+    // k forward and reverse
+    _kforward_reverse_need_sync(0),
+    _kforward(),
+    _kreverse(),
+    _policy_KForRev()
     {
     }
 
@@ -164,7 +169,12 @@ namespace TChem {
     _enthalpy_mix_mass_need_sync(0),
     _enthalpy_mass(),
     _enthalpy_mix_mass(),
-    _policy_enthalpy()
+    _policy_enthalpy(),
+    // k forward and reverse
+    _kforward_reverse_need_sync(0),
+    _kforward(),
+    _kreverse(),
+    _policy_KForRev()
     {
       createKineticModel(chem_file, therm_file);
     }
@@ -577,6 +587,109 @@ namespace TChem {
     SourceTerm::runDeviceBatch( _n_sample, _state._dev, _rhs_homogeneous_gas_reactor._dev, _kmcd_device);
 
   }
+  // K forward and reverse
+  bool
+  Driver::
+  isReactionRateConstantsCreated() const {
+    return (_kforward._dev.span() > 0);
+  }
+
+  void
+  Driver::
+  createReactionRateConstants() {
+    TCHEM_CHECK_ERROR(_n_sample <= 0, "# of samples should be nonzero");
+    TCHEM_CHECK_ERROR(!_kmd_created, "Kinetic mode first needs to be created");
+  const ordinal_type len = _kmcd_device.nReac;
+  _kforward._dev = real_type_2d_view("Forward rate constant dev", _n_sample, len);
+  _kforward._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _kforward._dev);
+  _kreverse._dev = real_type_2d_view("reverse rate constant dev", _n_sample, len);
+  _kreverse._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _kreverse._dev);
+  _kforward_reverse_need_sync = NoNeedSync;
+
+  // create policy for enthalpy
+  const auto exec_space_instance = exec_space();
+  _policy_KForRev = policy_type(exec_space_instance, _n_sample, Kokkos::AUTO());
+  const ordinal_type level = 1;
+  const ordinal_type per_team_extent = TChem::KForwardReverse::getWorkSpaceSize(_kmcd_device);
+  const ordinal_type per_team_scratch =
+    TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+  _policy_KForRev.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+}
+
+
+  void
+  Driver::
+  freeReactionRateConstants() {
+    _kforward._dev = real_type_2d_view();
+    _kforward._host = real_type_2d_view_host();
+    _kreverse._dev = real_type_2d_view();
+    _kreverse._host = real_type_2d_view_host();
+    _kforward_reverse_need_sync = NoNeedSync;
+  }
+
+  void
+  Driver::
+  getReactionRateConstantsHost(const ordinal_type i, real_type_1d_const_view_host& view1
+      , real_type_1d_const_view_host& view2) {
+    TCHEM_CHECK_ERROR(_kforward._dev.span() == 0, "Forward rate constant should be constructed");
+    if (_kforward_reverse_need_sync == NeedSyncToHost) {
+      Kokkos::deep_copy(_kforward._host, _kforward._dev);
+      _kforward_reverse_need_sync = NoNeedSync;
+    }
+    view1 = real_type_1d_const_view_host(&_kforward._host(i,0),
+     _kforward._host.extent(1));
+
+     TCHEM_CHECK_ERROR(_kreverse._dev.span() == 0, "Reverse rate constant should be constructed");
+     if (_kforward_reverse_need_sync == NeedSyncToHost) {
+       Kokkos::deep_copy(_kreverse._host, _kreverse._dev);
+       _kforward_reverse_need_sync = NoNeedSync;
+     }
+     view1 = real_type_1d_const_view_host(&_kreverse._host(i,0),
+      _kreverse._host.extent(1));
+
+  }
+
+  void
+  Driver::
+  getReactionRateConstantsHost(real_type_2d_const_view_host& view1,
+                               real_type_2d_const_view_host& view2) {
+    TCHEM_CHECK_ERROR(_kforward._dev.span() == 0, "Forward rate constant should be constructed");
+    if (_kforward_reverse_need_sync == NeedSyncToHost) {
+      Kokkos::deep_copy(_kforward._host, _kforward._dev);
+      _kforward_reverse_need_sync = NoNeedSync;
+    }
+    view1 = real_type_2d_const_view_host(&_kforward._host(0,0),
+    _kforward._host.extent(0), _kforward._host.extent(1));
+
+    TCHEM_CHECK_ERROR(_kreverse._dev.span() == 0, "Reverse rate constant should be constructed");
+    if (_kforward_reverse_need_sync == NeedSyncToHost) {
+      Kokkos::deep_copy(_kreverse._host, _kreverse._dev);
+      _kforward_reverse_need_sync = NoNeedSync;
+    }
+    view2 = real_type_2d_const_view_host(&_kreverse._host(0,0),
+    _kreverse._host.extent(0), _kreverse._host.extent(1));
+  }
+
+  void
+  Driver::
+  computeReactionRateConstantsDevice() {
+    TCHEM_CHECK_ERROR(_kmd_created, "Kinetic mode first needs to be created");
+    if (_state_need_sync == NeedSyncToDevice) {
+      Kokkos::deep_copy(_state._dev, _state._host);
+      _state_need_sync = NoNeedSync;
+    }
+    if (_kforward._dev.span() == 0) {
+      createReactionRateConstants();
+    }
+
+    KForwardReverse::runDeviceBatch( _policy_KForRev,
+                                     _state._dev,
+                                     _kforward._host,
+                                     _kreverse._dev,
+                                     _kmcd_device);
+
+
+  }
 
   // enthalpy mass
   bool
@@ -748,6 +861,7 @@ namespace TChem {
     createNetProductionRatePerMass();
     createJacobianHomogeneousGasReactor();
     createRHS_HomogeneousGasReactor();
+    createReactionRateConstants();
     createEnthapyMass();
   }
 
@@ -758,6 +872,7 @@ namespace TChem {
     freeNetProductionRatePerMass();
     freeJacobianHomogeneousGasReactor();
     freeRHS_HomogeneousGasReactor();
+    freeReactionRateConstants();
     freeEnthapyMass();
   }
 

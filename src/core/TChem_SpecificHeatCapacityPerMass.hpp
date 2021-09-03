@@ -29,6 +29,19 @@ namespace TChem {
 
 struct SpecificHeatCapacityPerMass
 {
+
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
+  using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_model_host_type = KineticModelConstData<host_device_type>;
+
   static inline ordinal_type getWorkSpaceSize()
   {
     return 0; // does not need work size
@@ -36,23 +49,23 @@ struct SpecificHeatCapacityPerMass
 
   static void runDeviceBatch( /// thread block size
     typename UseThisTeamPolicy<exec_space>::type& policy,
-    const real_type_2d_view& state,
+    const real_type_2d_view_type& state,
     /// output
-    const real_type_2d_view& CpMass,
-    const real_type_1d_view& CpMixMass,
+    const real_type_2d_view_type& CpMass,
+    const real_type_1d_view_type& CpMixMass,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
+    const kinetic_model_type& kmcd);
 
-  //
   static void runHostBatch( /// thread block size
     typename UseThisTeamPolicy<host_exec_space>::type& policy,
-    const real_type_2d_view_host& state,
+    const real_type_2d_view_host_type& state,
     /// output
-    const real_type_2d_view_host& CpMass,
-    const real_type_1d_view_host& CpMixMass,
+    const real_type_2d_view_host_type& CpMass,
+    const real_type_1d_view_host_type& CpMixMass,
     /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd);
+    const kinetic_model_host_type& kmcd);
 };
+
 
 } // namespace TChem
 

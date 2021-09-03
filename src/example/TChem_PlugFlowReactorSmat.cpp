@@ -87,13 +87,15 @@ main(int argc, char* argv[])
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
     TChem::KineticModelData kmdSurf(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
     const auto kmcd =
       kmdSurf
-        .createConstData<TChem::exec_space>(); // data struc with gas phase info
+        .createConstData<device_type>(); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<TChem::exec_space>(); // data struc with
+      kmdSurf.createConstSurfData<device_type>(); // data struc with
                                                         // surface phase info
 
     /// input: state vectors: temperature, pressure and mass fraction
@@ -131,7 +133,7 @@ main(int argc, char* argv[])
     real_type Area(0.00053);
     real_type Pcat(0.025977239243415308);
 
-    pfr_data_type pfrd;
+    PlugFlowReactorData pfrd;
     pfrd.Area = Area; // m2
     pfrd.Pcat = Pcat; //
 

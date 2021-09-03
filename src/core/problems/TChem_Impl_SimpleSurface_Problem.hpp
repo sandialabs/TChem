@@ -26,23 +26,34 @@ assumes that gas phase is frozen. In PRF problem, this ODE
 is the set to zero (algebraic part of the differential-algebraic
 equation (DAE) system).
 */
+#include "Tines_Internal.hpp"
+
 #include "TChem_Impl_SurfaceRHS.hpp"
 #include "TChem_Util.hpp"
-#include "TChem_Impl_NumericalJacobianCentralDifference.hpp"
-#include "TChem_Impl_NumericalJacobianForwardDifference.hpp"
-#include "TChem_Impl_NumericalJacobianRichardsonExtrapolation.hpp"
+
 
 namespace TChem {
 namespace Impl {
 
-template<typename KineticModelConstDataType,
-         typename KineticSurfModelConstDataType>
+template<typename ValueType, typename DeviceType>
 struct SimpleSurface_Problem
 {
-  using kmcd_type = KineticModelConstDataType;
-  using exec_space_type = typename kmcd_type::exec_space_type;
-  using real_type_1d_view_type = typename kmcd_type::real_type_1d_view_type;
-  using real_type_2d_view_type = typename kmcd_type::real_type_2d_view_type;
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using exec_space_type = typename device_type::execution_space;
+
+  using real_type = scalar_type;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type,device_type>;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  /// sacado is value type
+  using value_type_0d_view_type = Tines::value_type_0d_view<value_type,device_type>;
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using value_type_2d_view_type = Tines::value_type_2d_view<value_type,device_type>;
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
 
   KOKKOS_DEFAULTED_FUNCTION
   SimpleSurface_Problem() = default;
@@ -53,19 +64,19 @@ struct SimpleSurface_Problem
   real_type_1d_view_type _x;
   real_type_1d_view_type _work;
   real_type_1d_view_type _fac; /// numerical jacobian
-  KineticModelConstDataType _kmcd;
-  KineticSurfModelConstDataType _kmcdSurf;
+  kinetic_model_type _kmcd;
+  kinetic_surf_model_type _kmcdSurf;
   // ordinal_type _jac_dim;
 
   KOKKOS_INLINE_FUNCTION
   static ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf)
   {
     // const ordinal_type jac_workspace_size =
     //   SurfaceNumJacobian::getWorkSpaceSize(kmcd, kmcdSurf);
     const ordinal_type src_workspace_size =
-      SurfaceRHS::getWorkSpaceSize(kmcd, kmcdSurf);
+      SurfaceRHS<real_type,device_type>::getWorkSpaceSize(kmcd, kmcdSurf);
 
     // const ordinal_type workspace_size = jac_workspace_size > src_workspace_size
     //                                       ? jac_workspace_size
@@ -80,21 +91,21 @@ struct SimpleSurface_Problem
 
   KOKKOS_INLINE_FUNCTION
   static ordinal_type getNumberOfTimeODEs(
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_surf_model_type& kmcdSurf)
   {
     return kmcdSurf.nSpec;
   }
 
   KOKKOS_INLINE_FUNCTION
   static ordinal_type getNumberOfConstraints(
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_surf_model_type& kmcdSurf)
   {
     return 0;
   }
 
   KOKKOS_INLINE_FUNCTION
   static ordinal_type getNumberOfEquations(
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_surf_model_type& kmcdSurf)
   {
     return getNumberOfTimeODEs(kmcdSurf) + getNumberOfConstraints(kmcdSurf);
   }
@@ -127,10 +138,10 @@ struct SimpleSurface_Problem
     return getNumberOfTimeODEs() + getNumberOfConstraints();
   }
 
-  template<typename MemberType, typename RealType1DViewType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION void computeInitValues(
     const MemberType& member,
-    const RealType1DViewType& x) const
+    const real_type_1d_view_type& x) const
   {
     /// this is probably not used
     Kokkos::parallel_for(Kokkos::TeamVectorRange(member, x.extent(0)),
@@ -138,12 +149,10 @@ struct SimpleSurface_Problem
     member.team_barrier();
   }
 
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename RealType2DViewType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION void computeJacobian(const MemberType& member,
-                                              const RealType1DViewType& x,
-                                              const RealType2DViewType& J) const
+                                              const real_type_1d_view_type& x,
+                                              const real_type_2d_view_type& J) const
   {
     // Jac only for surface phase
     // Impl::SurfaceNumJacobian::team_invoke(
@@ -154,15 +163,15 @@ struct SimpleSurface_Problem
     /// _work is used for evaluating a function
     /// f_0 and f_h should be gained from the tail
     real_type* wptr = _work.data() + (_work.span() - 2 * m);
-    RealType1DViewType f_0(wptr, m);
+    real_type_1d_view_type f_0(wptr, m);
     wptr += f_0.span();
-    RealType1DViewType f_h(wptr, m);
+    real_type_1d_view_type f_h(wptr, m);
     wptr += f_h.span();
 
     /// use the default values
     const real_type fac_min(-1), fac_max(-1);
-    NumericalJacobianForwardDifference::team_invoke_detail
-     (member, *this, fac_min, fac_max, _fac, x, f_0, f_h, J);
+    Tines::NumericalJacobianForwardDifference<value_type, device_type>::invoke(
+          member, *this, fac_min, fac_max, _fac, x, f_0, f_h, J);
     // NumericalJacobianCentralDifference::team_invoke_detail(
     //   member, *this, fac_min, fac_max, _fac, x, f_0, f_h, J);
     // NumericalJacobianRichardsonExtrapolation::team_invoke_detail
@@ -170,13 +179,13 @@ struct SimpleSurface_Problem
 
   }
 
-  template<typename MemberType, typename RealType1DViewType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION void computeFunction(const MemberType& member,
-                                              const RealType1DViewType& x,
-                                              const RealType1DViewType& f) const
+                                              const real_type_1d_view_type& x,
+                                              const real_type_1d_view_type& f) const
   {
 
-    Impl::SurfaceRHS::team_invoke(
+    Impl::SurfaceRHS<real_type, device_type>::team_invoke(
       member, _t, _Ys, x, _p, f, _work, _kmcd, _kmcdSurf);
     member.team_barrier();
   }

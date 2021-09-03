@@ -22,160 +22,167 @@ Sandia National Laboratories, Livermore, CA, USA
 
 namespace TChem {
   template<typename PolicyType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename RealType3DViewType,
-           typename KineticModelConstType>
-
-  //
+           typename DeviceType>
   void
   JacobianReduced_TemplateRun( /// input
-    const std::string& profile_name,
-    const RealType1DViewType& dummy_1d,
-    /// team size setting
-    const PolicyType& policy,
+                              const std::string& profile_name,
+                              /// team size setting
+                              const PolicyType& policy,
 
-    const RealType2DViewType& state,
-    const RealType3DViewType& Jacobian,
-    const KineticModelConstType& kmcd)
+                              const Tines::value_type_2d_view<real_type, DeviceType>& state,
+                              const Tines::value_type_3d_view<real_type, DeviceType>& jacobian,
+                              const Tines::value_type_2d_view<real_type, DeviceType>& workspace,
+                              const KineticModelConstData<DeviceType >& kmcd)
   {
     Kokkos::Profiling::pushRegion(profile_name);
     using policy_type = PolicyType;
+    using device_type = DeviceType;
+
+    using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
+    using real_type_2d_view_type = Tines::value_type_2d_view<real_type, device_type>;
 
     const ordinal_type level = 1;
     const ordinal_type per_team_extent = JacobianReduced::getWorkSpaceSize(kmcd);
+    const ordinal_type n = state.extent(0);
 
-    Kokkos::parallel_for(
-      profile_name,
-      policy,
-      KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
-        const ordinal_type i = member.league_rank();
-        const RealType1DViewType state_at_i =
-          Kokkos::subview(state, i, Kokkos::ALL());
-        const RealType2DViewType Jacobian_at_i =
-          Kokkos::subview(Jacobian, i, Kokkos::ALL(), Kokkos::ALL());
+    if (workspace.span()) {
+      TCHEM_CHECK_ERROR(workspace.extent(0) < policy.league_size(), "Workspace is allocated smaller than the league size");
+      TCHEM_CHECK_ERROR(workspace.extent(1) < per_team_extent, "Workspace is allocated smaller than the required");
+    }
 
-        Scratch<RealType1DViewType> work(member.team_scratch(level),
-                                        per_team_extent);
-
-        const Impl::StateVector<RealType1DViewType> sv_at_i(kmcd.nSpec,
-                                                           state_at_i);
-        TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
-                          "Error: input state vector is not valid");
-        {
-          const real_type t = sv_at_i.Temperature();
-          const real_type p = sv_at_i.Pressure();
-          const RealType1DViewType Ys = sv_at_i.MassFractions();
-
-          Impl::JacobianReduced ::team_invoke(
-            member, t, p, Ys, Jacobian_at_i, work, kmcd);
+    Kokkos::parallel_for
+      (profile_name,
+       policy,
+       KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
+        real_type_1d_view_type work;
+        Scratch<real_type_1d_view_type> swork; 
+        if (workspace.span()) {
+          work = Kokkos::subview(workspace, member.league_rank(), Kokkos::ALL());
+        } else {
+          /// assume that the workspace is given from scratch space
+          swork = Scratch<real_type_1d_view_type>(member.team_scratch(level), per_team_extent);
+          work = real_type_1d_view_type(swork.data(), swork.span());
         }
+        
+	ordinal_type ibeg(0), iend(0), iinc(0);
+	Impl::getLeagueRange(member, n, ibeg, iend, iinc);
+	for (ordinal_type i=ibeg;i<iend;i+=iinc) {
+          const real_type_1d_view_type state_at_i = Kokkos::subview(state, i, Kokkos::ALL());
+          const real_type_2d_view_type jacobian_at_i = Kokkos::subview(jacobian, i, Kokkos::ALL(), Kokkos::ALL());
+
+	  const Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec, state_at_i);
+	  TCHEM_CHECK_ERROR(!sv_at_i.isValid(), "Error: input state vector is not valid");
+	  {
+	    const real_type t = sv_at_i.Temperature();
+	    const real_type p = sv_at_i.Pressure();
+            const real_type_1d_view_type Ys = sv_at_i.MassFractions();
+	    
+	    Impl::JacobianReduced ::team_invoke(member, t, p, Ys, jacobian_at_i, work, kmcd);
+	  }
+	}
       });
     Kokkos::Profiling::popRegion();
   }
 
 
-void
-JacobianReduced::runDeviceBatch( /// input
-  const ordinal_type nBatch,
-  const real_type_2d_view& state,
-  /// output
-  const real_type_3d_view& Jacobian,
-  /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
-{
+  void
+  JacobianReduced::runDeviceBatch( /// input
+                                  typename UseThisTeamPolicy<exec_space>::type& policy,
+                                  const real_type_2d_view_type& state,
+                                  /// output
+                                  const real_type_3d_view_type& jacobian,
+                                  const real_type_2d_view_type& workspace,
+                                  /// const data from kinetic model
+                                  const kinetic_model_type& kmcd)
+  {
+    JacobianReduced_TemplateRun( /// input
+                                "TChem::JacobianReduced::runDeviceBatch",
+                                policy,
+                                state,
+                                jacobian,
+                                workspace,
+                                kmcd);
 
-  using policy_type = Kokkos::TeamPolicy<exec_space>;
+  }
 
-  const ordinal_type level = 1;
-  const ordinal_type per_team_extent = JacobianReduced::getWorkSpaceSize(kmcd);
-  const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+  void
+  JacobianReduced::runHostBatch( /// input
+                                typename UseThisTeamPolicy<host_exec_space>::type& policy,
+                                const real_type_2d_view_host_type& state,
+                                /// output
+                                const real_type_3d_view_host_type& jacobian,
+                                const real_type_2d_view_host_type& workspace,
+                                /// const data from kinetic model
+                                const kinetic_model_host_type& kmcd)
+  {
+    JacobianReduced_TemplateRun( /// input
+                                "TChem::JacobianReduced::runDeviceBatch",
+                                /// team size setting
+                                policy,
+                                state,
+                                jacobian,
+                                workspace,
+                                kmcd);
 
-  policy_type policy(nBatch, Kokkos::AUTO()); // fine
-  policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+  }
 
-  JacobianReduced_TemplateRun( /// input
-    "TChem::JacobianReduced::runDeviceBatch",
-    real_type_1d_view(),
-    /// team size setting
-    policy,
-    state,
-    Jacobian,
-    kmcd);
+  void
+  JacobianReduced::runDeviceBatch( /// input
+                                  const real_type_2d_view_type& state,
+                                  /// output
+                                  const real_type_3d_view_type& jacobian,
+                                  const real_type_2d_view_type& workspace,
+                                  /// const data from kinetic model
+                                  const kinetic_model_type& kmcd)
+  {
+    const auto exec_space_instance = TChem::exec_space();
+    using policy_type = typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
+    const ordinal_type level = 1;
+    const ordinal_type per_team_extent = JacobianReduced::getWorkSpaceSize(kmcd);
+    const ordinal_type per_team_scratch = Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
+  
+    policy_type policy(exec_space_instance, state.extent(0), Kokkos::AUTO()); 
+    if (!workspace.span())
+      policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
-}
+    JacobianReduced_TemplateRun( /// input
+                                "TChem::JacobianReduced::runDeviceBatch",
+                                /// team size setting
+                                policy,
+                                state,
+                                jacobian,
+                                workspace,
+                                kmcd);
 
-void
-JacobianReduced::runDeviceBatch( /// input
-  typename UseThisTeamPolicy<exec_space>::type& policy,
-  const real_type_2d_view& state,
-  /// output
-  const real_type_3d_view& Jacobian,
-  /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
-{
-  JacobianReduced_TemplateRun( /// input
-    "TChem::JacobianReduced::runDeviceBatch",
-    real_type_1d_view(),
-    /// team size setting
-    policy,
-    state,
-    Jacobian,
-    kmcd);
+  }
 
-}
+  void
+  JacobianReduced::runHostBatch( /// input
+                                const real_type_2d_view_host_type& state,
+                                /// output
+                                const real_type_3d_view_host_type& jacobian,
+                                const real_type_2d_view_host_type& workspace,
+                                /// const data from kinetic model
+                                const kinetic_model_host_type& kmcd)
+  {
+    const auto host_space_instance = TChem::host_exec_space();
+    using policy_type = typename TChem::UseThisTeamPolicy<TChem::host_exec_space>::type;
+    const ordinal_type level = 1;
+    const ordinal_type per_team_extent = JacobianReduced::getWorkSpaceSize(kmcd);
+    const ordinal_type per_team_scratch = Scratch<real_type_1d_view_host_type>::shmem_size(per_team_extent);
+  
+    policy_type policy(host_space_instance, state.extent(0), Kokkos::AUTO()); 
+    if (!workspace.span())
+      policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
-void
-JacobianReduced::runHostBatch( /// input
-  typename UseThisTeamPolicy<host_exec_space>::type& policy,
-  const real_type_2d_view_host& state,
-  /// output
-  const real_type_3d_view_host& Jacobian,
-  /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
-{
-  JacobianReduced_TemplateRun( /// input
-    "TChem::JacobianReduced::runDeviceBatch",
-    real_type_1d_view_host(),
-    /// team size setting
-    policy,
-    state,
-    Jacobian,
-    kmcd);
+    JacobianReduced_TemplateRun( /// input
+                                "TChem::JacobianReduced::runHostBatch",
+                                /// team size setting
+                                policy,
+                                state,
+                                jacobian,
+                                workspace,
+                                kmcd);
 
-}
-
-void
-JacobianReduced::runHostBatch( /// input
-  const ordinal_type nBatch,
-  const real_type_2d_view_host& state,
-  /// output
-  const real_type_3d_view_host& Jacobian,
-  /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
-{
-
-  using policy_type = Kokkos::TeamPolicy<host_exec_space>;
-
-  const ordinal_type level = 1;
-  const ordinal_type per_team_extent = JacobianReduced::getWorkSpaceSize(kmcd);
-  const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view_host>::shmem_size(per_team_extent);
-
-  policy_type policy(nBatch, Kokkos::AUTO()); // fine
-  policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
-
-  JacobianReduced_TemplateRun( /// input
-    "TChem::JacobianReduced::runHostBatch",
-    real_type_1d_view_host(),
-    /// team size setting
-    policy,
-    state,
-    Jacobian,
-    kmcd);
-
-}
-
-
+  }
 } // namespace TChem

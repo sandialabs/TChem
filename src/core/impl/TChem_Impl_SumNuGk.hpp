@@ -21,6 +21,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #ifndef __TCHEM_IMPL_SUMNUGK_HPP__
 #define __TCHEM_IMPL_SUMNUGK_HPP__
 
+#include "TChem_KineticModelData.hpp"
 #include "TChem_Util.hpp"
 
 namespace TChem {
@@ -28,19 +29,26 @@ namespace Impl {
 ///
 /// \sum_{reaction} {\nu_{ki} g_{k}}
 ///
+template<typename ValueType, typename DeviceType>
 struct SumNuGk
 {
-  template<typename RealType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
-  KOKKOS_INLINE_FUNCTION static RealType serial_invoke( /// input
-    const RealType& dummy,
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type= KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+
+  KOKKOS_INLINE_FUNCTION static value_type serial_invoke( /// input
     const ordinal_type& i,
-    const RealType1DViewType& gk,
+    const value_type_1d_view_type& gk,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
-    RealType sumNuGk(0);
+    value_type sumNuGk(0);
     for (ordinal_type j = 0; j < kmcd.reacNreac(i); ++j) {
       const ordinal_type kspec = kmcd.reacSidx(i, j);
       sumNuGk += kmcd.reacNuki(i, j) * gk(kspec);
@@ -54,16 +62,14 @@ struct SumNuGk
     return (sumNuGk);
   }
 
-  template<typename RealType1DViewType,
-           typename KineticSurfModelConstDataType>
-  KOKKOS_INLINE_FUNCTION static real_type serial_invoke( /// input
+  KOKKOS_INLINE_FUNCTION static value_type serial_invoke( /// input
     const ordinal_type& i,
-    const RealType1DViewType& gk,
-    const RealType1DViewType& gkSurf,
+    const value_type_1d_view_type& gk,
+    const value_type_1d_view_type& gkSurf,
     /// const input from kinetic model
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_surf_model_type& kmcdSurf)
   {
-    real_type sumNuGk(0);
+    value_type sumNuGk(0);
     for (ordinal_type j = 0; j < kmcdSurf.reacNreac(i); ++j) {
       const ordinal_type kspec = kmcdSurf.reacSidx(i, j);
       if (kmcdSurf.reacSsrf(i, j) == 1) { // surfaces

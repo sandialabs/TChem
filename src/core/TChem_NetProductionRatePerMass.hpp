@@ -28,40 +28,51 @@ namespace TChem {
 
 struct NetProductionRatePerMass
 {
-  template<typename KineticModelConstDataType>
-  KOKKOS_INLINE_FUNCTION
-  static ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd)
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
+  using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_model_host_type = KineticModelConstData<host_device_type>;
+
+  template<typename DeviceType>
+  static inline ordinal_type getWorkSpaceSize(
+    const KineticModelConstData<DeviceType>& kmcd)
   {
     return (4 * kmcd.nSpec + 7 * kmcd.nReac);
   }
 
   static void runHostBatch( /// input
     const ordinal_type nBatch,
-    const real_type_2d_view_host& state,
+    const real_type_2d_view_host_type& state,
     /// output
-    const real_type_2d_view_host& omega,
+    const real_type_2d_view_host_type& omega,
     /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd);
+    const kinetic_model_host_type& kmcd);
 
   static void runDeviceBatch( /// input
     typename UseThisTeamPolicy<exec_space>::type& policy,
-    const real_type_2d_view& state,
+    const real_type_2d_view_type& state,
     /// output
-    const real_type_2d_view& omega,
+    const real_type_2d_view_type& omega,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
+    const kinetic_model_type& kmcd);
   //
   static void runDeviceBatch( /// input
     const ordinal_type nBatch,
-    const real_type_2d_view& state,
+    const real_type_2d_view_type& state,
     /// output
-    const real_type_2d_view& omega,
+    const real_type_2d_view_type& omega,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
+    const kinetic_model_type& kmcd);
 
   //
-    
+
 };
 
 } // namespace TChem

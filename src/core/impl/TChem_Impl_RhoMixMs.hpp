@@ -33,29 +33,39 @@ namespace Impl {
 ///    \param p : pressure
 ///    \param Ys : array of mass fractions Y
 ///    \return mixture density [kg/m<sup>3</sup>]
+template<typename ValueType, typename DeviceType>
 struct RhoMixMs
 {
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
-  KOKKOS_INLINE_FUNCTION static real_type team_invoke(
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using real_type = scalar_type;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type= KineticModelConstData<device_type>;
+
+  template<typename MemberType>
+  KOKKOS_INLINE_FUNCTION static value_type team_invoke(
     const MemberType& member,
     /// input
-    const real_type& t,           /// temperature
-    const real_type& p,           /// pressure
-    const RealType1DViewType& Ys, /// mole fractions
+    const value_type& t,           /// temperature
+    const value_type& p,           /// pressure
+    const value_type_1d_view_type& Ys, /// mole fractions
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
-    real_type Ysum(0);
+    using reducer_type = Tines::SumReducer<value_type>;
+    typename reducer_type::value_type Ysum(0);
+
     Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
-      [&](const ordinal_type& i, real_type& update) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
+      [&](const ordinal_type& i, typename reducer_type::value_type& update) {
         update += Ys(i) / kmcd.sMass(i);
       },
-      Ysum);
+      reducer_type(Ysum));
 
-    const real_type r_val = p / (kmcd.Runiv * Ysum * t);
+    const value_type r_val = p / (kmcd.Runiv * Ysum * t);
 #if defined(TCHEM_ENABLE_SERIAL_TEST_OUTPUT) && !defined(__CUDA_ARCH__)
     if (member.league_rank() == 0) {
       FILE* fs = fopen("RhoMixMs.team_invoke.test.out", "a+");

@@ -29,31 +29,29 @@ namespace TChem {
 void
 KForwardReverseSurface::runDeviceBatch( /// input
   const ordinal_type nBatch,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// input
-  const real_type_2d_view& gk,
-  const real_type_2d_view& gkSurf,
+  const real_type_2d_view_type& gk,
+  const real_type_2d_view_type& gkSurf,
   /// output
-  const real_type_2d_view& kfor,
-  const real_type_2d_view& krev,
+  const real_type_2d_view_type& kfor,
+  const real_type_2d_view_type& krev,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd,
+  const kinetic_model_type& kmcd,
   /// const data from kinetic model surface
-  const KineticSurfModelConstDataDevice& kmcdSurf)
+  const kinetic_surf_model_type& kmcdSurf)
 {
   Kokkos::Profiling::pushRegion(
     "TChem::KForwardReverseSurface::runDeviceBatch");
   using policy_type = Kokkos::TeamPolicy<exec_space>;
+  using KForwardReverseSurface = Impl::KForwardReverseSurface<real_type,device_type>;
 
   const ordinal_type level = 1;
-  const ordinal_type per_team_extent = getWorkSpaceSize(kmcd, kmcdSurf);
-  const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view>::shmem_size(per_team_extent);
 
   // policy_type policy(nBatch); // error
   policy_type policy(nBatch, Kokkos::AUTO()); // fine
   // policy_type policy(nBatch, Kokkos::AUTO(), Kokkos::AUTO()); // error
-  policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+  policy.set_scratch_size(level, Kokkos::PerTeam(0));
   Kokkos::parallel_for(
     "TChem::KForwardReverseSurface::runDeviceBatch",
     policy,
@@ -71,9 +69,6 @@ KForwardReverseSurface::runDeviceBatch( /// input
       const real_type_1d_view krev_at_i =
         Kokkos::subview(krev, i, Kokkos::ALL());
 
-      Scratch<real_type_1d_view> work(member.team_scratch(level),
-                                      per_team_extent);
-
       const Impl::StateVector<real_type_1d_view> sv_at_i(kmcd.nSpec,
                                                          state_at_i);
       TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
@@ -83,7 +78,7 @@ KForwardReverseSurface::runDeviceBatch( /// input
         const real_type p = sv_at_i.Pressure();
         const real_type_1d_view Xc = sv_at_i.MassFractions();
 
-        Impl::KForwardReverseSurface ::team_invoke(member,
+        KForwardReverseSurface ::team_invoke(member,
                                                    // inputs
                                                    t,
                                                    p,
@@ -92,7 +87,6 @@ KForwardReverseSurface::runDeviceBatch( /// input
                                                    // outputs
                                                    kfor_at_i,
                                                    krev_at_i,
-                                                   work,
                                                    kmcd,
                                                    kmcdSurf);
       }

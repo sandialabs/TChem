@@ -27,98 +27,107 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_Impl_MolarWeights.hpp"
 #include "TChem_Impl_ReactionRates.hpp"
 #include "TChem_Impl_ReactionRatesSurface.hpp"
-#include "TChem_Impl_RhoMixMs.hpp"
 #include "TChem_Util.hpp"
+
+
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct PlugFlowReactorRHS
 {
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+
+  using ordinal_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type      = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+  using pfr_data_type = PlugFlowReactorData;
+
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf)
   {
     return (7 * kmcd.nSpec + 8 * kmcd.nReac + 5 * kmcdSurf.nSpec +
-            6 * kmcdSurf.nReac);
+            5 * kmcdSurf.nReac);
   }
 
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename OrdinalType1DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename PlugFlowReactorConstDataType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
     /// input
-    const real_type& t,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec) mass fraction
-    const RealType1DViewType& Zs, // (kmcdSurf.nSpec) site fraction
-    const real_type& density,
-    const real_type& p,   // pressure
-    const real_type& vel, // velocity
+    const value_type& t,
+    const value_type_1d_view_type& Ys, /// (kmcd.nSpec) mass fraction
+    const value_type_1d_view_type& Zs, // (kmcdSurf.nSpec) site fraction
+    const value_type& density,
+    const value_type& p,   // pressure
+    const value_type& vel, // velocity
 
     /// output
-    const RealType1DViewType& dT,   /// (1) //energy
-    const RealType1DViewType& dYs,  /// (kmcd.nSpec) // species
-    const RealType1DViewType& dZs,  /// (kmcdSurf.nSpec) // surface species
-    const RealType1DViewType& drho, //(1) density
-    const RealType1DViewType& du,   // velocity
+    const value_type_1d_view_type& dT,   /// (1) //energy
+    const value_type_1d_view_type& dYs,  /// (kmcd.nSpec) // species
+    const value_type_1d_view_type& dZs,  /// (kmcdSurf.nSpec) // surface species
+    const value_type_1d_view_type& drho, //(1) density
+    const value_type_1d_view_type& du,   // velocity
 
     /// workspace
-    const RealType1DViewType& omega,
-    const RealType1DViewType& omegaSurfGas,
-    const RealType1DViewType& omegaSurf,
+    const value_type_1d_view_type& omega,
+    const value_type_1d_view_type& omegaSurfGas,
+    const value_type_1d_view_type& omegaSurf,
     // gas species
-    const RealType1DViewType& Xc,
-    const RealType1DViewType& gk,
-    const RealType1DViewType& hks,
-    const RealType1DViewType& cpks,
-    const RealType1DViewType& concX,
-    const RealType1DViewType& concM,
-    const RealType1DViewType& kfor,
-    const RealType1DViewType& krev,
-    const RealType1DViewType& ropFor,
-    const RealType1DViewType& ropRev,
-    const RealType1DViewType& Crnd,
-    const OrdinalType1DViewType& iter,
+    const value_type_1d_view_type& Xc,
+    const value_type_1d_view_type& gk,
+    const value_type_1d_view_type& hks,
+    const value_type_1d_view_type& cpks,
+    const value_type_1d_view_type& concX,
+    const value_type_1d_view_type& concM,
+    const value_type_1d_view_type& kfor,
+    const value_type_1d_view_type& krev,
+    const value_type_1d_view_type& ropFor,
+    const value_type_1d_view_type& ropRev,
+    const value_type_1d_view_type& Crnd,
+    const ordinal_type_1d_view_type& iter,
     // surface species
-    const RealType1DViewType& Surf_gk,
-    const RealType1DViewType& Surf_hks,
-    const RealType1DViewType& Surf_cpks,
-    const RealType1DViewType& concXSurf,
-    const RealType1DViewType& kforSurf,
-    const RealType1DViewType& krevSurf,
-    const RealType1DViewType& ropForSurf,
-    const RealType1DViewType& ropRevSurf,
-    const OrdinalType1DViewType& iterSurf,
+    const value_type_1d_view_type& Surf_gk,
+    const value_type_1d_view_type& Surf_hks,
+    const value_type_1d_view_type& Surf_cpks,
+    const value_type_1d_view_type& concXSurf,
+    const value_type_1d_view_type& kforSurf,
+    const value_type_1d_view_type& krevSurf,
+    const value_type_1d_view_type& ropForSurf,
+    const value_type_1d_view_type& ropRevSurf,
+    const value_type_1d_view_type& CoverageFactor,
 
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
     // const input for plug flow reactor
-    const PlugFlowReactorConstDataType& pfrd)
+    const pfr_data_type& pfrd)
   {
+
+    using EnthalpySpecMs = EnthalpySpecMsFcn<value_type,device_type>;
+    using ReactionRates  = ReactionRates<value_type,device_type>;
+    using ReactionRatesSurface = ReactionRatesSurface<value_type,device_type>;
+    using MolarWeights = MolarWeights<value_type,device_type>;
+    using CpMixMs = CpMixMs<value_type, device_type>;
 
     const real_type one(1);
 
     const real_type Area(pfrd.Area);
     const real_type Pcat(pfrd.Pcat);
 
-    /// 0. convert Ys to Xc
-    // mass fraction to concentration
-    // MolarConcentrations
-    //   ::team_invoke(member,
-    //                 t, p, Ys,
-    //                 Xc,
-    //                 kmcd);
-
     /// 1. compute molar reaction rates
-    ReactionRates ::team_invoke_detail(member,
+    ReactionRates::team_invoke_detail(member,
                                        t,
                                        p,
+                                       density,
                                        Ys,
                                        omega,
                                        gk,
@@ -139,6 +148,7 @@ struct PlugFlowReactorRHS
     ReactionRatesSurface ::team_invoke_detail(member,
                                               t,
                                               p,
+                                              density,
                                               Ys,
                                               Zs,
                                               omegaSurfGas,
@@ -155,19 +165,19 @@ struct PlugFlowReactorRHS
                                               krevSurf,
                                               ropForSurf,
                                               ropRevSurf,
-                                              iterSurf, //
+                                              CoverageFactor, //
                                               kmcd,
                                               kmcdSurf);
 
-    /// 3. compute density, cpmix
-    const real_type rhomix = RhoMixMs::team_invoke(member, t, p, Ys, kmcd);
-    const real_type cpmix = CpMixMs::team_invoke(member, t, Ys, cpks, kmcd);
+    member.team_barrier();
+    /// 3. compute cpmix
+    const value_type cpmix = CpMixMs::team_invoke(member, t, Ys, cpks, kmcd);
 
     /// 4. compute species enthalies
-    EnthalpySpecMs ::team_invoke(member, t, hks, cpks, kmcd);
+    EnthalpySpecMs::team_invoke(member, t, hks, cpks, kmcd);
 
     /// 2. transform molar reaction rates to mass reaction rates
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
+    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
                          [&](const ordinal_type& k) {
                            omega(k) *= kmcd.sMass(k);        // kg/m3/2
                            omegaSurfGas(k) *= kmcd.sMass(k); // kg/m2/s
@@ -175,51 +185,54 @@ struct PlugFlowReactorRHS
 
     member.team_barrier();
 
-    real_type sumSkWk(0);
+    using reducer_type = Tines::SumReducer<value_type>;
+
+    typename reducer_type::value_type sumSkWk(0);
+
     Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
-      [&](const ordinal_type& k, real_type& update) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
+      [&](const ordinal_type& k, typename reducer_type::value_type& update) {
         update += omegaSurfGas(k);
       },
-      sumSkWk);
+      reducer_type(sumSkWk));
 
-    real_type sumSkWkhk(0);
+    typename reducer_type::value_type sumSkWkhk(0);
     Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
-      [&](const ordinal_type& k, real_type& update) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
+      [&](const ordinal_type& k, typename reducer_type::value_type& update) {
         update += omegaSurfGas(k) * hks(k);
       },
-      sumSkWkhk);
+      reducer_type(sumSkWkhk));
 
-    real_type sumomgkWkhk(0);
+    typename reducer_type::value_type sumomgkWkhk(0);
     Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
-      [&](const ordinal_type& k, real_type& update) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
+      [&](const ordinal_type& k, typename reducer_type::value_type& update) {
         update += omega(k) * hks(k); // Units of omega (kg/m3/s).
       },
-      sumomgkWkhk);
+      reducer_type(sumomgkWkhk));
 
     member.team_barrier();
 
-    real_type sumgYkoWk(0);
+    typename reducer_type::value_type sumgYkoWk(0);
     Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
-      [&](const ordinal_type& k, real_type& update) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
+      [&](const ordinal_type& k, typename reducer_type::value_type& update) {
         dYs(k) =
           (Area * omega(k) + Pcat * omegaSurfGas(k) - Ys(k) * Pcat * sumSkWk) /
           (Area * density * vel);         // species equation
         update += dYs(k) / kmcd.sMass(k); // Units of omega (kg/m3/s).
       },
-      sumgYkoWk);
+      reducer_type(sumgYkoWk) );
 
     // energy equation
     dT(0) =
       -(Area * sumomgkWkhk + Pcat * sumSkWkhk) / (Area * density * vel * cpmix);
 
-    const real_type Wmix = MolarWeights::team_invoke(member, Ys, kmcd);
+    const value_type Wmix = MolarWeights::team_invoke(member, Ys, kmcd);
     // momentum equation
-    const real_type coef1 = 1. - p / (density * vel * vel);
-    const real_type coef2 = -coef1 + 2.;
+    const value_type coef1 = 1. - p / (density * vel * vel);
+    const value_type coef2 = -coef1 + 2.;
 
     member.team_barrier();
     du(0) = (-vel * Pcat * coef2 * sumSkWk -
@@ -230,15 +243,15 @@ struct PlugFlowReactorRHS
     member.team_barrier();
     drho(0) = (-Area * density * du(0) + Pcat * sumSkWk) / vel / Area;
 
-    real_type Zsum(0);
+    typename reducer_type::value_type Zsum(0);
     Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcdSurf.nSpec),
-      [&](const ordinal_type& k, real_type& update) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.nSpec),
+      [&](const ordinal_type& k, typename reducer_type::value_type& update) {
         dZs(k) =
           omegaSurf(k);  /// kmcdSurf.sitedensity; // surface species equation
         update += Zs(k); // Units of omega (kg/m3/s).
       },
-      Zsum);
+      reducer_type(Zsum));
 
     member.team_barrier();
     dZs(kmcdSurf.nSpec - 1) = one - Zsum;
@@ -282,28 +295,24 @@ struct PlugFlowReactorRHS
   }
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename PlugFlowReactorConstDataType>
+           typename WorkViewType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
     const real_type& t,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec)
-    const RealType1DViewType& Zs, // (kmcdSurf.nSpec) site fraction
+    const real_type_1d_view_type& Ys, /// (kmcd.nSpec)
+    const real_type_1d_view_type& Zs, // (kmcdSurf.nSpec) site fraction
     const real_type& density,
     const real_type& p, // pressure
     const real_type& u, // velocity
     /// output
-    const RealType1DViewType& rhs, /// (kmcd.nSpec + 1)
+    const real_type_1d_view_type& rhs, /// (kmcd.nSpec + 1)
     /// workspace
     const WorkViewType& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
-    const PlugFlowReactorConstDataType& pfrd)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
+    const pfr_data_type& pfrd)
   {
     // const real_type zero(0);
 
@@ -318,72 +327,82 @@ struct PlugFlowReactorRHS
 
     auto w = (real_type*)work.data();
 
-    auto omega = RealType1DViewType(w, kmcd.nSpec);
+    auto omega = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto omegaSurfGas = RealType1DViewType(w, kmcd.nSpec);
+    auto omegaSurfGas = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto omegaSurf = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto omegaSurf = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
 
-    auto Xc = RealType1DViewType(w, kmcd.nSpec);
+    auto Xc = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto gk = RealType1DViewType(w, kmcd.nSpec);
+    auto gk = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto hks = RealType1DViewType(w, kmcd.nSpec);
+    auto hks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto cpks = RealType1DViewType(w, kmcd.nSpec);
+    auto cpks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto concX = RealType1DViewType(w, kmcd.nSpec);
+    auto concX = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
 
-    auto concM = RealType1DViewType(w, kmcd.nReac);
+    auto concM = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto kfor = RealType1DViewType(w, kmcd.nReac);
+    auto kfor = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto krev = RealType1DViewType(w, kmcd.nReac);
+    auto krev = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto ropFor = RealType1DViewType(w, kmcd.nReac);
+    auto ropFor = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto ropRev = RealType1DViewType(w, kmcd.nReac);
+    auto ropRev = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto Crnd = RealType1DViewType(w, kmcd.nReac);
+    auto Crnd = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
 
-    auto Surf_gk = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto Surf_gk = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
-    auto Surf_hks = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto Surf_hks = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
-    auto Surf_cpks = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto Surf_cpks = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
-    auto concXSurf = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto concXSurf = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
 
-    auto kforSurf = RealType1DViewType(w, kmcdSurf.nReac);
+    auto kforSurf = real_type_1d_view_type(w, kmcdSurf.nReac);
     w += kmcdSurf.nReac;
-    auto krevSurf = RealType1DViewType(w, kmcdSurf.nReac);
+    auto krevSurf = real_type_1d_view_type(w, kmcdSurf.nReac);
     w += kmcdSurf.nReac;
-    auto ropForSurf = RealType1DViewType(w, kmcdSurf.nReac);
+    auto ropForSurf = real_type_1d_view_type(w, kmcdSurf.nReac);
     w += kmcdSurf.nReac;
-    auto ropRevSurf = RealType1DViewType(w, kmcdSurf.nReac);
+    auto ropRevSurf = real_type_1d_view_type(w, kmcdSurf.nReac);
     w += kmcdSurf.nReac;
 
-    auto iter = Kokkos::View<ordinal_type*,
-                             Kokkos::LayoutRight,
-                             typename WorkViewType::memory_space>(
-      (ordinal_type*)w, kmcd.nReac * 2);
+    auto CoverageFactor = real_type_1d_view_type(w, kmcdSurf.nReac);
+    w += kmcdSurf.nReac;
+
+
+    using ordinal_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
+
+
+    // auto iter = Kokkos::View<ordinal_type*,
+    //                          Kokkos::LayoutRight,
+    //                          typename WorkViewType::memory_space>(
+    //   (ordinal_type*)w, kmcd.nReac * 2);
+    auto iter = ordinal_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
 
-    auto iterSurf = Kokkos::View<ordinal_type*,
-                                 Kokkos::LayoutRight,
-                                 typename WorkViewType::memory_space>(
-      (ordinal_type*)w, kmcdSurf.nReac * 2);
-    w += kmcdSurf.nReac * 2;
+    // auto iterSurf = Kokkos::View<ordinal_type*,
+    //                              Kokkos::LayoutRight,
+    //                              typename WorkViewType::memory_space>(
+    //   (ordinal_type*)w, kmcdSurf.nReac * 2);
+    //
+    // auto iterSurf = ordinal_type_1d_view_type((ordinal_type*)w, kmcdSurf.nReac * 2);
+    // w += kmcdSurf.nReac * 2;
 
-    auto dT = RealType1DViewType(rhs.data(), 1);
-    auto dYs = RealType1DViewType(rhs.data() + 1, kmcd.nSpec);
-    auto drho = RealType1DViewType(rhs.data() + 1 + kmcd.nSpec, 1);
-    auto du = RealType1DViewType(rhs.data() + 2 + kmcd.nSpec, 1);
-    auto dZs = RealType1DViewType(rhs.data() + 3 + kmcd.nSpec, kmcdSurf.nSpec);
+    auto dT = real_type_1d_view_type(rhs.data(), 1);
+    auto dYs = real_type_1d_view_type(rhs.data() + 1, kmcd.nSpec);
+    auto drho = real_type_1d_view_type(rhs.data() + 1 + kmcd.nSpec, 1);
+    auto du = real_type_1d_view_type(rhs.data() + 2 + kmcd.nSpec, 1);
+    auto dZs = real_type_1d_view_type(rhs.data() + 3 + kmcd.nSpec, kmcdSurf.nSpec);
 
     team_invoke_detail(member,
                        t,
@@ -423,7 +442,153 @@ struct PlugFlowReactorRHS
                        krevSurf,
                        ropForSurf,
                        ropRevSurf,
-                       iterSurf,
+                       CoverageFactor,
+                       // data from surface and gas phases
+                       kmcd,
+                       kmcdSurf,
+                       pfrd);
+  }
+
+  template<typename MemberType,
+           typename WorkViewType>
+  KOKKOS_FORCEINLINE_FUNCTION static void team_invoke_sacado(
+    const MemberType& member,
+    /// input
+    const value_type& t,
+    const value_type_1d_view_type& Ys, /// (kmcd.nSpec)
+    const value_type_1d_view_type& Zs, // (kmcdSurf.nSpec) site fraction
+    const value_type& density,
+    const value_type& p, // pressure
+    const value_type& u, // velocity
+    /// output
+    const value_type_1d_view_type& rhs, /// (kmcd.nSpec + 1)
+    /// workspace
+    const WorkViewType& work,
+    /// const input from kinetic model
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
+    const pfr_data_type& pfrd)
+  {
+    // const real_type zero(0);
+
+    // const ordinal_type len_rhs_w = getWorkSpaceSize(kmcd, kmcdSurf);
+    // if (len_rhs_w > ordinal_type(work.extent(0))) {
+    //   Kokkos::abort("Error: workspace used is smaller than it "
+    //                 "required::TChem_Impl_PlugFlowReactorRHS\n");
+    //   printf("work required %d, provided %d \n",
+    //          len_rhs_w,
+    //          ordinal_type(work.extent(0)));
+    // }
+
+    // We need to add 1 to the number of equation becase of sacado
+    const ordinal_type sacadoStorageDimension = ats<value_type>::sacadoStorageDimension(u);
+    auto w = (real_type*)work.data();
+    const ordinal_type len = value_type().length();
+
+    auto omega = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+    auto omegaSurfGas = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+    auto omegaSurf = value_type_1d_view_type(w, kmcdSurf.nSpec, sacadoStorageDimension);
+    w += kmcdSurf.nSpec*len;
+
+    auto Xc = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+    auto gk = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+    auto hks = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+    auto cpks = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+    auto concX = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+
+    auto concM = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+    auto kfor = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+    auto krev = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+    auto ropFor = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+    auto ropRev = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+    auto Crnd = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+
+    auto Surf_gk = value_type_1d_view_type(w, kmcdSurf.nSpec, sacadoStorageDimension);
+    w += kmcdSurf.nSpec*len;
+    auto Surf_hks = value_type_1d_view_type(w, kmcdSurf.nSpec, sacadoStorageDimension);
+    w += kmcdSurf.nSpec*len;
+    auto Surf_cpks = value_type_1d_view_type(w, kmcdSurf.nSpec, sacadoStorageDimension);
+    w += kmcdSurf.nSpec*len;
+    auto concXSurf = value_type_1d_view_type(w, kmcdSurf.nSpec, sacadoStorageDimension);
+    w += kmcdSurf.nSpec*len;
+
+    auto kforSurf = value_type_1d_view_type(w, kmcdSurf.nReac, sacadoStorageDimension);
+    w += kmcdSurf.nReac*len;
+    auto krevSurf = value_type_1d_view_type(w, kmcdSurf.nReac, sacadoStorageDimension);
+    w += kmcdSurf.nReac*len;
+    auto ropForSurf = value_type_1d_view_type(w, kmcdSurf.nReac, sacadoStorageDimension);
+    w += kmcdSurf.nReac*len;
+    auto ropRevSurf = value_type_1d_view_type(w, kmcdSurf.nReac, sacadoStorageDimension);
+    w += kmcdSurf.nReac*len;
+
+    auto CoverageFactor = value_type_1d_view_type(w, kmcdSurf.nReac, sacadoStorageDimension);
+    w += kmcdSurf.nReac*len;
+
+
+    using ordinal_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
+    auto iter = ordinal_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
+    w += kmcd.nReac * 2;
+
+    using range_type = Kokkos::pair<ordinal_type, ordinal_type>;
+
+    const value_type_1d_view_type dT   = Kokkos::subview(rhs,range_type(0, 1));
+    const value_type_1d_view_type dYs  = Kokkos::subview(rhs,range_type(1, kmcd.nSpec + 1));
+    const value_type_1d_view_type drho = Kokkos::subview(rhs,range_type(kmcd.nSpec + 1, kmcd.nSpec + 2));
+    const value_type_1d_view_type du   = Kokkos::subview(rhs,range_type(kmcd.nSpec + 2, kmcd.nSpec + 3));
+    const value_type_1d_view_type dZs  = Kokkos::subview(rhs,range_type(kmcd.nSpec + 3, kmcd.nSpec + 3 + kmcdSurf.nSpec ));
+
+    team_invoke_detail(member,
+                       t,
+                       Ys,
+                       Zs,
+                       density,
+                       p,
+                       u, // y variables
+                       dT,
+                       dYs,
+                       dZs,
+                       drho,
+                       du, // rhs dydz
+                       /// workspace
+                       omega,
+                       omegaSurfGas,
+                       omegaSurf,
+                       // gas
+                       Xc,
+                       gk,
+                       hks,
+                       cpks,
+                       concX,
+                       concM,
+                       kfor,
+                       krev,
+                       ropFor,
+                       ropRev,
+                       Crnd,
+                       iter,
+                       // surface
+                       Surf_gk,
+                       Surf_hks,
+                       Surf_cpks,
+                       concXSurf,
+                       kforSurf,
+                       krevSurf,
+                       ropForSurf,
+                       ropRevSurf,
+                       CoverageFactor,
                        // data from surface and gas phases
                        kmcd,
                        kmcdSurf,

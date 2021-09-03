@@ -29,33 +29,43 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 namespace Impl {
 
+
+//
+template<typename ValueType, typename DeviceType>
 struct GkFcn
 {
-  template<typename MemberType,
-           typename RealType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type= KineticModelConstData<device_type>;
+
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input temperature
-    const RealType& t,
+    const value_type& t,
     /// output
-    const RealType1DViewType& gk,
-    const RealType1DViewType& hks,
+    const value_type_1d_view_type& gk,
+    const value_type_1d_view_type& hks,
     /// workspace
-    const RealType1DViewType& cpks,
+    const value_type_1d_view_type& cpks,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
-    const RealType t_1 = RealType(1) / t;
-    const RealType tln = ats<RealType>::log(t);
+    const value_type t_1 = value_type(1) / t;
+    const value_type tln = ats<value_type>::log(t);
 
     /// no need for barrier as all parallelized for kmcd.nSpec
-    Entropy0SpecMl::team_invoke(member, t, gk, cpks, kmcd);
+    Entropy0SpecMlFcn<value_type, device_type>::team_invoke(member, t, gk, cpks, kmcd);
 
-    EnthalpySpecMl::team_invoke(member, t, hks, cpks, kmcd);
+    EnthalpySpecMlFcn<value_type, device_type>::team_invoke(member, t, hks, cpks, kmcd);
 
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
+    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
                          [&](const ordinal_type& i) {
                            gk(i) = -tln + (gk(i) - hks(i) * t_1) / kmcd.Runiv;
                          });
@@ -74,35 +84,47 @@ struct GkFcn
 #endif
   }
 };
-using Gk = GkFcn;
+
 
 // Gas species in surface phase
+template<typename ValueType, typename DeviceType>
 struct GkFcnSurfGas
 {
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+
   template<typename MemberType,
-           typename RealType1DViewType,
            typename KineticModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input temperature
-    const real_type& t,
+    const value_type& t,
     /// output
-    const RealType1DViewType& gk,
-    const RealType1DViewType& hks,
+    const value_type_1d_view_type& gk,
+    const value_type_1d_view_type& hks,
     /// workspace
-    const RealType1DViewType& cpks,
+    const value_type_1d_view_type& cpks,
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
-    const real_type t_1 = real_type(1) / t;
-    const real_type tln = ats<real_type>::log(t);
+    using Entropy0SpecMl = Entropy0SpecMlFcn<value_type,device_type>;
+    using EnthalpySpecMl = EnthalpySpecMlFcn<value_type,device_type>;
+
+    const value_type t_1 = value_type(1) / t;
+    const value_type tln = ats<value_type>::log(t);
+
 
     /// no need for barrier as all parallelized for kmcd.nSpec
     Entropy0SpecMl::team_invoke(member, t, gk, cpks, kmcd);
 
     EnthalpySpecMl::team_invoke(member, t, hks, cpks, kmcd);
 
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
+    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
                          [&](const ordinal_type& i) {
                            gk(i) = (gk(i) - hks(i) * t_1) / kmcd.Runiv;
                          });
@@ -121,7 +143,7 @@ struct GkFcnSurfGas
 #endif
   }
 };
-using GkSurfGas = GkFcnSurfGas;
+
 
 /// Derivative functions
 struct GkFcnDerivative
@@ -141,6 +163,10 @@ struct GkFcnDerivative
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
+    using kmcd_type = KineticModelConstDataType;
+    using device_type = typename kmcd_type::exec_space_type;
+    using EnthalpySpecMl = EnthalpySpecMlFcn<real_type,device_type>;
+    using CpSpecMl = CpSpecMlFcn<real_type,device_type>;
 
     /* done computing gkp=d(gk)/dT */
     const real_type t_1 = real_type(1) / t;
@@ -149,11 +175,11 @@ struct GkFcnDerivative
     Entropy0SpecMlDerivative::team_invoke(member, t, gkp, cpks, kmcd);
 
     EnthalpySpecMl::team_invoke(member, t, hks, cpks, kmcd);
-
-    CpSpecMlDerivative::team_invoke(member, t, cpks, kmcd);
+    // CpSpecMlDerivative::team_invoke(member, t, cpks, kmcd);
+    CpSpecMl::team_invoke(member, t, cpks, kmcd);
 
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
+      Tines::RangeFactory<real_type>::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
         gkp(i) =
           -t_1 + (gkp(i) + hks(i) * t_1 * t_1 - cpks(i) * t_1) / kmcd.Runiv;
       });

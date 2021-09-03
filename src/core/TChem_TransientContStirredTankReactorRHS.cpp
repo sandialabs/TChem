@@ -25,75 +25,74 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 
 
-  template<typename RealType0DViewType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstType,
-           typename KineticSurfModelConstData,
-           typename TransientContStirredTankReactorConstDataType>
+  template<typename PolicyType,
+           typename DeviceType>
   void
   TransientContStirredTankReactorRHS_TemplateRun( /// required template arguments
     const std::string& profile_name,
-    const RealType0DViewType& dummy_0d,
-    const RealType1DViewType& dummy_1d,
-    const ordinal_type nBatch,
+    const PolicyType& policy,
 
     // inputs
-    const RealType2DViewType& state,
-    const RealType2DViewType& zSurf,
+    const Tines::value_type_2d_view<real_type, DeviceType>& state,
+    const Tines::value_type_2d_view<real_type, DeviceType>& site_fraction,
     /// output
     /// const data from kinetic model
-    const RealType2DViewType& rhs,
-    const KineticModelConstType& kmcd,
-    const KineticSurfModelConstData& kmcdSurf,
-    const TransientContStirredTankReactorConstDataType& cstr)
+    const Tines::value_type_2d_view<real_type, DeviceType>& rhs,
+    const KineticModelConstData<DeviceType >& kmcd,
+    const KineticSurfModelConstData<DeviceType>& kmcdSurf,
+    const TransientContStirredTankReactorData<DeviceType>& cstr)
   {
     Kokkos::Profiling::pushRegion(profile_name);
-    using policy_type = Kokkos::TeamPolicy<exec_space>;
+    using policy_type = PolicyType;
+    using device_type = DeviceType;
+    using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
+    using real_type_2d_view_type = Tines::value_type_2d_view<real_type, device_type>;
+
+    using TransientContStirredTankReactorRHS =
+    Impl::TransientContStirredTankReactorRHS<real_type, device_type>;
 
     const ordinal_type level = 1;
 
     const ordinal_type per_team_extent =
      TChem::TransientContStirredTankReactorRHS
           ::getWorkSpaceSize(kmcd, kmcdSurf); ///
-
+    //
     const ordinal_type per_team_scratch =
-        Scratch<RealType1DViewType>::shmem_size(per_team_extent);
-
-    policy_type policy(nBatch, Kokkos::AUTO()); // fine
-    policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+        Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
 
     Kokkos::parallel_for(
       profile_name,
       policy,
       KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
         const ordinal_type i = member.league_rank();
-        const RealType1DViewType state_at_i =
+        const real_type_1d_view_type state_at_i =
           Kokkos::subview(state, i, Kokkos::ALL());
         // site fraction
-        const RealType1DViewType Zs_at_i =
-          Kokkos::subview(zSurf, i, Kokkos::ALL());
+        const real_type_1d_view_type site_fraction_at_i =
+          Kokkos::subview(site_fraction, i, Kokkos::ALL());
 
-        const RealType1DViewType rhs_at_i =
+        const real_type_1d_view_type rhs_at_i =
         Kokkos::subview(rhs, i, Kokkos::ALL());
 
-        Scratch<RealType1DViewType> work(member.team_scratch(level),
+        Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                          per_team_extent);
 
-        Impl::StateVector<RealType1DViewType> sv_at_i(kmcd.nSpec, state_at_i);
+        Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec, state_at_i);
         TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                           "Error: input state vector is not valid");
         {
 
           const real_type temperature = sv_at_i.Temperature();
           const real_type pressure = sv_at_i.Pressure();
+          const real_type_1d_view_type Ys = sv_at_i.MassFractions();
           const real_type density = sv_at_i.Density();
-          const RealType1DViewType Ys = sv_at_i.MassFractions();
 
-          Impl::TransientContStirredTankReactorRHS ::team_invoke(member,
+          member.team_barrier();
+
+          TransientContStirredTankReactorRHS ::team_invoke(member,
                                                  temperature,
                                                  Ys,
-                                                 Zs_at_i,
+                                                 site_fraction_at_i,
                                                  density,
                                                  pressure ,
                                                  rhs_at_i,
@@ -113,22 +112,35 @@ namespace TChem {
   void
   TransientContStirredTankReactorRHS::runDeviceBatch( /// thread block size
     const ordinal_type nBatch,
-    const real_type_2d_view& state,
-    const real_type_2d_view& zSurf,
+    const real_type_2d_view_type& state,
+    const real_type_2d_view_type& site_fraction,
     /// output
-    const real_type_2d_view& rhs,
+    const real_type_2d_view_type& rhs,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
-    const KineticSurfModelConstDataDevice& kmcdSurf,
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
     const cstr_data_type& cstr)
   {
+
+    const auto exec_space_instance = TChem::exec_space();
+    using policy_type =
+      typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
+    const ordinal_type level = 1;
+    const ordinal_type per_team_extent =
+     TChem::TransientContStirredTankReactorRHS
+          ::getWorkSpaceSize(kmcd, kmcdSurf); ///
+
+    const ordinal_type per_team_scratch =
+        Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
+
+    policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
+    policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+
     TransientContStirredTankReactorRHS_TemplateRun( /// template arguments deduction
-      "TChem::TransientContStirredTankReactorRHS::runHostBatch",
-      real_type_0d_view(),
-      real_type_1d_view(),
-      nBatch,
+      "TChem::TransientContStirredTankReactorRHS::runDeviceBatch",
+      policy,
       state,
-      zSurf,
+      site_fraction,
       rhs,
       /// const data of kinetic model
       kmcd,

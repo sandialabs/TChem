@@ -28,24 +28,33 @@ namespace TChem {
 namespace Impl {
 
 
+//
+template<typename ValueType, typename DeviceType>
 struct CpSpecMsFcn
 {
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+
   template<typename MemberType,
-           typename RealType,
-           typename RealType1DViewType,
            typename KineticModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const RealType& t,
+    const value_type& t,
     /// output
-    const RealType1DViewType& cpi,
+    const value_type_1d_view_type& cpi,
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
-    CpSpecMl::team_invoke(member, t, cpi, kmcd);
+    CpSpecMlFcn<value_type, device_type>::team_invoke(member, t, cpi, kmcd);
+
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
       [&](const ordinal_type& i) { cpi(i) /= kmcd.sMass(i); });
 #if defined(TCHEM_ENABLE_SERIAL_TEST_OUTPUT) && !defined(__CUDA_ARCH__)
     if (member.league_rank() == 0) {
@@ -60,7 +69,6 @@ struct CpSpecMsFcn
 #endif
   }
 };
-using CpSpecMs = CpSpecMsFcn;
 
 struct CpSpecMsFcnDerivative
 {
@@ -78,7 +86,7 @@ struct CpSpecMsFcnDerivative
   {
     CpSpecMlDerivative::team_invoke(member, t, cpi, kmcd);
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
+      Tines::RangeFactory<real_type>::TeamVectorRange(member, kmcd.nSpec),
       [&](const ordinal_type& i) { cpi(i) /= kmcd.sMass(i); });
 #if defined(TCHEM_ENABLE_SERIAL_TEST_OUTPUT) && !defined(__CUDA_ARCH__)
     if (member.league_rank() == 0) {

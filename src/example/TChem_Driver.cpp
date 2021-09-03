@@ -28,8 +28,8 @@ int
 main(int argc, char* argv[])
 {
   //#define TCHEM_TEST_DRIVER_NET_PRODUCTION_RATE
-// #define TCHEM_TEST_DRIVER_HOMOGENEOUS_BATCH_REACTOR
-#define TCHEM_TEST_DRIVER_JACOBIAN_HOMOGENEOUS_BATCH_REACTOR
+ #define TCHEM_TEST_DRIVER_HOMOGENEOUS_BATCH_REACTOR
+//#define TCHEM_TEST_DRIVER_JACOBIAN_HOMOGENEOUS_BATCH_REACTOR
 
 
   /// default inputs
@@ -46,7 +46,7 @@ main(int argc, char* argv[])
   std::string thermFile(prefixPath + "therm.dat");
   std::string inputFile(prefixPath + "input.dat");
   std::string outputFile(prefixPath + "omega.dat");
-  int nBatch(1);
+  int nBatch(1), jacobian_interval(1);
   bool verbose(true);
 
   /// parse command line arguments
@@ -64,6 +64,7 @@ main(int argc, char* argv[])
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
+  opts.set_option<int>("jacobian-interval", "Jacobians are evaluated in this interval during Newton solve", &jacobian_interval);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
 
@@ -140,7 +141,7 @@ main(int argc, char* argv[])
     tchem.showViews("After creating state vectors and net production rate per mass");
 
     const int nspec = tchem.getNumberOfSpecies();
-    typename TChem::Driver::real_type_1d_view_host state("state", tchem.getLengthOfStateVector());
+    typename TChem::real_type_1d_view_host state("state", tchem.getLengthOfStateVector());
     TChem::Test::readStateVector(inputFile, nspec, state);
     for (int i=0;i<nBatch;++i)
       tchem.setStateVectorHost(i, state);
@@ -149,11 +150,13 @@ main(int argc, char* argv[])
     const int max_num_newton_iterations(20), num_time_iterations_per_interval(10);
     const real_type atol_newton(1e-8), rtol_newton(1e-5), atol_time(1e-12), rtol_time(1e-8);
     tchem.setTimeAdvanceHomogeneousGasReactor(tbeg, tend, dtmin, dtmax,
-					      max_num_newton_iterations, num_time_iterations_per_interval,
+                                              jacobian_interval,
+					      max_num_newton_iterations,
+                                              num_time_iterations_per_interval,
 					      atol_newton, rtol_newton,
 					      atol_time, rtol_time);
     real_type tsum(0);
-    TChem::Driver::real_type_1d_const_view_host t, dt, s;
+    TChem::real_type_1d_const_view_host t, dt, s;
     for (int i=0;tsum<tend && i<1000;++i) {
       tchem.computeTimeAdvanceHomogeneousGasReactorDevice();
       tchem.getTimeStepHost(t);

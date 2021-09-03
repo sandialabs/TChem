@@ -22,29 +22,37 @@ Sandia National Laboratories, Livermore, CA, USA
 #define __TCHEM_IMPL_CPSPECML_HPP__
 
 #include "TChem_Util.hpp"
+#include "TChem_KineticModelData.hpp"
 
 namespace TChem {
 namespace Impl {
 
 /// all impl space evaluate values (nspecs) per a single temperature input
+
+template<typename ValueType, typename DeviceType>
 struct CpSpecMlFcn
 {
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using real_type = scalar_type;
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+
   template<typename MemberType,
-           typename RealType,
-           typename RealType1DViewType,
            typename KineticModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const RealType& t,
+    const value_type& t,
     /// output
-    const RealType1DViewType& cpi,
+    const value_type_1d_view_type& cpi,
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
     const auto tLoc = getValueInRangev2(kmcd.TthrmMin, kmcd.TthrmMax, t);
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
         const ordinal_type ipol = tLoc > kmcd.Tmi(i);
         // this assumes nNASAinter_ = 2, nCpCoef_ = 5 (confirm this)
         // icpst = i*7*2+ipol*7 ;
@@ -68,7 +76,6 @@ struct CpSpecMlFcn
 #endif
   }
 };
-using CpSpecMl = CpSpecMlFcn;
 
 struct CpSpecMlFcnDerivative
 {
@@ -89,11 +96,11 @@ struct CpSpecMlFcnDerivative
     const real_type delT = t - tLoc;
 
     if (ats<real_type>::abs(delT) > REACBALANCE()) {
-      Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
+      Kokkos::parallel_for(Tines::RangeFactory<real_type>::TeamVectorRange(member, kmcd.nSpec),
                            [&](const ordinal_type& i) { cpi(i) = zero; });
     } else {
       Kokkos::parallel_for(
-        Kokkos::TeamVectorRange(member, kmcd.nSpec),
+        Tines::RangeFactory<real_type>::TeamVectorRange(member, kmcd.nSpec),
         [&](const ordinal_type& i) {
           const ordinal_type ipol = tLoc > kmcd.Tmi(i);
           // this assumes nNASAinter_ = 2, nCpCoef_ = 5 (confirm this)

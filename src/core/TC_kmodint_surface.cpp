@@ -26,6 +26,8 @@ Sandia National Laboratories, Livermore, CA, USA
        ...
 
 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
 
 #include <assert.h>
 #include <ctype.h>
@@ -2812,3 +2814,4 @@ TCKMI_saveSurfRectionEquations(speciesGas* listspec,
 
   return 0;
 }
+#pragma GCC diagnostic pop

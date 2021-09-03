@@ -90,17 +90,16 @@ main(int argc, char* argv[])
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
     /// construct kmd and use the view for testing
-    // TChem::KineticModelData kmd(chemFile, thermFile);
-    // const auto kmcd = kmd.createConstData<TChem::exec_space>();
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
     // need to fix it
     TChem::KineticModelData kmdSurf(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
     const auto kmcd =
       kmdSurf
-        .createConstData<TChem::exec_space>(); // data struc with gas phase info
+        .createConstData<device_type>(); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<TChem::exec_space>(); // data struc with
+      kmdSurf.createConstSurfData<device_type>(); // data struc with
                                                         // surface phase info
 
     /// input: state vectors: temperature, pressure and mass fraction

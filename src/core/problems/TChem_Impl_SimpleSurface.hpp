@@ -24,47 +24,57 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_Util.hpp"
 
 #include "TChem_Impl_SimpleSurface_Problem.hpp"
-#include "TChem_Impl_TimeIntegrator.hpp"
 
 namespace TChem {
 namespace Impl {
-
+  
+template<typename ValueType, typename DeviceType>
 struct SimpleSurface
 {
 
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
-  static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
-  {
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
 
-    //
+  using real_type = scalar_type;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type,device_type>;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+  using pdf_model_type = PlugFlowReactorData;
+
+  using TimeIntegrator = Tines::TimeIntegratorTrBDF2<value_type, device_type>;
+
+  static inline ordinal_type getWorkSpaceSize(
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf)
+  {
     using problem_type =
-      TChem::Impl::SimpleSurface_Problem<KineticModelConstDataType,
-                                         KineticSurfModelConstDataType>;
+      TChem::Impl::SimpleSurface_Problem<value_type,
+                                         device_type>;
     problem_type problem;
     problem._kmcd = kmcd;
     problem._kmcdSurf = kmcdSurf;
-    return TimeIntegrator::getWorkSpaceSize(problem) +
-           problem.getNumberOfEquations(kmcdSurf); /// temporal vector tolerence
+    ordinal_type problem_workspace_size = problem.getWorkSpaceSize();
+    ordinal_type m = problem.getNumberOfEquations();
+    ordinal_type worksizeTimeIntegration(0);
+    TimeIntegrator::workspace(m, worksizeTimeIntegration);
+
+    return  worksizeTimeIntegration + problem_workspace_size; /// temporal vector tolerence
   }
 
-  template<typename MemberType,
-           typename WorkViewType,
-           typename RealType0DViewType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input iteration and qoi index to store
+    const ordinal_type& jacobian_interval,
     const ordinal_type& max_num_newton_iterations,
     const ordinal_type& max_num_time_iterations,
-    const RealType1DViewType& tol_newton,
-    const RealType2DViewType& tol_time,
-    const RealType1DViewType& fac, /// numerica jacobian percentage
+    const real_type_1d_view_type& tol_newton,
+    const real_type_2d_view_type& tol_time,
+    const real_type_1d_view_type& fac, /// numerica jacobian percentage
     /// input time step and time range
     const real_type& dt_in,
     const real_type& dt_min,
@@ -72,31 +82,28 @@ struct SimpleSurface
     const real_type& t_beg,
     const real_type& t_end,
     /// input (initial condition)
-    const RealType1DViewType& vals,
+    const real_type_1d_view_type& vals,
     /// output (final output conditions)
-    const RealType0DViewType& t_out,
-    const RealType0DViewType& dt_out,
-    const RealType1DViewType& vals_out,
+    const real_type_0d_view_type& t_out,
+    const real_type_0d_view_type& dt_out,
+    const real_type_1d_view_type& vals_out,
     // const values
     const real_type& temperature, /// temperature
     const real_type& pressure,    /// pressure
-    const RealType1DViewType& Ys, /// mass fraction (kmcd.nSpec)
+    const real_type_1d_view_type& Ys, /// mass fraction (kmcd.nSpec)
     /// workspace
-    const WorkViewType& work,
+    const real_type_1d_view_type& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf)
   {
     /// all tolerence are from users; for this, it should be set in the front
     /// interface
     /// const real_type atol_newton = 1e-6, rtol_newton = 1e-5, tol_time = 1e-4;
 
     using problem_type =
-      TChem::Impl::SimpleSurface_Problem<KineticModelConstDataType,
-                                         KineticSurfModelConstDataType>;
-    using real_type_1d_view_type =
-      typename problem_type::real_type_1d_view_type;
-
+      TChem::Impl::SimpleSurface_Problem<value_type,
+                                         device_type>;
     problem_type problem;
 
     /// problem workspace
@@ -114,7 +121,7 @@ struct SimpleSurface
       Kokkos::abort("Error: workspace used is larger than it is provided\n");
     }
     /// time integrator workspace
-    auto tw = WorkViewType(wptr, workspace_extent - workspace_used);
+    auto tw = real_type_1d_view_type(wptr, workspace_extent - workspace_used);
 
     /// constant values of the problem
     problem._p = pressure;        // pressure
@@ -125,8 +132,9 @@ struct SimpleSurface
     problem._work = pw;           // problem workspace array
     problem._fac = fac;    // fac for numerical jacobian
 
-    TimeIntegrator::team_invoke_detail(member,
+    TimeIntegrator::invoke(member,
                                        problem,
+                           jacobian_interval,
                                        max_num_newton_iterations,
                                        max_num_time_iterations,
                                        tol_newton,

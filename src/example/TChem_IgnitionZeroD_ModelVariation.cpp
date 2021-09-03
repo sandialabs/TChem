@@ -41,7 +41,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_CommandLineParser.hpp"
 #include "TChem_KineticModelData.hpp"
 #include "TChem_Util.hpp"
-
+#include "TChem_MassFractionToMoleFraction.hpp"
 #include "TChem_IgnitionZeroD.hpp"
 
 using ordinal_type = TChem::ordinal_type;
@@ -76,7 +76,7 @@ main(int argc, char* argv[])
   real_type dtmin(1e-8), dtmax(1e-1);
   real_type rtol_time(1e-4), atol_newton(1e-10), rtol_newton(1e-6);
   int num_time_iterations_per_interval(1e1), max_num_time_iterations(1e3),
-    max_num_newton_iterations(100);
+    max_num_newton_iterations(100), jacobian_interval(1);
   int output_frequency(-1);
 
   real_type T_threshold(1500);
@@ -85,11 +85,16 @@ main(int argc, char* argv[])
   ;
   bool verbose(true);
   bool OnlyComputeIgnDelayTime(false);
+  bool saveMoleFractions(false);
+
 
   std::string chemFile("chem.inp");
   std::string thermFile("therm.dat");
   std::string inputFile("sample.dat");
   std::string inputFileParamModifiers("ParameterModifiers.dat");
+  std::string ignition_delay_time_file("IgnitionDelayTime.dat");
+  std::string ignition_delay_time_w_threshold_temperature_file("IgnitionDelayTimeTthreshold.dat");
+
 
   bool use_prefixPath(true);
 
@@ -128,16 +133,28 @@ main(int argc, char* argv[])
   opts.set_option<int>("max-newton-iterations",
                        "Maximum number of newton iterations",
                        &max_num_newton_iterations);
+  opts.set_option<int>("jacobian-interval",
+                       "Jacobians are evaluated once in this interval",
+                       &jacobian_interval);
   opts.set_option<int>(
     "output_frequency", "save data at this iterations", &output_frequency);
   // opts.set_option<int>("batchsize", "Batchsize the same state vector
   // described in statefile is cloned", &nBatch);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
+  //
+  opts.set_option<bool>(
+    "saveMoleFractions", "If true, save mole fractions else mass fractions", &saveMoleFractions);
   opts.set_option<real_type>(
     "T_threshold", "Temp threshold in ignition delay time", &T_threshold);
 
   //
+  opts.set_option<std::string>("ignition-delay-time-file",
+    "Output of ignition delay time second using second-derivative method e.g., IgnitionDelayTime.dat",
+     &ignition_delay_time_file);
+  opts.set_option<std::string>("ignition-delay-time-w-threshold-temperature-file",
+    "Output of ignition delay time second using threshold-temperature method  e.g., IgnitionDelayTimeTthreshold.dat",
+    &ignition_delay_time_w_threshold_temperature_file);
   opts.set_option<bool>(
     "OnlyComputeIgnDelayTime",
     "If true, simulation will end when Temperature is equal to T_threshold ",
@@ -166,11 +183,12 @@ main(int argc, char* argv[])
 
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
-    const TChem::KineticModelConstData<TChem::exec_space> kmcd =
-      kmd.createConstData<TChem::exec_space>();
+    const TChem::KineticModelConstData<device_type> kmcd =
+      kmd.createConstData<device_type>();
 
 
     const ordinal_type stateVecDim =
@@ -180,7 +198,7 @@ main(int argc, char* argv[])
     printf("Number of Reactions %d \n", kmcd.nReac);
 
     if (OnlyComputeIgnDelayTime) {
-      printf("This simulation will end when tempearature is equal to "
+      printf("Simulation will end when temperature is equal to: "
              "T_threshold (K) %e\n",
              T_threshold);
     }
@@ -210,10 +228,13 @@ main(int argc, char* argv[])
 
     real_type_2d_view state("StateVector Devices", nBatch, stateVecDim);
 
+    real_type_2d_view mole_fraction;
+    real_type_2d_view_host mole_fraction_host;
+
     /// different sample would have a different kinetic model
     auto kmds = cloneKineticModelData(kmd, nBatch);
     TChem::KineticModelsModifyWithArrheniusForwardParameters(kmds, inputFileParamModifiers, nBatch );
-    auto kmcds = TChem::createKineticModelConstData<TChem::exec_space>(kmds);
+    auto kmcds = TChem::createKineticModelConstData<device_type>(kmds);
 
 
     if (verbose) {
@@ -311,6 +332,28 @@ main(int argc, char* argv[])
 
     };
 
+    auto writeStateMoleFraction = [](const ordinal_type iter,
+                         const real_type_1d_view_host _t,
+                         const real_type_1d_view_host _dt,
+                         const real_type_2d_view_host _state,
+                         const real_type_2d_view_host _mole_fraction,
+                         FILE* fout) { // sample, time, density, pressure,
+                                       // temperature, mass fraction
+      for (size_t sp = 0; sp < _state.extent(0); sp++) {
+        fprintf(fout, "%d \t %15.10e \t  %15.10e \t ", iter, _t(sp), _dt(sp));
+        //
+        // density, pressure and temperature
+        for (ordinal_type k = 0, kend = 3; k < kend; ++k)
+          fprintf(fout, "%15.10e \t", _state(sp, k));
+        // mole fraction
+        for (ordinal_type k = 0, kend = _mole_fraction.extent(1); k < kend; ++k)
+          fprintf(fout, "%15.10e \t", _mole_fraction(sp, k));
+
+        fprintf(fout, "\n");
+      }
+
+    };
+
     auto printState = [](const time_advance_type _tadv,
                          const real_type _t,
                          const real_type_1d_view_host _state_at_i) {
@@ -338,6 +381,11 @@ main(int argc, char* argv[])
       /// team policy
       policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
 
+      if (team_size > 0 && vector_size > 0) {
+        policy = policy_type(exec_space_instance, nBatch, team_size, vector_size);
+      }
+
+
       const ordinal_type level = 1;
       // const ordinal_type per_team_extent =
         // TChem::IgnitionZeroD::getWorkSpaceSize(kmcd);
@@ -362,13 +410,13 @@ main(int argc, char* argv[])
           dt_host = real_type_1d_view_host("dt host", nBatch);
         }
 
-        using problem_type = TChem::Impl::IgnitionZeroD_Problem<decltype(kmcd)>;
+        // using problem_type = TChem::Impl::IgnitionZeroD_Problem<decltype(kmcd)>;
         real_type_2d_view tol_time(
-          "tol time", problem_type::getNumberOfTimeODEs(kmcd), 2);
+          "tol time", kmcd.nSpec + 1, 2);
         real_type_1d_view tol_newton("tol newton", 2);
 
         real_type_2d_view fac(
-          "fac", nBatch, problem_type::getNumberOfEquations(kmcd));
+          "fac", nBatch, kmcd.nSpec + 1);
 
         /// tune tolerence
         {
@@ -396,7 +444,8 @@ main(int argc, char* argv[])
         tadv_default._max_num_newton_iterations = max_num_newton_iterations;
         tadv_default._num_time_iterations_per_interval =
           num_time_iterations_per_interval;
-
+        tadv_default._jacobian_interval = jacobian_interval;
+        
         time_advance_type_1d_view tadv("tadv", nBatch);
         Kokkos::deep_copy(tadv, tadv_default);
 
@@ -442,7 +491,25 @@ main(int argc, char* argv[])
             fprintf(fout, "%s \t", &speciesNamesHost(k, 0));
           fprintf(fout, "\n");
           // save initial condition
-          writeState(-1, t_host, dt_host, state_host, fout);
+          if (saveMoleFractions){
+
+            mole_fraction = real_type_2d_view("mole fraction", nBatch, kmcd.nSpec);
+            mole_fraction_host = real_type_2d_view_host("mole fraction", nBatch, kmcd.nSpec);
+
+            TChem::MassFractionToMoleFraction::runDeviceBatch(nBatch,
+                                                               state,
+                                                               mole_fraction,
+                                                               kmcd);
+
+            Kokkos::deep_copy(mole_fraction_host, mole_fraction);
+
+            // create a cope of mole_fraction
+            writeStateMoleFraction(-1, t_host, dt_host, state_host, mole_fraction_host,  fout);
+
+          } else {
+            writeState(-1, t_host, dt_host, state_host, fout);
+          }
+
         }
 
         real_type tsum(0);
@@ -525,7 +592,24 @@ main(int argc, char* argv[])
             Kokkos::deep_copy(t_host, t);
             Kokkos::deep_copy(state_host, state);
 
-            writeState(iter, t_host, dt_host, state_host, fout);
+            if (saveMoleFractions){
+
+              TChem::MassFractionToMoleFraction::runDeviceBatch(nBatch,
+                                                                 state,
+                                                                 mole_fraction,
+                                                                 kmcd);
+
+              Kokkos::deep_copy(mole_fraction_host, mole_fraction);
+
+              // create a cope of mole_fraction
+              writeStateMoleFraction(iter, t_host, dt_host, state_host, mole_fraction_host,  fout);
+
+            } else {
+              writeState(iter, t_host, dt_host, state_host, fout);
+
+            }
+
+
 
             // Kokkos::parallel_for(
             //   Kokkos::RangePolicy<TChem::exec_space>(0, nBatch),
@@ -583,11 +667,11 @@ main(int argc, char* argv[])
 
     auto IgnDelayTimes_host = Kokkos::create_mirror_view(IgnDelayTimes);
     Kokkos::deep_copy(IgnDelayTimes_host, IgnDelayTimes);
-    TChem::Test::write1DVector("IgnitionDelayTime.dat", IgnDelayTimes_host);
+    TChem::Test::write1DVector(ignition_delay_time_file, IgnDelayTimes_host);
 
     auto IgnDelayTimesT_host = Kokkos::create_mirror_view(IgnDelayTimesT);
     Kokkos::deep_copy(IgnDelayTimesT_host, IgnDelayTimesT);
-    TChem::Test::write1DVector("IgnitionDelayTimeTthreshold.dat",
+    TChem::Test::write1DVector(ignition_delay_time_w_threshold_temperature_file,
                                IgnDelayTimesT_host);
 
     fclose(fout);

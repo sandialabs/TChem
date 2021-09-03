@@ -26,54 +26,16 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
   struct Driver {
   public:
-    using exec_space = TChem::exec_space;
-    using host_exec_space = TChem::host_exec_space;
-
-    using real_type = TChem::real_type;
-
-    using real_type_0d_view = TChem::real_type_0d_view;
-    using real_type_1d_view = TChem::real_type_1d_view;
-    using real_type_2d_view = TChem::real_type_2d_view;
-    using real_type_3d_view = TChem::real_type_3d_view;
-
-    using time_advance_type_1d_view = TChem::time_advance_type_1d_view;
-
-    using real_type_0d_view_host = typename real_type_0d_view::HostMirror;
-    using real_type_1d_view_host = typename real_type_1d_view::HostMirror;
-    using real_type_2d_view_host = typename real_type_2d_view::HostMirror;
-    using real_type_3d_view_host = typename real_type_3d_view::HostMirror;
-
-    using real_type_0d_const_view_host = typename real_type_0d_view_host::const_type;
-    using real_type_1d_const_view_host = typename real_type_1d_view_host::const_type;
-    using real_type_2d_const_view_host = typename real_type_2d_view_host::const_type;
-    using real_type_3d_const_view_host = typename real_type_3d_view_host::const_type;
-
     /// this policy is for time integration which can be repeatedly reused
     using policy_type = typename TChem::UseThisTeamPolicy<exec_space>::type;
 
-    template<typename ViewType>
-    struct DualViewType {
-      ViewType _dev;
-      typename ViewType::HostMirror _host;
-    };
-
-    using real_type_0d_dual_view = DualViewType<real_type_0d_view>;
-    using real_type_1d_dual_view = DualViewType<real_type_1d_view>;
-    using real_type_2d_dual_view = DualViewType<real_type_2d_view>;
-    using real_type_3d_dual_view = DualViewType<real_type_3d_view>;
-
   private:
-    enum {
-      NeedSyncToDevice = 1,
-      NeedSyncToHost = -1,
-      NoNeedSync = 0
-    };
 
     bool _kmd_created;
     std::string _chem_file, _therm_file;
     TChem::KineticModelData _kmd;
-    TChem::KineticModelConstData<exec_space> _kmcd_device;
-    TChem::KineticModelConstData<host_exec_space> _kmcd_host;
+    TChem::KineticModelConstData<interf_device_type> _kmcd_device;
+    TChem::KineticModelConstData<interf_host_device_type> _kmcd_host;
 
     ordinal_type _n_sample;
 
@@ -84,27 +46,20 @@ namespace TChem {
     ///
 
     /// variables
-    ordinal_type _state_need_sync;
     real_type_2d_dual_view _state;
 
-    ordinal_type _net_production_rate_per_mass_need_sync;
     real_type_2d_dual_view _net_production_rate_per_mass;
     //  jacobian homogeneous gas reactor
-    ordinal_type _jacobian_homogeneous_gas_reactor_need_sync;
     real_type_3d_dual_view _jacobian_homogeneous_gas_reactor;
 
     // rhs homogeneous gas reactor
-    ordinal_type _rhs_homogeneous_gas_reactor_need_sync;
     real_type_2d_dual_view _rhs_homogeneous_gas_reactor;
 
     // enthalpy mix
-    ordinal_type _enthalpy_mass_need_sync;
-    ordinal_type _enthalpy_mix_mass_need_sync;
     real_type_2d_dual_view _enthalpy_mass;
     real_type_1d_dual_view _enthalpy_mix_mass;
 
     // Forward and reverse constants
-    ordinal_type _kforward_reverse_need_sync;
     real_type_2d_dual_view _kforward;
     real_type_2d_dual_view _kreverse;
     policy_type _policy_KForRev;
@@ -228,6 +183,7 @@ namespace TChem {
 					     const real_type & tend,
 					     const real_type & dtmin,
 					     const real_type & dtmax,
+                                             const ordinal_type & jacobian_interval,
 					     const ordinal_type & max_num_newton_iterations,
 					     const ordinal_type & num_time_iterations_per_interval,
 					     const real_type& atol_newton, const real_type&rtol_newton,
@@ -284,6 +240,7 @@ extern "C" {
 						 const real_type tend,
 						 const real_type dtmin,
 						 const real_type dtmax,
+                                                 const int jacobian_interval,
 						 const int max_num_newton_iterations,
 						 const int num_time_iterations_per_interval,
 						 const real_type atol_newton, const real_type rtol_newton,

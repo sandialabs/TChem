@@ -56,6 +56,12 @@ main(int argc, char* argv[])
     "thermfile", "Therm file name e.g., therm.dat", &thermFile);
   opts.set_option<std::string>(
     "inputfile", "Input state file name e.g., input.dat", &inputFile);
+  //
+  opts.set_option<int>(
+    "team_thread_size", "time thread size ", &team_size);
+  //
+  opts.set_option<int>(
+    "vector_thread_size", "vector thread size ", &vector_size);
   // opts.set_option<std::string>("outputfile", "Output omega file name e.g.,
   // omega.dat", &outputFile);
   opts.set_option<int>(
@@ -64,7 +70,6 @@ main(int argc, char* argv[])
     &nBatch);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
-  opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
 
@@ -81,9 +86,11 @@ main(int argc, char* argv[])
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
-    const auto kmcd = kmd.createConstData<TChem::exec_space>();
+    const auto kmcd = kmd.createConstData<device_type>();
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
@@ -139,6 +146,9 @@ main(int argc, char* argv[])
     {
 
       policy_type policy_cp(exec_space_instance, nBatch, Kokkos::AUTO());
+      if (team_size > 0 && vector_size > 0) {
+        policy_cp = policy_type(exec_space_instance, nBatch, team_size, vector_size);
+      }
 
       const ordinal_type per_team_extent_cp =
         TChem::SpecificHeatCapacityPerMass::getWorkSpaceSize();

@@ -34,9 +34,23 @@ namespace TChem {
 ///
 struct Jacobian
 {
-  template<typename KineticModelConstDataType>
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+  using real_type_3d_view_type = Tines::value_type_3d_view<real_type,device_type>;
+
+  using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
+  using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
+  using real_type_3d_view_host_type = Tines::value_type_3d_view<real_type,host_device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_model_host_type = KineticModelConstData<host_device_type>;
+
+  template<typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd)
+    const KineticModelConstData<DeviceType>& kmcd)
   {
     const ordinal_type iter_size =
       (kmcd.nSpec > kmcd.nReac ? kmcd.nSpec : kmcd.nReac) * 2;
@@ -45,19 +59,19 @@ struct Jacobian
 
   static void runHostBatch( /// input
     const ordinal_type nBatch,
-    const real_type_2d_view_host& state,
+    const real_type_2d_view_host_type& state,
     /// output
-    const real_type_3d_view_host& jac,
+    const real_type_3d_view_host_type& jac,
     /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd);
+    const kinetic_model_host_type& kmcd);
 
   static void runDeviceBatch( /// input
     const ordinal_type nBatch,
-    const real_type_2d_view& state,
+    const real_type_2d_view_type& state,
     /// output
-    const real_type_3d_view& jac,
+    const real_type_3d_view_type& jac,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
+    const kinetic_model_type& kmcd);
 };
 
 } // namespace TChem

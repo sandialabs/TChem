@@ -32,11 +32,21 @@ namespace TChem {
 struct TransientContStirredTankReactorSmatrix
 {
 
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+  using real_type_3d_view_type = Tines::value_type_3d_view<real_type,device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+  using cstr_data_type = TransientContStirredTankReactorData<device_type>;
+
+  template< typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const KineticModelConstData<DeviceType>& kmcd,
+    const KineticSurfModelConstData<DeviceType>& kmcdSurf)
   {
     return 2 * kmcd.nSpec + kmcdSurf.nReac;
   }
@@ -45,59 +55,59 @@ struct TransientContStirredTankReactorSmatrix
     const ordinal_type team_size,
     const ordinal_type vector_size,
     const ordinal_type nBatch,
-    const real_type_2d_view& state,
-    const real_type_2d_view& zSurf,
+    const real_type_2d_view_type& state,
+    const real_type_2d_view_type& site_fraction,
     /// output
-    const real_type_3d_view& Smat,
-    const real_type_3d_view& Ssmat,
-    const real_type_2d_view& Sconv,
+    const real_type_3d_view_type& Smat,
+    const real_type_3d_view_type& Ssmat,
+    const real_type_2d_view_type& Sconv,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
-    const KineticSurfModelConstDataDevice& kmcdSurf,
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
     const cstr_data_type& cstr);
 
   // policy is define outside of the interface
   static void runDeviceBatch( /// thread block size
     typename UseThisTeamPolicy<exec_space>::type& policy,
-    const real_type_2d_view& state,
-    const real_type_2d_view& zSurf,
+    const real_type_2d_view_type& state,
+    const real_type_2d_view_type& site_fraction,
     /// output
-    const real_type_3d_view& Smat,
-    const real_type_3d_view& Ssmat,
-    const real_type_2d_view& Sconv,
+    const real_type_3d_view_type& Smat,
+    const real_type_3d_view_type& Ssmat,
+    const real_type_2d_view_type& Sconv,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
-    const KineticSurfModelConstDataDevice& kmcdSurf,
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
     const cstr_data_type& cstr);
 
-  //
-  static void runHostBatch( /// thread block size
-    const ordinal_type team_size,
-    const ordinal_type vector_size,
-    const ordinal_type nBatch,
-    const real_type_2d_view_host& state,
-    const real_type_2d_view_host& zSurf,
-    /// output
-    const real_type_3d_view_host& Smat,
-    const real_type_3d_view_host& Ssmat,
-    const real_type_2d_view_host& Sconv,
-    /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
-    const KineticSurfModelConstDataDevice& kmcdSurf,
-    const cstr_data_type& cstr);
-  //
-  static void runHostBatch( /// thread block size
-    typename UseThisTeamPolicy<host_exec_space>::type& policy,
-    const real_type_2d_view_host& state,
-    const real_type_2d_view_host& zSurf,
-    /// output
-    const real_type_3d_view_host& Smat,
-    const real_type_3d_view_host& Ssmat,
-    const real_type_2d_view_host& Sconv,
-    /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
-    const KineticSurfModelConstDataDevice& kmcdSurf,
-    const cstr_data_type& cstr);
+  // //
+  // static void runHostBatch( /// thread block size
+  //   const ordinal_type team_size,
+  //   const ordinal_type vector_size,
+  //   const ordinal_type nBatch,
+  //   const real_type_2d_view_host& state,
+  //   const real_type_2d_view_host& zSurf,
+  //   /// output
+  //   const real_type_3d_view_host& Smat,
+  //   const real_type_3d_view_host& Ssmat,
+  //   const real_type_2d_view_host& Sconv,
+  //   /// const data from kinetic model
+  //   const KineticModelConstDataDevice& kmcd,
+  //   const KineticSurfModelConstDataDevice& kmcdSurf,
+  //   const TransientContStirredTankReactorData& cstr);
+  // //
+  // static void runHostBatch( /// thread block size
+  //   typename UseThisTeamPolicy<host_exec_space>::type& policy,
+  //   const real_type_2d_view_host& state,
+  //   const real_type_2d_view_host& zSurf,
+  //   /// output
+  //   const real_type_3d_view_host& Smat,
+  //   const real_type_3d_view_host& Ssmat,
+  //   const real_type_2d_view_host& Sconv,
+  //   /// const data from kinetic model
+  //   const KineticModelConstDataDevice& kmcd,
+  //   const KineticSurfModelConstDataDevice& kmcdSurf,
+  //   const TransientContStirredTankReactorData& cstr);
 
 };
 

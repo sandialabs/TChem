@@ -23,9 +23,7 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 
   template<typename PolicyType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstType>
+           typename DeviceType>
 
   //
   void
@@ -33,15 +31,18 @@ namespace TChem {
     const std::string& profile_name,
     /// team size setting
     const PolicyType& policy,
-    const RealType1DViewType& theta,
-    const RealType1DViewType& lambda,
-    const RealType2DViewType& state,
-    const RealType2DViewType& SourceTermToyProblem,
-    const KineticModelConstType& kmcd
+    const Tines::value_type_1d_view<real_type, DeviceType>& theta,
+    const Tines::value_type_1d_view<real_type, DeviceType>& lambda,
+    const Tines::value_type_2d_view<real_type, DeviceType>& state,
+    const Tines::value_type_2d_view<real_type, DeviceType>& SourceTermToyProblem,
+    const KineticModelConstData<DeviceType>& kmcd
   )
   {
     Kokkos::Profiling::pushRegion(profile_name);
     using policy_type = PolicyType;
+    using device_type = DeviceType;
+
+    using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
 
     const ordinal_type level = 1;
     const ordinal_type per_team_extent = SourceTermToyProblem::getWorkSpaceSize(kmcd);
@@ -51,19 +52,19 @@ namespace TChem {
       policy,
       KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
         const ordinal_type i = member.league_rank();
-        const RealType1DViewType state_at_i =
+        const real_type_1d_view_type state_at_i =
           Kokkos::subview(state, i, Kokkos::ALL());
-        const RealType1DViewType SourceTermToyProblem_at_i =
+        const real_type_1d_view_type SourceTermToyProblem_at_i =
           Kokkos::subview(SourceTermToyProblem, i, Kokkos::ALL());
 
-        Scratch<RealType1DViewType> work(member.team_scratch(level),
+        Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                         per_team_extent);
 
         //
         const real_type theta_at_i = theta(i);
         const real_type lambda_at_i = lambda(i);
 
-        Impl::SourceTermToyProblem ::team_invoke(member, theta_at_i, lambda_at_i,
+        Impl::SourceTermToyProblem<real_type, device_type>::team_invoke(member, theta_at_i, lambda_at_i,
           state_at_i, SourceTermToyProblem_at_i, work, kmcd);
 
       });
@@ -75,13 +76,13 @@ namespace TChem {
 void
 SourceTermToyProblem::runDeviceBatch( /// input
   typename UseThisTeamPolicy<exec_space>::type& policy,
-  const real_type_1d_view& theta,
-  const real_type_1d_view& lambda,
-  const real_type_2d_view& state,
+  const real_type_1d_view_type& theta,
+  const real_type_1d_view_type& lambda,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_2d_view& SourceTermToyProblem,
+  const real_type_2d_view_type& SourceTermToyProblem,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
 
   SourceTermToyProblem_TemplateRun( /// input
@@ -99,13 +100,13 @@ SourceTermToyProblem::runDeviceBatch( /// input
 void
 SourceTermToyProblem::runHostBatch( /// input
   typename UseThisTeamPolicy<host_exec_space>::type& policy,
-  const real_type_1d_view_host& theta,
-  const real_type_1d_view_host& lambda,
-  const real_type_2d_view_host& state,
+  const real_type_1d_view_host_type& theta,
+  const real_type_1d_view_host_type& lambda,
+  const real_type_2d_view_host_type& state,
   /// output
-  const real_type_2d_view_host& SourceTermToyProblem,
+  const real_type_2d_view_host_type& SourceTermToyProblem,
   /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
+  const kinetic_model_host_type& kmcd)
 {
 
   SourceTermToyProblem_TemplateRun( /// input

@@ -22,6 +22,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #define __TCHEM_IMPL_MOLAR_WEIGHTS_HPP__
 
 #include "TChem_Util.hpp"
+#include "TChem_KineticModelData.hpp"
 
 namespace TChem {
 
@@ -30,100 +31,139 @@ namespace Impl {
 /// Computes molar weight based on species mass fraction (getMs2Wmix)
 ///    \f[ W_{mix}=\left(\sum_{k=1}^{N_{spec}}Y_k/W_k\right)^{-1} \f]
 /// input mass fraction
+template<typename ValueType, typename DeviceType>
 struct MolarWeights
 {
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
-  KOKKOS_INLINE_FUNCTION static real_type team_invoke(
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using real_type = scalar_type;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type = TChem::KineticModelConstData<device_type>;
+  template<typename MemberType>
+  KOKKOS_INLINE_FUNCTION static value_type team_invoke(
     const MemberType& member,
     /// input
-    const RealType1DViewType& Ys, /// mass fractions
+    const value_type_1d_view_type& Ys, /// mass fractions
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
-    real_type wmix(0);
+
+    using reducer_type = Tines::SumReducer<value_type>;
+
+    typename reducer_type::value_type wmix(0);
     // mass fraction is the input for this function?
     Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
-      [&](const ordinal_type& i, real_type& update) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
+      [&](const ordinal_type& i, typename reducer_type::value_type& update) {
         update += Ys(i) / kmcd.sMass(i);
       },
-      wmix);
-    wmix = real_type(1) / wmix;
+      reducer_type(wmix));
+    wmix = real_type(1.) / wmix;
     return wmix;
   }
 };
 
+/// mean molecular weight
+/// Computes molar weight based on species mole fraction
+template<typename ValueType, typename DeviceType>
 struct MeanMolecularWeightXc
 {
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using real_type = scalar_type;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type = TChem::KineticModelConstData<device_type>;
+
   // computes mean Molecular weight
   // inputs mole fraction
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
-  KOKKOS_INLINE_FUNCTION static real_type team_invoke(
+  template<typename MemberType>
+  KOKKOS_INLINE_FUNCTION static value_type team_invoke(
     const MemberType& member,
     /// input
-    const RealType1DViewType& Xc, /// mole fractions
+    const value_type_1d_view_type& Xc, /// mole fractions
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
-    real_type wmix(0);
+
+    using reducer_type = Tines::SumReducer<value_type>;
+
+    typename reducer_type::value_type wmix(0);
     Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
-      [&](const ordinal_type& i, real_type& update) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
+      [&](const ordinal_type& i, typename reducer_type::value_type& update) {
         update += Xc(i) * kmcd.sMass(i);
       },
-      wmix);
+      reducer_type(wmix));
     return wmix;
   }
 };
 
+// converts species mass fraction  to species mole fraction
+template<typename ValueType, typename DeviceType>
 struct MassFractionToMoleFraction
 {
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using real_type = scalar_type;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type = TChem::KineticModelConstData<device_type>;
+
   // Computes Mole fraction from Mass fraction
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const RealType1DViewType& Ys, /// mass fractions
+    const value_type_1d_view_type& Ys, /// mass fractions
     /// const input from kinetic model
-    const RealType1DViewType& Xc,
-    const KineticModelConstDataType& kmcd)
+    const value_type_1d_view_type& Xc,
+    const kinetic_model_type& kmcd)
   {
 
-    const real_type Wmix = MolarWeights::team_invoke(member, Ys, kmcd);
+    const value_type Wmix = MolarWeights<value_type,device_type>::team_invoke(member, Ys, kmcd);
 
-    // mass fraction is the input for this function?
+    // is mass fraction  the input for this function?
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
       [&](const ordinal_type& i) { Xc(i) = Ys(i) * Wmix / kmcd.sMass(i); });
   }
 };
-
+//converts species mole fraction to species mass fraction
+template<typename ValueType, typename DeviceType>
 struct MoleFractionToMassFraction
 {
   // Computes Mass fraction from Mole fraction
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using real_type = scalar_type;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type = TChem::KineticModelConstData<device_type>;
+
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const RealType1DViewType& Xc, /// mole fraction
+    const value_type_1d_view_type& Xc, /// mole fraction
     /// const input from kinetic model
-    const RealType1DViewType& Ys, // mass fraction
-    const KineticModelConstDataType& kmcd)
+    const value_type_1d_view_type& Ys, // mass fraction
+    const kinetic_model_type& kmcd)
   {
 
-    const real_type Wmix = MeanMolecularWeightXc::team_invoke(member, Xc, kmcd);
-
+    const value_type Wmix = MeanMolecularWeightXc<value_type,device_type>::team_invoke(member, Xc, kmcd);
     // mass fraction is the input for this function?
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
       [&](const ordinal_type& i) { Ys(i) = Xc(i) * kmcd.sMass(i) / Wmix; });
   }
 };

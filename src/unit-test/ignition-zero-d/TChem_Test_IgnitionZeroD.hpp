@@ -27,12 +27,20 @@ TEST(IgnitionZeroD, single)
   std::string exec="../../example/TChem_IgnitionZeroDSA.x";
   std::string prefixPath="../../example/data/ignition-zero-d/gri3.0/";
   std::string max_time_iterations="4";
-  std::string save="1";
+  std::string atol_newton="1e-18";
+  std::string rtol_newton="1e-8";
+  std::string tol_time="1e-8";
+  std::string dtmin="1e-20";
+  std::string dtmax="1e-3";
 
   std::string invoke=(exec +" "+
            "--inputsPath="+ prefixPath +" "+
            "--max-time-iterations=" + max_time_iterations +" "+
-           "--output_frequency=" + save);
+           "--atol_newton=" + atol_newton +" "+
+           "--rtol_newton=" + rtol_newton +" "+
+           "--tol_time=" +tol_time +" "+
+           "--dtmin=" + dtmin + " "+
+           "--dtmax=" + dtmax);
 
   const auto invoke_c_str = invoke.c_str();
   printf("testing : %s\n", invoke_c_str);

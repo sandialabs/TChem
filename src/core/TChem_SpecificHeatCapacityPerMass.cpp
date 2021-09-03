@@ -23,48 +23,50 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 
 namespace Impl {
-template<typename PolicyType,
-         typename RealType0DViewType,
-         typename RealType1DViewType,
-         typename RealType2DViewType,
-         typename KineticModelConstType>
+  template<typename PolicyType,
+           typename DeviceType>
 void
 SpecificHeatCapacityPerMass_TemplateRun( /// required template arguments
   const std::string& profile_name,
-  const RealType0DViewType& dummy_0d,
   /// team size setting
   const PolicyType& policy,
-  const RealType2DViewType& state,
+  const Tines::value_type_2d_view<real_type, DeviceType>& state,
   // outputFile
-  const RealType2DViewType& CpMass,
-  const RealType1DViewType& CpMixMass,
-  const KineticModelConstType& kmcd)
+  const Tines::value_type_2d_view<real_type, DeviceType>& CpMass,
+  const Tines::value_type_1d_view<real_type, DeviceType>& CpMixMass,
+  const KineticModelConstData<DeviceType >& kmcd)
 {
   Kokkos::Profiling::pushRegion(profile_name);
   using policy_type = PolicyType;
+  using device_type = DeviceType;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type, device_type>;
+
+  using CpMixMs = Impl::CpMixMs<real_type,device_type>;
 
   Kokkos::parallel_for(
     profile_name,
     policy,
     KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
       const ordinal_type i = member.league_rank();
-      const RealType1DViewType state_at_i =
+      const real_type_1d_view_type state_at_i =
         Kokkos::subview(state, i, Kokkos::ALL());
-      const RealType1DViewType CpMass_at_i =
+      const real_type_1d_view_type CpMass_at_i =
         Kokkos::subview(CpMass, i, Kokkos::ALL());
-      const RealType0DViewType CpMixMass_at_i = Kokkos::subview(CpMixMass, i);
+      const real_type_0d_view_type CpMixMass_at_i = Kokkos::subview(CpMixMass, i);
 
-      const Impl::StateVector<RealType1DViewType> sv_at_i(kmcd.nSpec,
+      const Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec,
                                                           state_at_i);
       TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                         "Error: input state vector is not valid");
       {
         const real_type t = sv_at_i.Temperature();
         const real_type p = sv_at_i.Pressure();
-        const RealType1DViewType Ys = sv_at_i.MassFractions();
+        const real_type_1d_view_type Ys = sv_at_i.MassFractions();
 
         CpMixMass_at_i() =
-          Impl::CpMixMs::team_invoke(member, t, Ys, CpMass_at_i, kmcd);
+          CpMixMs::team_invoke(member, t, Ys, CpMass_at_i, kmcd);
       }
     });
   Kokkos::Profiling::popRegion();
@@ -72,20 +74,20 @@ SpecificHeatCapacityPerMass_TemplateRun( /// required template arguments
 
 } // namespace Impl
 
+
 void
 SpecificHeatCapacityPerMass::runDeviceBatch( /// thread block size
   typename UseThisTeamPolicy<exec_space>::type& policy,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_2d_view& CpMass,
-  const real_type_1d_view& CpMixMass,
+  const real_type_2d_view_type& CpMass,
+  const real_type_1d_view_type& CpMixMass,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
 
   Impl::SpecificHeatCapacityPerMass_TemplateRun(
     "TChem::SpecificHeatCapacityPerMass::runDeviceBatch",
-    real_type_0d_view(),
     /// team policy
     policy,
     state,
@@ -97,17 +99,16 @@ SpecificHeatCapacityPerMass::runDeviceBatch( /// thread block size
 void
 SpecificHeatCapacityPerMass::runHostBatch( /// thread block size
   typename UseThisTeamPolicy<host_exec_space>::type& policy,
-  const real_type_2d_view_host& state,
+  const real_type_2d_view_host_type& state,
   /// output
-  const real_type_2d_view_host& CpMass,
-  const real_type_1d_view_host& CpMixMass,
+  const real_type_2d_view_host_type& CpMass,
+  const real_type_1d_view_host_type& CpMixMass,
   /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
+  const kinetic_model_host_type& kmcd)
 {
 
   Impl::SpecificHeatCapacityPerMass_TemplateRun(
     "TChem::SpecificHeatCapacityPerMass::runDeviceBatch",
-    real_type_0d_view_host(),
     /// team policy
     policy,
     state,

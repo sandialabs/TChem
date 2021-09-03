@@ -37,15 +37,15 @@ namespace TChem {
 void
 SurfaceRHS::runDeviceBatch( /// input
   const ordinal_type nBatch,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// input
-  const real_type_2d_view& zSurf,
+  const real_type_2d_view_type& zSurf,
   /// output
-  const real_type_2d_view& rhs,
+  const real_type_2d_view_type& rhs,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd,
+  const kinetic_model_type& kmcd,
   /// const data from kinetic model surface
-  const KineticSurfModelConstDataDevice& kmcdSurf)
+  const kinetic_surf_model_type& kmcdSurf)
 {
 
   Kokkos::Profiling::pushRegion("TChem::SurfaceRHS::runDeviceBatch");
@@ -54,7 +54,7 @@ SurfaceRHS::runDeviceBatch( /// input
   const ordinal_type level = 1;
   const ordinal_type per_team_extent = getWorkSpaceSize(kmcd, kmcdSurf);
   const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
 
   // policy_type policy(nBatch); // error
   policy_type policy(nBatch, Kokkos::AUTO()); // fine
@@ -65,13 +65,13 @@ SurfaceRHS::runDeviceBatch( /// input
     policy,
     KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
       const ordinal_type i = member.league_rank();
-      const real_type_1d_view state_at_i =
+      const real_type_1d_view_type state_at_i =
         Kokkos::subview(state, i, Kokkos::ALL());
-      const real_type_1d_view rhs_at_i = Kokkos::subview(rhs, i, Kokkos::ALL());
-      Scratch<real_type_1d_view> work(member.team_scratch(level),
+      const real_type_1d_view_type rhs_at_i = Kokkos::subview(rhs, i, Kokkos::ALL());
+      Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                       per_team_extent);
 
-      const Impl::StateVector<real_type_1d_view> sv_at_i(kmcd.nSpec,
+      const Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec,
                                                          state_at_i);
       TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                         "Error: input state vector is not valid");
@@ -79,10 +79,10 @@ SurfaceRHS::runDeviceBatch( /// input
         const real_type t = sv_at_i.Temperature();
         const real_type p = sv_at_i.Pressure();
         // const real_type density = sv_at_i.Density();
-        const real_type_1d_view Xc = sv_at_i.MassFractions();
+        const real_type_1d_view_type Xc = sv_at_i.MassFractions();
         // site fraction
-        const real_type_1d_view Zs = Kokkos::subview(zSurf, i, Kokkos::ALL());
-        Impl::SurfaceRHS ::team_invoke(
+        const real_type_1d_view_type Zs = Kokkos::subview(zSurf, i, Kokkos::ALL());
+        Impl::SurfaceRHS<real_type, device_type> ::team_invoke(
           member, t, Xc, Zs, p, rhs_at_i, work, kmcd, kmcdSurf);
       }
     });

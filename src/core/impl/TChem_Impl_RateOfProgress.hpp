@@ -22,6 +22,8 @@ Sandia National Laboratories, Livermore, CA, USA
 #define __TCHEM_IMPL_RATEOFPROGRESS_HPP__
 
 #include "TChem_Util.hpp"
+#include "TChem_KineticModelData.hpp"
+
 // #define TCHEM_ENABLE_SERIAL_TEST_OUTPUT
 namespace TChem {
 namespace Impl {
@@ -29,26 +31,37 @@ namespace Impl {
 ///
 /// ...
 ///
+template<typename ValueType, typename DeviceType>
 struct RateOfProgress
 {
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename OrdinalType1DViewType,
-           typename KineticModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+
+  using ordinary_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type = TChem::KineticModelConstData<device_type>;
+
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
     /// input
-    const RealType1DViewType& kfor,
-    const RealType1DViewType& krev,
-    const RealType1DViewType& concX,
+    const value_type_1d_view_type& kfor,
+    const value_type_1d_view_type& krev,
+    const value_type_1d_view_type& concX,
     /// output
-    const RealType1DViewType& ropFor,
-    const RealType1DViewType& ropRev,
+    const value_type_1d_view_type& ropFor,
+    const value_type_1d_view_type& ropRev,
     /// work
-    const OrdinalType1DViewType& irnus,
-    const OrdinalType1DViewType& iords,
+    const ordinary_type_1d_view_type& irnus,
+    const ordinary_type_1d_view_type& iords,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
     Kokkos::single(Kokkos::PerTeam(member), [&]() {
       /// compute iterators
@@ -69,9 +82,9 @@ struct RateOfProgress
     member.team_barrier();
 
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nReac), [&](const ordinal_type& i) {
-        real_type ropFor_at_i = kfor(i);
-        real_type ropRev_at_i = krev(i);
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac), [&](const ordinal_type& i) {
+        value_type ropFor_at_i = kfor(i);
+        value_type ropRev_at_i = krev(i);
 
         /// we compute only one case
         const ordinal_type irnu = irnus(i), iord = iords(i);
@@ -82,9 +95,9 @@ struct RateOfProgress
           /* compute forward rop */
           for (ordinal_type j = 0; j < kmcd.reacNreac(i); ++j) {
             const ordinal_type kspec = kmcd.reacSidx(i, j);
-            const real_type niup =
-              ats<real_type>::abs(kmcd.reacNuki(i, j));
-            ropFor_at_i *= ats<real_type>::pow(concX(kspec), niup);
+            const ordinal_type niup =
+              ats<ordinal_type>::abs(kmcd.reacNuki(i, j));
+            ropFor_at_i *= ats<value_type>::pow(concX(kspec), niup);
           }
 
           if (kmcd.isRev(i)) {
@@ -92,30 +105,34 @@ struct RateOfProgress
             const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
             for (ordinal_type j = 0; j < kmcd.reacNprod(i); ++j) {
               const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
-              const real_type nius = kmcd.reacNuki(i, j + joff);
-              ropRev_at_i *= ats<real_type>::pow(concX(kspec), nius);
+              const ordinal_type nius = kmcd.reacNuki(i, j + joff);
+              ropRev_at_i *= ats<value_type>::pow(concX(kspec), nius);
             }
           }
         }
 
         /* check for arbitrary order reaction */
         if (iord_flag) {
+          /* found arbitrary order -> need to recompute rop's */
           for (ordinal_type j = 0; j < kmcd.maxOrdPar; ++j) {
             const ordinal_type kspec =
-              ats<ordinal_type>::abs(kmcd.specAOidx(i, j)) - 1;
-            const real_type niu = kmcd.specAOval(i, j);
-#ifdef NONNEG
-            const real_type concX_value_at_kspec =
-              ats<real_type>::abs(concX(kspec));
+              ats<ordinal_type>::abs(kmcd.specAOidx(iord, j)) - 1;
+            const real_type niu = kmcd.specAOval(iord, j);
+
+#if defined(TCHEM_ENABLE_NO_NEG_CONCENTRATION_ARBITRARY_ORDER)
+            const value_type concX_value_at_kspec = concX(kspec) < 0 ?
+                   value_type(1e-20) : concX(kspec);
 #else
-                const real_type concX_value_at_kspec = concX(kspec);
+                const value_type concX_value_at_kspec = concX(kspec);
 #endif
-            if (kmcd.specAOidx(i, j) < 0) {
+            if (kmcd.specAOidx(iord, j) < 0) {
               const real_type niup = niu;
-              ropFor_at_i *= ats<real_type>::pow(concX_value_at_kspec, niup);
-            } else if (kmcd.specAOidx(i, j) > 0) {
+              ropFor_at_i *= ats<value_type>::pow(concX_value_at_kspec, niup);
+              // printf(" ropFor_at_i ireac %d niu %f isp %d \n", i, niu, kspec);
+            } else if (kmcd.specAOidx(iord, j) > 0 && (kmcd.isRev(i))) {
+              // printf(" ropRev_at_i ireac %d niu %f isp %d \n", i, niu, kspec );
               const real_type nius = niu;
-              ropRev_at_i *= ats<real_type>::pow(concX_value_at_kspec, nius);
+              ropRev_at_i *= ats<value_type>::pow(concX_value_at_kspec, nius);
             }
           } /* done if arbitrary order reaction */
         }
@@ -150,33 +167,33 @@ struct RateOfProgress
   }
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
+           typename WorkViewType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const RealType1DViewType& kfor,
-    const RealType1DViewType& krev,
-    const RealType1DViewType& concX,
+    const value_type_1d_view_type& kfor,
+    const value_type_1d_view_type& krev,
+    const value_type_1d_view_type& concX,
     /// output
-    const RealType1DViewType& ropFor,
-    const RealType1DViewType& ropRev,
+    const value_type_1d_view_type& ropFor,
+    const value_type_1d_view_type& ropRev,
     /// work
     const WorkViewType& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
     auto w = (ordinal_type*)work.data();
-    auto irnus =
-      Kokkos::View<ordinal_type*,
-                   Kokkos::LayoutRight,
-                   typename WorkViewType::memory_space>(w, kmcd.nReac);
+    // auto irnus =
+      // Kokkos::View<ordinal_type*,
+      //              Kokkos::LayoutRight,
+      //              typename WorkViewType::memory_space>(w, kmcd.nReac);
+    auto irnus = ordinary_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto iords =
-      Kokkos::View<ordinal_type*,
-                   Kokkos::LayoutRight,
-                   typename WorkViewType::memory_space>(w, kmcd.nReac);
+    auto iords = ordinary_type_1d_view_type(w, kmcd.nReac);
+    // auto iords =
+    //   Kokkos::View<ordinal_type*,
+    //                Kokkos::LayoutRight,
+    //                typename WorkViewType::memory_space>(w, kmcd.nReac);
     w += kmcd.nReac;
 
     team_invoke_detail(

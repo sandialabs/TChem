@@ -27,37 +27,49 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct SourceTermToyProblem
 {
 
-  ///
-  template<typename KineticModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+
+  using ordinary_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type= KineticModelConstData<device_type>;
+
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
     return 6 * kmcd.nReac;
   }
 
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename OrdinalType1DViewType,
-           typename KineticModelConstDataType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
     /// input
     const real_type& theta,
     const real_type& lambda,
-    const RealType1DViewType& concX,
+    const real_type_1d_view_type& concX,
     /// output
-    const RealType1DViewType& omega, /// (kmcd.nSpec)
-    const RealType1DViewType& kfor,
-    const RealType1DViewType& krev,
-    const RealType1DViewType& ropFor,
-    const RealType1DViewType& ropRev,
-    const OrdinalType1DViewType& iter,
+    const real_type_1d_view_type& omega, /// (kmcd.nSpec)
+    const real_type_1d_view_type& kfor,
+    const real_type_1d_view_type& krev,
+    const real_type_1d_view_type& ropFor,
+    const real_type_1d_view_type& ropRev,
+    const ordinary_type_1d_view_type& iter,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
+    // const real_type zero(0);
+    using RateOfProgress = RateOfProgress<real_type,device_type>;
+
 
     /// 1. compute forward and reverse rate constants
     {
@@ -93,7 +105,7 @@ struct SourceTermToyProblem
     /// 3. assemble reaction rates
     auto rop = ropFor;
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nReac), [&](const ordinal_type& i) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac), [&](const ordinal_type& i) {
         rop(i) -= ropRev(i);
         const real_type rop_at_i = rop(i);
         for (ordinal_type j = 0; j < kmcd.reacNreac(i); ++j) {
@@ -172,37 +184,33 @@ struct SourceTermToyProblem
 
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
+           typename WorkViewType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
     const real_type& theta,
     const real_type& lambda,
-    const RealType1DViewType& X, /// (kmcd.nSpec)
+    const real_type_1d_view_type& X, /// (kmcd.nSpec)
     /// output
-    const RealType1DViewType& omega, /// (kmcd.nSpec)
+    const real_type_1d_view_type& omega, /// (kmcd.nSpec)
     /// workspace
     const WorkViewType& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
 
     ///
     auto w = (real_type*)work.data();
-    auto kfor = RealType1DViewType(w, kmcd.nReac);
+    auto kfor = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto krev = RealType1DViewType(w, kmcd.nReac);
+    auto krev = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto ropFor = RealType1DViewType(w, kmcd.nReac);
+    auto ropFor = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto ropRev = RealType1DViewType(w, kmcd.nReac);
+    auto ropRev = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto iter = Kokkos::View<ordinal_type*,
-                             Kokkos::LayoutRight,
-                             typename WorkViewType::memory_space>(
-      (ordinal_type*)w, kmcd.nReac * 2);
+    auto iter = ordinary_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
+
     w += kmcd.nReac * 2;
 
     team_invoke_detail(member,

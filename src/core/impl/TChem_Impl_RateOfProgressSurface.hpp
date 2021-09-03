@@ -30,27 +30,39 @@ namespace Impl {
 ///
 /// ...
 ///
+template<typename ValueType, typename DeviceType>
 struct RateOfProgressSurface
 {
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename KineticSurfModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using real_type = scalar_type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
-    const real_type &t,
+    const value_type &t,
     /// input
-    const RealType1DViewType& kfor,
-    const RealType1DViewType& krev,
-    const RealType1DViewType& concX,
-    const RealType1DViewType& concXSurf,
+    const value_type_1d_view_type& kfor,
+    const value_type_1d_view_type& krev,
+    const value_type_1d_view_type& concX,
+    const value_type_1d_view_type& concXSurf,
     /// output
-    const RealType1DViewType& ropFor,
-    const RealType1DViewType& ropRev,
+    const value_type_1d_view_type& ropFor,
+    const value_type_1d_view_type& ropRev,
     // work
-    const RealType1DViewType& CoverageFactor,
+    const value_type_1d_view_type& CoverageFactor,
     /// const input from kinetic model
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_surf_model_type& kmcdSurf)
   {
+
+    using SurfaceCoverageModification = SurfaceCoverageModification<value_type, device_type>;
 
     SurfaceCoverageModification::team_invoke(member,
     t, concX, concXSurf, CoverageFactor, kmcdSurf);
@@ -58,10 +70,10 @@ struct RateOfProgressSurface
     member.team_barrier();
 
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcdSurf.nReac),
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.nReac),
       [&](const ordinal_type& i) {
-        real_type ropFor_at_i = kfor(i)*CoverageFactor(i);
-        real_type ropRev_at_i = krev(i)*CoverageFactor(i);
+        value_type ropFor_at_i = kfor(i)*CoverageFactor(i);
+        value_type ropRev_at_i = krev(i)*CoverageFactor(i);
 
         /* compute forward rop */
         for (ordinal_type j = 0; j < kmcdSurf.reacNreac(i); ++j) {
@@ -69,9 +81,9 @@ struct RateOfProgressSurface
           const ordinal_type niup =
             ats<ordinal_type>::abs(kmcdSurf.reacNuki(i, j)); // st coef
           if (kmcdSurf.reacSsrf(i, j) == 1) {                // surface
-            ropFor_at_i *= ats<real_type>::pow(concXSurf(kspec), niup);
+            ropFor_at_i *= ats<value_type>::pow(concXSurf(kspec), niup);
           } else { // gas
-            ropFor_at_i *= ats<real_type>::pow(concX(kspec), niup);
+            ropFor_at_i *= ats<value_type>::pow(concX(kspec), niup);
           }
         }
 
@@ -86,9 +98,9 @@ struct RateOfProgressSurface
               ats<ordinal_type>::abs(kmcdSurf.reacNuki(i, j + joff)); // st coef
 
             if (kmcdSurf.reacSsrf(i, j + joff) == 1) { // surface
-              ropRev_at_i *= ats<real_type>::pow(concXSurf(kspec), nius);
+              ropRev_at_i *= ats<value_type>::pow(concXSurf(kspec), nius);
             } else { // gas
-              ropRev_at_i *= ats<real_type>::pow(concX(kspec), nius);
+              ropRev_at_i *= ats<value_type>::pow(concX(kspec), nius);
             }
           }
         }
@@ -123,28 +135,26 @@ struct RateOfProgressSurface
   }
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename KineticSurfModelConstDataType>
+           typename WorkViewType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     const real_type &t,
     /// input
-    const RealType1DViewType& kfor,
-    const RealType1DViewType& krev,
-    const RealType1DViewType& concX,
-    const RealType1DViewType& concXSurf,
+    const real_type_1d_view_type& kfor,
+    const real_type_1d_view_type& krev,
+    const real_type_1d_view_type& concX,
+    const real_type_1d_view_type& concXSurf,
     /// output
-    const RealType1DViewType& ropFor,
-    const RealType1DViewType& ropRev,
+    const real_type_1d_view_type& ropFor,
+    const real_type_1d_view_type& ropRev,
     /// work
     const WorkViewType& work,
     /// const input from kinetic model
-    const KineticSurfModelConstDataType& kmcd)
+    const kinetic_surf_model_type& kmcd)
   {
 
     auto w = (real_type*)work.data();
-    auto CoverageFactor = RealType1DViewType(w, kmcd.nReac);
+    auto CoverageFactor = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
 
     team_invoke_detail(

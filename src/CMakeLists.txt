@@ -36,11 +36,18 @@ OPTION(TCHEM_ENABLE_DEBUG "Flag to enable TChem debug flag" OFF)
 OPTION(TCHEM_ENABLE_PYTHON "Flag to enable python binding" OFF)
 OPTION(TCHEM_ENABLE_FORTRAN "Flag to enable fortran binding" OFF)
 
+OPTION(TCHEM_ENABLE_NO_NEG_CONCENTRATION_ARBITRARY_ORDER "Flag to enable no negative values of concentration only in arbitrary-order reactions" OFF)
 OPTION(TCHEM_ENABLE_PROBLEMS_NUMERICAL_JACOBIAN "Flag to enable numerical jacobian" OFF)
 OPTION(TCHEM_ENABLE_NEWTONSOLVER_USE_WRMS_NORMS "Flag to enable newton solver to use wrms norms" ON)
 OPTION(TCHEM_ENABLE_TRBDF2_USE_WRMS_NORMS "Flag to enable time integrator to use wrms norms" ON)
+OPTION(TCHEM_ENABLE_SACADO_JACOBIAN_PLUG_FLOW_REACTOR "Flag to enable sacado jacobian for plug flow reactor" OFF)
+OPTION(TCHEM_ENABLE_SACADO_JACOBIAN_IGNITION_ZERO_D_REACTOR "Flag to enable sacado jacobian for ignition zero D reactor" OFF)
+OPTION(TCHEM_ENABLE_SACADO_JACOBIAN_CONSTANT_VOLUME_IGNITION_REACTOR "Flag to enable sacado jacobian for constant volume ignition reactor" OFF)
+OPTION(TCHEM_ENABLE_SACADO_JACOBIAN_TRANSIENT_CONT_STIRRED_TANK_REACTOR "Flag to enable sacado jacobian for  transient cont stirred tank reactor" OFF)
+OPTION(TCHEM_ENABLE_NUMERICAL_JACOBIAN_IGNITION_ZERO_D_REACTOR "Flag to enable numerical jacobian for ignition zero D reactor" OFF)
+OPTION(TCHEM_ENABLE_SACADO_JACOBIAN_ATMOSPHERIC_CHEMISTRY "Flag to enable sacado jacobian for atmospheric chemistry" OFF)
 
-OPTION(TCHEM_ENABLE_PROBLEM_DAE_CSTR "Flag to enable DAE solver in CSTR" OFF)
+OPTION(TCHEM_CSTR_ALLOW_NEGATIVE_MASS_FLOW_OUTLET "Flag to allow negative values for mass flow at outlet in CSTR " OFF)
 
 OPTION(KOKKOS_INSTALL_PATH "Path to Kokkos installation")
 OPTION(TINES_INSTALL_PATH "Path to Tines installation")
@@ -50,8 +57,16 @@ INCLUDE_DIRECTORIES(${TChem_BINARY_DIR})
 
 # Fortran
 IF (TCHEM_ENABLE_FORTRAN)
-  ENABLE_LANGUAGE(Fortran)  
+  ENABLE_LANGUAGE(Fortran)
 ENDIF()
+
+# TChem
+IF (TCHEM_ENABLE_PYTHON)
+  SET(TCHEM_ENABLE_SHARED_BUILD ON)
+ELSE()
+  SET(TCHEM_ENABLE_SHARED_BUILD OFF)
+ENDIF()
+
 
 # TChem link libraries for tests
 SET(TCHEM_LINK_LIBRARIES tchem)

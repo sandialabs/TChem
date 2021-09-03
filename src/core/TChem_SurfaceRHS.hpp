@@ -29,45 +29,43 @@ namespace TChem {
 
 struct SurfaceRHS
 {
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+
+
+
+  template<typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const KineticModelConstData<DeviceType >& kmcd,
+    const KineticSurfModelConstData<DeviceType>& kmcdSurf)
   {
     // work for surface reactions
+    using device_type = DeviceType;
+    using ReactionRatesSurface = Impl::ReactionRatesSurface<real_type,device_type>;
+
     const ordinal_type per_team_extent =
-      Impl::ReactionRatesSurface::getWorkSpaceSize(kmcd, kmcdSurf);
+      ReactionRatesSurface::getWorkSpaceSize(kmcd, kmcdSurf);
 
     return (per_team_extent + kmcd.nSpec + kmcdSurf.nSpec);
   }
 
-  static void runHostBatch( /// input
-    const ordinal_type nBatch,
-    const real_type_2d_view_host& state,
-    /// input
-    const real_type_2d_view_host& zSurf,
-    // prf aditional variable
-    const real_type_2d_view_host& velocity,
-    /// output
-    const real_type_2d_view_host& rhs,
-    /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd,
-    /// const data from kinetic model surface
-    const KineticSurfModelConstDataHost& kmcdSurf);
-
   static void runDeviceBatch( /// input
     const ordinal_type nBatch,
     /// input gas state
-    const real_type_2d_view& state,
+    const real_type_2d_view_type& state,
     /// surface state
-    const real_type_2d_view& zSurf,
+    const real_type_2d_view_type& zSurf,
     /// output
-    const real_type_2d_view& rhs,
+    const real_type_2d_view_type& rhs,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
+    const kinetic_model_type& kmcd,
     /// const data from kinetic model surface
-    const KineticSurfModelConstDataDevice& kmcdSurf);
+    const kinetic_surf_model_type& kmcdSurf);
 };
 
 } // namespace TChem

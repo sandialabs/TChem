@@ -34,6 +34,7 @@ main(int argc, char* argv[])
 {
 
   /// default inputs
+    #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
 
 
   std::string prefixPath("data/reaction-rates-surfaces/PT/");
@@ -50,6 +51,7 @@ main(int argc, char* argv[])
   int nBatch(1);
   bool verbose(true);
   bool useYaml(true);
+  bool use_sample_format(false);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
@@ -106,11 +108,13 @@ main(int argc, char* argv[])
       kmdSurf = TChem::KineticModelData(chemFile, thermFile, chemSurfFile, thermSurfFile);
     }
 
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
     const auto kmcd =
       kmdSurf
-        .createConstData<TChem::exec_space>(); // data struc with gas phase info
+        .createConstData<device_type>(); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<TChem::exec_space>(); // data struc with
+      kmdSurf.createConstSurfData<device_type>(); // data struc with
                                                         // surface phase info
 
     /// input: state vectors: temperature, pressure and mass fraction
@@ -131,25 +135,24 @@ main(int argc, char* argv[])
     real_type_2d_view_host state_host;
     real_type_2d_view_host siteFraction_host;
 
-
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
 
-    const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
-    Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
 
-    // get names of species on host
-    const auto SurfSpeciesNamesHost =
-      Kokkos::create_mirror_view(kmcdSurf.speciesNames);
-    Kokkos::deep_copy(SurfSpeciesNamesHost, kmcdSurf.speciesNames);
-
-    {
-      // get names of species on host
+    if (use_sample_format){
+      // read gas
+      const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
+      Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
 
       // get species molecular weigths
       const auto SpeciesMolecularWeights =
         Kokkos::create_mirror_view(kmcd.sMass);
       Kokkos::deep_copy(SpeciesMolecularWeights, kmcd.sMass);
+
+      // get names of species on host
+      const auto SurfSpeciesNamesHost =
+        Kokkos::create_mirror_view(kmcdSurf.speciesNames);
+      Kokkos::deep_copy(SurfSpeciesNamesHost, kmcdSurf.speciesNames);
 
       TChem::Test::readSample(inputFile,
                               speciesNamesHost,
@@ -158,7 +161,7 @@ main(int argc, char* argv[])
                               stateVecDim,
                               state_host,
                               nBatch);
-
+      //
       TChem::Test::readSurfaceSample(inputFileSurf,
                                      SurfSpeciesNamesHost,
                                      kmcdSurf.nSpec,
@@ -167,6 +170,18 @@ main(int argc, char* argv[])
 
       if (state_host.extent(0) != siteFraction_host.extent(0) )
         std::logic_error("Error: number of sample is not valid");
+
+    } else{
+      state_host = real_type_2d_view_host("state vector host", nBatch, stateVecDim);
+      auto state_host_at_0 = Kokkos::subview(state_host, 0, Kokkos::ALL());
+      TChem::Test::readStateVector(inputFile, kmcd.nSpec, state_host_at_0);
+      TChem::Test::cloneView(state_host);
+
+      siteFraction_host = real_type_2d_view_host("state vector host", nBatch, kmcdSurf.nSpec);
+      auto siteFraction_host_at_0 = Kokkos::subview(siteFraction_host, 0, Kokkos::ALL());
+      TChem::Test::readSiteFraction(inputFileSurf, kmcdSurf.nSpec, siteFraction_host_at_0);
+      TChem::Test::cloneView(siteFraction_host);
+
     }
 
     Kokkos::Impl::Timer timer;
@@ -230,6 +245,10 @@ main(int argc, char* argv[])
     printf("Done \n");
   }
   Kokkos::finalize();
+
+  #else
+   printf("This example requires Yaml ...\n" );
+  #endif
 
   return 0;
 }

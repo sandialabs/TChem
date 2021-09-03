@@ -19,7 +19,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
 #include "TChem_Util.hpp"
-
 #include "TChem_IgnitionZeroD.hpp"
 
 /// tadv - an input structure for time marching
@@ -33,327 +32,275 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 
   template<typename PolicyType,
-         typename TimeAdvance1DViewType,
-         typename RealType0DViewType,
-         typename RealType1DViewType,
-         typename RealType2DViewType,
-	 typename KineticModelConstViewType>
-void
-IgnitionZeroD_TemplateRunModelVariation( /// required template arguments
-  const std::string& profile_name,
-  const RealType0DViewType& dummy_0d,
-  /// team size setting
-  const PolicyType& policy,
-  /// input
-  const RealType1DViewType& tol_newton,
-  const RealType2DViewType& tol_time,
-  const RealType2DViewType& fac,
-  const TimeAdvance1DViewType& tadv,
-  const RealType2DViewType& state,
-  /// output
-  const RealType1DViewType& t_out,
-  const RealType1DViewType& dt_out,
-  const RealType2DViewType& state_out,
-  /// const data from kinetic model
-  const KineticModelConstViewType& kmcds)
-{
-  Kokkos::Profiling::pushRegion(profile_name);
-  using policy_type = PolicyType;
+           typename ValueType,
+           typename DeviceType>
+  void
+  IgnitionZeroD_TemplateRunModelVariation( /// required template arguments
+                                          const std::string& profile_name,
+                                          const ValueType& dummyValueType,
+                                          /// team size setting
+                                          const PolicyType& policy,
 
-  auto kmcd_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(),
-						       Kokkos::subview(kmcds, 0));
-  
-  const ordinal_type level = 1;
-  const ordinal_type per_team_extent = IgnitionZeroD::getWorkSpaceSize(kmcd_host());
+                                          /// input
+                                          const Tines::value_type_1d_view<real_type, DeviceType>& tol_newton,
+                                          const Tines::value_type_2d_view<real_type, DeviceType>& tol_time,
+                                          const Tines::value_type_2d_view<real_type, DeviceType>& fac,
+                                          const Tines::value_type_1d_view<time_advance_type, DeviceType>& tadv,
+                                          const Tines::value_type_2d_view<real_type, DeviceType>& state,
+                                          /// output
+                                          const Tines::value_type_1d_view<real_type, DeviceType>& t_out,
+                                          const Tines::value_type_1d_view<real_type, DeviceType>& dt_out,
+                                          const Tines::value_type_2d_view<real_type, DeviceType>& state_out,
+                                          /// const data from kinetic model
+                                          const Kokkos::View<KineticModelConstData<DeviceType >*,DeviceType>& kmcds);
 
-  Kokkos::parallel_for(
-    profile_name,
-    policy,
-    KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
-      const ordinal_type i = member.league_rank();
-      const auto kmcd_at_i = (kmcds.extent(0) == 1 ? kmcds(0) : kmcds(i));
-      const RealType1DViewType fac_at_i =
-        Kokkos::subview(fac, i, Kokkos::ALL());
-      const auto tadv_at_i = tadv(i);
-      const real_type t_end = tadv_at_i._tend;
-      const RealType0DViewType t_out_at_i = Kokkos::subview(t_out, i);
-      if (t_out_at_i() < t_end) {
-      const RealType1DViewType state_at_i =
-        Kokkos::subview(state, i, Kokkos::ALL());
-      const RealType1DViewType state_out_at_i =
-        Kokkos::subview(state_out, i, Kokkos::ALL());
-
-      const RealType0DViewType dt_out_at_i = Kokkos::subview(dt_out, i);
-      Scratch<RealType1DViewType> work(member.team_scratch(level),
-                                       per_team_extent);
-
-      Impl::StateVector<RealType1DViewType> sv_at_i(kmcd_at_i.nSpec, state_at_i);
-      Impl::StateVector<RealType1DViewType> sv_out_at_i(kmcd_at_i.nSpec,
-                                                        state_out_at_i);
-      TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
-                        "Error: input state vector is not valid");
-      TCHEM_CHECK_ERROR(!sv_out_at_i.isValid(),
-                        "Error: input state vector is not valid");
-      {
-        const ordinal_type max_num_newton_iterations =
-          tadv_at_i._max_num_newton_iterations;
-        const ordinal_type max_num_time_iterations =
-          tadv_at_i._num_time_iterations_per_interval;
-
-        const real_type dt_in = tadv_at_i._dt, dt_min = tadv_at_i._dtmin,
-                        dt_max = tadv_at_i._dtmax;
-	const real_type t_beg = tadv_at_i._tbeg;
-	
-        const auto temperature = sv_at_i.Temperature();
-        const auto pressure = sv_at_i.Pressure();
-        const auto Ys = sv_at_i.MassFractions();
-
-        const RealType0DViewType temperature_out(sv_out_at_i.TemperaturePtr());
-        const RealType0DViewType pressure_out(sv_out_at_i.PressurePtr());
-        const RealType1DViewType Ys_out = sv_out_at_i.MassFractions();
-        const RealType0DViewType density_out(sv_at_i.DensityPtr());
-
-        const ordinal_type m = Impl::IgnitionZeroD_Problem<
-	  typename KineticModelConstViewType::non_const_value_type
-	  >::getNumberOfEquations(kmcd_at_i);
-        auto wptr = work.data();
-        const RealType1DViewType vals(wptr, m);
-        wptr += m;
-        const RealType1DViewType ww(wptr,
-                                    work.extent(0) - (wptr - work.data()));
-
-        /// we can only guarantee vals is contiguous array. we basically assume
-        /// that a state vector can be arbitrary ordered.
-
-        /// m is nSpec + 1
-        Kokkos::parallel_for(Kokkos::TeamVectorRange(member, m),
-                             [&](const ordinal_type& i) {
-                               vals(i) = i == 0 ? temperature : Ys(i - 1);
-                             });
-        member.team_barrier();
-
-        Impl::IgnitionZeroD ::team_invoke(member,
-                                          max_num_newton_iterations,
-                                          max_num_time_iterations,
-                                          tol_newton,
-                                          tol_time,
-                                          fac_at_i,
-                                          dt_in,
-                                          dt_min,
-                                          dt_max,
-                                          t_beg,
-                                          t_end,
-                                          pressure,
-                                          vals,
-                                          t_out_at_i,
-                                          dt_out_at_i,
-                                          pressure_out,
-                                          vals,
-                                          ww,
-                                          kmcd_at_i);
-
-        member.team_barrier();
-        Kokkos::parallel_for(Kokkos::TeamVectorRange(member, m),
-                             [&](const ordinal_type& i) {
-                               if (i == 0) {
-                                 temperature_out() = vals(0);
-                               } else {
-                                 Ys_out(i - 1) = vals(i);
-                               }
-                             });
-        member.team_barrier();
-        density_out() = Impl::RhoMixMs::team_invoke(member, temperature_out(),
-                                                    pressure_out(), Ys_out, kmcd_at_i);
-        member.team_barrier();
-      }
-      }
-    });
-  Kokkos::Profiling::popRegion();
-}
-
-template<typename PolicyType,
-         typename TimeAdvance1DViewType,
-         typename RealType0DViewType,
-         typename RealType1DViewType,
-         typename RealType2DViewType,
-         typename KineticModelConstType>
-void
-IgnitionZeroD_TemplateRun( /// required template arguments
-  const std::string& profile_name,
-  const RealType0DViewType& dummy_0d,
-  /// team size setting
-  const PolicyType& policy,
-  /// input
-  const RealType1DViewType& tol_newton,
-  const RealType2DViewType& tol_time,
-  const RealType2DViewType& fac,
-  const TimeAdvance1DViewType& tadv,
-  const RealType2DViewType& state,
-  /// output
-  const RealType1DViewType& t_out,
-  const RealType1DViewType& dt_out,
-  const RealType2DViewType& state_out,
-  /// const data from kinetic model
-  const KineticModelConstType& kmcd)
-{
-  Kokkos::Profiling::pushRegion(profile_name);
-  using policy_type = PolicyType;
-  using space_type = typename policy_type::execution_space;
-  Kokkos::View<KineticModelConstType*,space_type>
-    kmcds(do_not_init_tag("IgnitionaZeroD::kmcds"), 1);
-  Kokkos::deep_copy(kmcds, kmcd);
-  
-  IgnitionZeroD_TemplateRunModelVariation
-    (profile_name,
-     dummy_0d,
-     policy,
-     tol_newton, tol_time,
-     fac,
-     tadv, state,
-     t_out, dt_out, state_out, kmcds);
-
-  Kokkos::Profiling::popRegion();
-}
-
-void
-IgnitionZeroD::runHostBatch( /// input
-  typename UseThisTeamPolicy<host_exec_space>::type& policy,
-  const real_type_1d_view_host& tol_newton,
-  const real_type_2d_view_host& tol_time,
-  const real_type_2d_view_host& fac,
-  const time_advance_type_1d_view_host& tadv,
-  const real_type_2d_view_host& state,
-  /// output
-  const real_type_1d_view_host& t_out,
-  const real_type_1d_view_host& dt_out,
-  const real_type_2d_view_host& state_out,
-  /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
-{
-  IgnitionZeroD_TemplateRun( /// template arguments deduction
-    "TChem::IgnitionZeroD::runHostBatch::kmcd",
-    real_type_0d_view_host(),
-    /// team policy
-    policy,
-    /// input
-    tol_newton,
-    tol_time,
-    fac,
-    tadv,
-    state,
-    /// output
-    t_out,
-    dt_out,
-    state_out,
-    /// const data of kinetic model
-    kmcd);
-}
-
-void
-IgnitionZeroD::runDeviceBatch( /// thread block size
-  typename UseThisTeamPolicy<exec_space>::type& policy,
-  /// input
-  const real_type_1d_view& tol_newton,
-  const real_type_2d_view& tol_time,
-  const real_type_2d_view& fac,
-  const time_advance_type_1d_view& tadv,
-  const real_type_2d_view& state,
-  /// output
-  const real_type_1d_view& t_out,
-  const real_type_1d_view& dt_out,
-  const real_type_2d_view& state_out,
-  /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
-{
-  IgnitionZeroD_TemplateRun( /// template arguments deduction
-    "TChem::IgnitionZeroD::runHostBatch::kmcd",
-    real_type_0d_view(),
-    /// team policy
-    policy,
-    /// input
-    tol_newton,
-    tol_time,
-    fac,
-    tadv,
-    state,
-    /// output
-    t_out,
-    dt_out,
-    state_out,
-    /// const data of kinetic model
-    kmcd);
-}
+#define TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION()     \
+    IgnitionZeroD_TemplateRunModelVariation(                    \
+                                            profile_name,       \
+                                            value_type(),       \
+                                            policy,             \
+                                            tol_newton,         \
+                                            tol_time,           \
+                                            fac,                \
+                                            tadv,               \
+                                            state,              \
+                                            t_out,              \
+                                            dt_out,             \
+                                            state_out,          \
+                                            kmcds)
 
 
+  template<typename PolicyType,
+           typename ValueType,
+           typename DeviceType>
+  void
+  IgnitionZeroD_TemplateRun( /// required template arguments
+                            const std::string& profile_name,
+                            const ValueType& dummyValueType,
+                            /// team size setting
+                            const PolicyType& policy,
 
-void
-IgnitionZeroD::runHostBatch( /// input
-  typename UseThisTeamPolicy<host_exec_space>::type& policy,
-  const real_type_1d_view_host& tol_newton,
-  const real_type_2d_view_host& tol_time,
-  const real_type_2d_view_host& fac,
-  const time_advance_type_1d_view_host& tadv,
-  const real_type_2d_view_host& state,
-  /// output
-  const real_type_1d_view_host& t_out,
-  const real_type_1d_view_host& dt_out,
-  const real_type_2d_view_host& state_out,
-  /// const data from kinetic model
-  const Kokkos::View<KineticModelConstDataHost*,host_exec_space>& kmcds)
-{
-  IgnitionZeroD_TemplateRunModelVariation( /// template arguments deduction
-    "TChem::IgnitionZeroD::runHostBatch::kmcd array",
-    real_type_0d_view_host(),
-    /// team policy
-    policy,
-    /// input
-    tol_newton,
-    tol_time,
-    fac,
-    tadv,
-    state,
-    /// output
-    t_out,
-    dt_out,
-    state_out,
-    /// const data of kinetic model
-    kmcds);
-}
+                            /// input
+                            const Tines::value_type_1d_view<real_type, DeviceType>& tol_newton,
+                            const Tines::value_type_2d_view<real_type, DeviceType>& tol_time,
+                            const Tines::value_type_2d_view<real_type, DeviceType>& fac,
+                            const Tines::value_type_1d_view<time_advance_type, DeviceType>& tadv,
+                            const Tines::value_type_2d_view<real_type, DeviceType>& state,
+                            /// output
+                            const Tines::value_type_1d_view<real_type, DeviceType>& t_out,
+                            const Tines::value_type_1d_view<real_type, DeviceType>& dt_out,
+                            const Tines::value_type_2d_view<real_type, DeviceType>& state_out,
+                            /// const data from kinetic model
+                            const KineticModelConstData<DeviceType>& kmcd);
 
-void
-IgnitionZeroD::runDeviceBatch( /// thread block size
-  typename UseThisTeamPolicy<exec_space>::type& policy,
-  /// input
-  const real_type_1d_view& tol_newton,
-  const real_type_2d_view& tol_time,
-  const real_type_2d_view& fac,
-  const time_advance_type_1d_view& tadv,
-  const real_type_2d_view& state,
-  /// output
-  const real_type_1d_view& t_out,
-  const real_type_1d_view& dt_out,
-  const real_type_2d_view& state_out,
-  /// const data from kinetic model
-  const Kokkos::View<KineticModelConstDataDevice*,exec_space>& kmcds)
-{
-  IgnitionZeroD_TemplateRunModelVariation( /// template arguments deduction
-    "TChem::IgnitionZeroD::runHostBatch::kmcd array",
-    real_type_0d_view(),
-    /// team policy
-    policy,
-    /// input
-    tol_newton,
-    tol_time,
-    fac,
-    tadv,
-    state,
-    /// output
-    t_out,
-    dt_out,
-    state_out,
-    /// const data of kinetic model
-    kmcds);
-}
+#define TCHEM_RUN_IGNITION_ZERO_D_REACTOR()     \
+    IgnitionZeroD_TemplateRun(                  \
+                              profile_name,     \
+                              value_type(),     \
+                              policy,           \
+                              tol_newton,       \
+                              tol_time,         \
+                              fac,              \
+                              tadv,             \
+                              state,            \
+                              t_out,            \
+                              dt_out,           \
+                              state_out,        \
+                              kmcd)
 
+  void
+  IgnitionZeroD::runDeviceBatch( /// thread block size
+                                typename UseThisTeamPolicy<exec_space>::type& policy,
+                                /// input
+                                const real_type_1d_view& tol_newton,
+                                const real_type_2d_view& tol_time,
+                                /// sample specific input
+                                const real_type_2d_view& fac,
+                                const time_advance_type_1d_view& tadv,
+                                const real_type_2d_view& state,
+                                /// output
+                                const real_type_1d_view& t_out,
+                                const real_type_1d_view& dt_out,
+                                const real_type_2d_view& state_out,
+                                /// const data from kinetic model
+                                const KineticModelConstData<interf_device_type >& kmcd)
+  {
+    const std::string profile_name = "TChem::IgnitionZeroD::runDeviceBatch::kmcd";
+
+#if defined(TCHEM_ENABLE_SACADO_JACOBIAN_IGNITION_ZERO_D_REACTOR)
+    using problem_type = Impl::IgnitionZeroD_Problem<real_type, interf_device_type>;
+    const ordinal_type m = problem_type::getNumberOfEquations(kmcd);
+
+    if (m < 16) {
+      using value_type = Sacado::Fad::SLFad<real_type,16>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 32) {
+      using value_type = Sacado::Fad::SLFad<real_type,32>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 64) {
+      using value_type = Sacado::Fad::SLFad<real_type,64>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 128) {
+      using value_type = Sacado::Fad::SLFad<real_type,128>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 256) {
+      using value_type = Sacado::Fad::SLFad<real_type,256>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 512) {
+      using value_type = Sacado::Fad::SLFad<real_type,512>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if (m < 1024){
+      using value_type = Sacado::Fad::SLFad<real_type,1024>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else{
+      TCHEM_CHECK_ERROR(0,
+                        "Error: Number of equations is bigger than size of sacado fad type");
+    }
+#else
+    using value_type = real_type;
+    TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+#endif
+  }
+
+  void
+  IgnitionZeroD::runHostBatch( /// input
+                              typename UseThisTeamPolicy<host_exec_space>::type& policy,
+                              const real_type_1d_view_host& tol_newton,
+                              const real_type_2d_view_host& tol_time,
+                              const real_type_2d_view_host& fac,
+                              const time_advance_type_1d_view_host& tadv,
+                              const real_type_2d_view_host& state,
+                              /// output
+                              const real_type_1d_view_host& t_out,
+                              const real_type_1d_view_host& dt_out,
+                              const real_type_2d_view_host& state_out,
+                              /// const data from kinetic model
+                              const KineticModelConstData<interf_host_device_type>& kmcd)
+  {
+    const std::string profile_name = "TChem::IgnitionZeroD::runHostBatch::kmcd";
+#if defined(TCHEM_ENABLE_SACADO_JACOBIAN_IGNITION_ZERO_D_REACTOR)
+    using problem_type = Impl::IgnitionZeroD_Problem<real_type, interf_host_device_type>;
+    const ordinal_type m = problem_type::getNumberOfEquations(kmcd);
+
+    if (m < 16) {
+      using value_type = Sacado::Fad::SLFad<real_type,16>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 32) {
+      using value_type = Sacado::Fad::SLFad<real_type,32>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 64) {
+      using value_type = Sacado::Fad::SLFad<real_type,64>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 128) {
+      using value_type = Sacado::Fad::SLFad<real_type,128>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 256) {
+      using value_type = Sacado::Fad::SLFad<real_type,256>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if  (m < 512) {
+      using value_type = Sacado::Fad::SLFad<real_type,512>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else if (m < 1024){
+      using value_type = Sacado::Fad::SLFad<real_type,1024>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+    } else{
+      TCHEM_CHECK_ERROR(0,
+                        "Error: Number of equations is bigger than size of sacado fad type");
+    }
+#else
+    using value_type = real_type;
+    TCHEM_RUN_IGNITION_ZERO_D_REACTOR();
+#endif
+  }
+
+  void
+  IgnitionZeroD::runDeviceBatch( /// thread block size
+                                typename UseThisTeamPolicy<exec_space>::type& policy,
+                                /// input
+                                const real_type_1d_view& tol_newton,
+                                const real_type_2d_view& tol_time,
+                                const real_type_2d_view& fac,
+                                const time_advance_type_1d_view& tadv,
+                                const real_type_2d_view& state,
+                                /// output
+                                const real_type_1d_view& t_out,
+                                const real_type_1d_view& dt_out,
+                                const real_type_2d_view& state_out,
+                                /// const data from kinetic model
+                                const Kokkos::View<KineticModelConstData<interf_device_type>*,interf_device_type>& kmcds)
+  {
+    const std::string profile_name = "TChem::IgnitionZeroD::runDeviceBatch::kmcd array";
+
+#if defined(TCHEM_ENABLE_SACADO_JACOBIAN_IGNITION_ZERO_D_REACTOR)
+    using problem_type = Impl::IgnitionZeroD_Problem<real_type, interf_device_type>;
+    const ordinal_type m = problem_type::getNumberOfEquations(kmcds(0));
+
+    if (m < 128) {
+      using value_type = Sacado::Fad::SLFad<real_type,128>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+    } else if  (m < 256) {
+      using value_type = Sacado::Fad::SLFad<real_type,256>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+    } else if  (m < 512) {
+      using value_type = Sacado::Fad::SLFad<real_type,512>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+    } else if (m < 1024){
+      using value_type = Sacado::Fad::SLFad<real_type,1024>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+    } else{
+      TCHEM_CHECK_ERROR(0,
+                        "Error: Number of equations is bigger than size of sacado fad type");
+    }
+#else
+    using value_type = real_type;
+    TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+#endif
+
+  }
+
+  void
+  IgnitionZeroD::runHostBatch( /// thread block size
+                              typename UseThisTeamPolicy<host_exec_space>::type& policy,
+                              /// input
+                              const real_type_1d_view_host& tol_newton,
+                              const real_type_2d_view_host& tol_time,
+                              const real_type_2d_view_host& fac,
+                              const time_advance_type_1d_view_host& tadv,
+                              const real_type_2d_view_host& state,
+                              /// output
+                              const real_type_1d_view_host& t_out,
+                              const real_type_1d_view_host& dt_out,
+                              const real_type_2d_view_host& state_out,
+                              /// const data from kinetic model
+                              const Kokkos::View<KineticModelConstData<interf_host_device_type>*,interf_host_device_type>& kmcds)
+  {
+    const std::string profile_name = "TChem::IgnitionZeroD::runHostBatch::kmcd array";
+
+#if defined(TCHEM_ENABLE_SACADO_JACOBIAN_IGNITION_ZERO_D_REACTOR)
+    using problem_type = Impl::IgnitionZeroD_Problem<real_type, interf_host_device_type>;
+    const ordinal_type m = problem_type::getNumberOfEquations(kmcds(0));
+
+    if (m < 128) {
+      using value_type = Sacado::Fad::SLFad<real_type,128>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+    } else if  (m < 256) {
+      using value_type = Sacado::Fad::SLFad<real_type,256>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+    } else if  (m < 512) {
+      using value_type = Sacado::Fad::SLFad<real_type,512>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+    } else if (m < 1024){
+      using value_type = Sacado::Fad::SLFad<real_type,1024>;
+      TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+    } else{
+      TCHEM_CHECK_ERROR(0,
+                        "Error: Number of equations is bigger than size of sacado fad type");
+    }
+#else
+    using value_type = real_type;
+    TCHEM_RUN_IGNITION_ZERO_D_REACTOR_MODEL_VARIATION();
+#endif
+
+  }
 
 } // namespace TChem

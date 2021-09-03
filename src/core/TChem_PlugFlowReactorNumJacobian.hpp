@@ -32,16 +32,30 @@ namespace TChem {
 struct PlugFlowReactorNumJacobian
 {
 
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename PlugFlowReactorConstDataType>
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+  using real_type_3d_view_type = Tines::value_type_3d_view<real_type,device_type>;
+
+  using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
+  using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
+  using real_type_3d_view_host_type = Tines::value_type_3d_view<real_type,host_device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+
+  using kinetic_model_host_type = KineticModelConstData<host_device_type>;
+  using kinetic_surf_model_host_type = KineticSurfModelConstData<host_device_type>;
+
+  template<typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
-    const PlugFlowReactorConstDataType& pfrd)
+    const KineticModelConstData<DeviceType >& kmcd,
+    const KineticSurfModelConstData<DeviceType>& kmcdSurf)
   {
-    return Impl::PlugFlowReactorNumJacobian::
-    getWorkSpaceSize(kmcd, kmcdSurf, pfrd);
+    return Impl::PlugFlowReactorNumJacobian<real_type,DeviceType>::
+    getWorkSpaceSize(kmcd, kmcdSurf);
   }
 
   static void runDeviceBatch( /// input
@@ -49,37 +63,35 @@ struct PlugFlowReactorNumJacobian
     const ordinal_type& vector_size,
     const ordinal_type nBatch,
     /// input gas state
-    const real_type_2d_view& state,
+    const real_type_2d_view_type& state,
     /// surface state
-    const real_type_2d_view& zSurf,
+    const real_type_2d_view_type& site_fraction,
     // prf aditional variable
-    const real_type_1d_view& velocity,
+    const real_type_1d_view_type& velocity,
     /// output
-    const real_type_3d_view& jac,
-    const real_type_2d_view& fac,
+    const real_type_3d_view_type& jac,
+    const real_type_2d_view_type& fac,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
-    /// const data from kinetic model surface
-    const KineticSurfModelConstDataDevice& kmcdSurf,
-    const pfr_data_type& pfrd);
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
+    const PlugFlowReactorData& pfrd);
   //
   static void runDeviceBatch( /// input
     typename UseThisTeamPolicy<exec_space>::type& policy,
     /// input gas state
-    const real_type_2d_view& state,
+    const real_type_2d_view_type& state,
     /// surface state
-    const real_type_2d_view& zSurf,
+    const real_type_2d_view_type& site_fraction,
     // prf aditional variable
-    const real_type_1d_view& velocity,
+    const real_type_1d_view_type& velocity,
     /// output
-    const real_type_3d_view& jac,
-    const real_type_2d_view& fac,
+    const real_type_3d_view_type& jac,
+    const real_type_2d_view_type& fac,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
-    /// const data from kinetic model surface
-    const KineticSurfModelConstDataDevice& kmcdSurf,
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
     //const data from pfr reactor
-    const pfr_data_type& pfrd);
+    const PlugFlowReactorData& pfrd);
 };
 
 

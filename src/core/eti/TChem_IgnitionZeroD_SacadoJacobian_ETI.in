@@ -1,0 +1,17 @@
+#include "TChem_IgnitionZeroD_SacadoJacobianInternal.hpp"
+
+namespace TChem {
+  using value_type = Sacado::Fad::SLFad<real_type,@SLFAD_SIZE@>;                                               
+  using policy_type = typename UseThisTeamPolicy<@EXEC_SPACE@>::type;
+  using device_type = typename Tines::UseThisDevice<@EXEC_SPACE@>::type;
+  template
+  void
+  IgnitionZeroD_SacadoJacobian_TemplateRun<policy_type,value_type,device_type>
+  (const std::string& profile_name,
+   const value_type& dummyValueType,
+   const policy_type& policy,   
+   const Tines::value_type_2d_view<real_type,device_type>& state,
+   const Tines::value_type_3d_view<real_type,device_type>& jacobian,
+   const Tines::value_type_2d_view<real_type,device_type>& workspace,
+   const KineticModelConstData<device_type>& kmcd);
+} // namespace TChem

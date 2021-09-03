@@ -28,26 +28,35 @@ namespace TChem {
 
 namespace Impl {
 
+//
+template<typename ValueType, typename DeviceType>
 struct EnthalpySpecMsFcn
 {
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type= KineticModelConstData<device_type>;
   template<typename MemberType,
-           typename RealType,
-           typename RealType1DViewType,
            typename KineticModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const RealType& t, /// temperature
+    const value_type& t, /// temperature
     /// output
-    const RealType1DViewType& hi,
+    const value_type_1d_view_type& hi,
     /// work space
-    const RealType1DViewType& cpks,
+    const value_type_1d_view_type& cpks,
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
-    EnthalpySpecMl::team_invoke(member, t, hi, cpks, kmcd);
+    EnthalpySpecMlFcn<value_type, device_type>::team_invoke(member, t, hi, cpks, kmcd);
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
       [&](const ordinal_type& i) { hi(i) /= kmcd.sMass(i); });
 #if defined(TCHEM_ENABLE_SERIAL_TEST_OUTPUT) && !defined(__CUDA_ARCH__)
     if (member.league_rank() == 0) {
@@ -62,9 +71,8 @@ struct EnthalpySpecMsFcn
 #endif
   }
 };
-using HspecMsFcn = EnthalpySpecMsFcn;     /// backward compatibility
-using HspecMs = EnthalpySpecMsFcn;        /// backward compatibility
-using EnthalpySpecMs = EnthalpySpecMsFcn; /// front interface
+
+
 } // namespace Impl
 } // namespace TChem
 

@@ -22,51 +22,66 @@ Sandia National Laboratories, Livermore, CA, USA
 #define __TCHEM_IMPL_PFR_SMAT_HPP__
 
 #include "TChem_Impl_PlugFlowReactorRHS.hpp"
+#include "TChem_Impl_RhoMixMs.hpp"
 #include "TChem_Util.hpp"
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct PlugFlowReactorSmat
 {
 
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename PlugFlowReactorConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using kinetic_model_type      = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+  using pfr_data_type = PlugFlowReactorData;
+
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
     /// input
     const real_type& t,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec) mass fraction
-    const RealType1DViewType& Zs, // (kmcdSurf.nSpec) site fraction
+    const real_type_1d_view_type& Ys, /// (kmcd.nSpec) mass fraction
+    const real_type_1d_view_type& Zs, // (kmcdSurf.nSpec) site fraction
     const real_type& density,
     const real_type& p,   // pressure
     const real_type& vel, // velocity
     /// output
-    const RealType2DViewType& Smat,
-    const RealType2DViewType& Ssmat,
+    const real_type_2d_view_type& Smat,
+    const real_type_2d_view_type& Ssmat,
     // work
-    const RealType1DViewType& hks,
-    const RealType1DViewType& cpks,
-    const RealType1DViewType& sumSpecSurf,
+    const real_type_1d_view_type& hks,
+    const real_type_1d_view_type& cpks,
+    const real_type_1d_view_type& sumSpecSurf,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
     // const input for plug flow reactor
-    const PlugFlowReactorConstDataType& pfrd)
+    const pfr_data_type& pfrd)
   {
 
+    using EnthalpySpecMs = EnthalpySpecMsFcn<real_type,device_type>;
+    using MolarWeights = MolarWeights<real_type,device_type>;
+    using RhoMixMs = RhoMixMs<real_type,device_type>;
+    using CpMixMs = CpMixMs<real_type, device_type>;
+
+
     const real_type Nvars = kmcd.nSpec + 3;
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nReac),
+    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac),
                          [&](const ordinal_type& i) {
                            for (ordinal_type j = 0; j < Nvars; ++j) {
                              Smat(j, i) = 0;
                            }
                          }); /* done loop over all reactions */
 
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcdSurf.nReac),
+    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.nReac),
                          [&](const ordinal_type& i) {
                            for (ordinal_type j = 0; j < Nvars; ++j) {
                              Ssmat(j, i) = 0;
@@ -96,7 +111,7 @@ struct PlugFlowReactorSmat
       // reactans
       real_type sumEnerR(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcd.reacNreac(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNreac(i)),
         [&](const ordinal_type& j, real_type& update) {
           const ordinal_type kspec = kmcd.reacSidx(i, j);
           update += hks(kspec) * kmcd.sMass(kspec) * kmcd.reacNuki(i, j);
@@ -107,7 +122,7 @@ struct PlugFlowReactorSmat
       const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
       real_type sumEnerP(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcd.reacNprod(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNprod(i)),
         [=](const ordinal_type& j, real_type& update) {
           const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
           update += hks(kspec) * kmcd.sMass(kspec) * kmcd.reacNuki(i, j + joff);
@@ -119,7 +134,7 @@ struct PlugFlowReactorSmat
       // density and mom
       real_type sumMomR(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcd.reacNreac(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNreac(i)),
         [&](const ordinal_type& j, real_type& update) {
           const ordinal_type kspec = kmcd.reacSidx(i, j);
           update += kmcd.reacNuki(i, j);
@@ -129,7 +144,7 @@ struct PlugFlowReactorSmat
       // products
       real_type sumMomP(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcd.reacNprod(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNprod(i)),
         [=](const ordinal_type& j, real_type& update) {
           const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
           update += kmcd.reacNuki(i, j + joff);
@@ -147,23 +162,21 @@ struct PlugFlowReactorSmat
 
       // species equations
 
-      Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.reacNreac(i)),
+      Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNreac(i)),
                            [&](const ordinal_type& j) {
                              const ordinal_type kspec = kmcd.reacSidx(i, j);
                              Smat(kspec + 1, i) = kmcd.sMass(kspec) *
                                                   kmcd.reacNuki(i, j) *
                                                   ConSpecies;
-                             // Kokkos::atomic_fetch_add(&Smat(kspec+ 1,i),
-                             // val);
                            });
 
       Kokkos::parallel_for(
-        Kokkos::TeamVectorRange(member, kmcd.reacNprod(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNprod(i)),
         [=](const ordinal_type& j) {
           const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
-          Smat(kspec + 1, i) =
+          const real_type val =
             kmcd.sMass(kspec) * kmcd.reacNuki(i, j + joff) * ConSpecies;
-          // Kokkos::atomic_fetch_add(&Smat(kspec+ 1,i), val);
+          Kokkos::atomic_fetch_add(&Smat(kspec+ 1,i), val);
         });
 
     } /* done loop over all reactions */
@@ -186,7 +199,7 @@ struct PlugFlowReactorSmat
       // reactans
       real_type sumEnerR(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcdSurf.reacNreac(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.reacNreac(i)),
         [&](const ordinal_type& j, real_type& update) {
           if (kmcdSurf.reacSsrf(i, j) == 0) { // only gas species
             const ordinal_type kspec = kmcdSurf.reacSidx(i, j);
@@ -199,7 +212,7 @@ struct PlugFlowReactorSmat
       const ordinal_type joff = kmcdSurf.reacSidx.extent(1) / 2;
       real_type sumEnerP(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcdSurf.reacNprod(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.reacNprod(i)),
         [=](const ordinal_type& j, real_type& update) {
           if (kmcdSurf.reacSsrf(i, j + joff) == 0) { // only gas species
             const ordinal_type kspec = kmcdSurf.reacSidx(i, j + joff);
@@ -214,7 +227,7 @@ struct PlugFlowReactorSmat
       // reactans
       real_type sumMomR(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcdSurf.reacNreac(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.reacNreac(i)),
         [&](const ordinal_type& j, real_type& update) {
           if (kmcdSurf.reacSsrf(i, j) == 0) { // only gas species
             const ordinal_type kspec = kmcdSurf.reacSidx(i, j);
@@ -228,7 +241,7 @@ struct PlugFlowReactorSmat
       // products
       real_type sumMomP(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcdSurf.reacNprod(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.reacNprod(i)),
         [=](const ordinal_type& j, real_type& update) {
           if (kmcdSurf.reacSsrf(i, j + joff) == 0) { // only gas species
             const ordinal_type kspec = kmcdSurf.reacSidx(i, j + joff);
@@ -246,7 +259,7 @@ struct PlugFlowReactorSmat
       // sum_{k=1}^nSpec {W_k * V_ki}
       real_type sumWkVkiR(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcdSurf.reacNreac(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.reacNreac(i)),
         [&](const ordinal_type& j, real_type& update) {
           if (kmcdSurf.reacSsrf(i, j) == 0) { // only gas species
             const ordinal_type kspec = kmcdSurf.reacSidx(i, j);
@@ -259,7 +272,7 @@ struct PlugFlowReactorSmat
       // sum_{k=1}^nSpec {W_k * V_{ki}}
       real_type sumWkVkiP(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcdSurf.reacNprod(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.reacNprod(i)),
         [=](const ordinal_type& j, real_type& update) {
           if (kmcdSurf.reacSsrf(i, j + joff) == 0) { // only gas species
             const ordinal_type kspec = kmcdSurf.reacSidx(i, j + joff);
@@ -288,7 +301,7 @@ struct PlugFlowReactorSmat
     member.team_barrier();
 
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcdSurf.nReac),
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.nReac),
       [&](const ordinal_type& i) {
         // reactans
         for (ordinal_type j = 0; j < kmcdSurf.reacNreac(i); ++j) {
@@ -296,7 +309,6 @@ struct PlugFlowReactorSmat
             const ordinal_type kspec = kmcdSurf.reacSidx(i, j);
             const real_type val =
               kmcd.sMass(kspec) * kmcdSurf.reacNuki(i, j) * ConSpeciesSurf;
-            // Ssmat(kspec + 1,i) += val;
             Kokkos::atomic_fetch_add(&Ssmat(kspec + 1, i), val);
           }
         }
@@ -310,7 +322,6 @@ struct PlugFlowReactorSmat
                                   kmcdSurf.reacNuki(i, j + joff) *
                                   ConSpeciesSurf;
             Kokkos::atomic_fetch_add(&Ssmat(kspec + 1, i), val);
-            // Ssmat(kspec + 1,i) += val;
           }
         }
       });
@@ -356,39 +367,34 @@ struct PlugFlowReactorSmat
   }
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename PlugFlowReactorConstDataType>
+           typename WorkViewType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
     const real_type& t,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec)
-    const RealType1DViewType& Zs, // (kmcdSurf.nSpec) site fraction
+    const real_type_1d_view_type& Ys, /// (kmcd.nSpec)
+    const real_type_1d_view_type& Zs, // (kmcdSurf.nSpec) site fraction
     const real_type& density,
     const real_type& p, // pressure
     const real_type& u, // velocity
     /// output
-    const RealType2DViewType& Smat,
-    const RealType2DViewType& Ssmat,
+    const real_type_2d_view_type& Smat,
+    const real_type_2d_view_type& Ssmat,
     // work
     /// workspace
     const WorkViewType& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
-    const PlugFlowReactorConstDataType& pfrd)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
+    const pfr_data_type& pfrd)
   {
 
     auto w = (real_type*)work.data();
-    auto hks = RealType1DViewType(w, kmcd.nSpec);
+    auto hks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto cpks = RealType1DViewType(w, kmcd.nSpec);
+    auto cpks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto sumSpecSurf = RealType1DViewType(w, kmcdSurf.nReac);
+    auto sumSpecSurf = real_type_1d_view_type(w, kmcdSurf.nReac);
     w += kmcdSurf.nSpec;
 
     team_invoke_detail(member,

@@ -1,0 +1,57 @@
+{
+  "camp-data" : [
+  {
+    "type" : "RELATIVE_TOLERANCE",
+    "value" : 1.0e-30
+  },
+  {
+    "name" : "A",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-30
+  },
+  {
+    "name" : "B",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-30
+  },
+  {
+    "name" : "C",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-30
+  },
+  {
+    "name" : "troe",
+    "type" : "MECHANISM",
+    "reactions" : [
+      {
+	"type" : "TROE",
+	"reactants" : {
+	  "A" : {}
+	},
+	"products" : {
+	  "B" : {}
+	},
+	"k0_A" : 4.0e-18
+      },
+      {
+	"type" : "TROE",
+	"reactants" : {
+	  "B" : {}
+	},
+	"products" : {
+	  "C" : {}
+	},
+	"k0_A" : 1.2e-12,
+	"k0_B" : 167,
+	"k0_C" : 3,
+	"kinf_A" : 136,
+	"kinf_B" : 5,
+	"kinf_C" : 24,
+	"Fc" : 0.9,
+	"N" : 0.8,
+	"time unit" : "MIN"
+      }
+    ]
+  }
+  ]
+}

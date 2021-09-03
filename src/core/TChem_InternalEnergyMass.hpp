@@ -29,46 +29,59 @@ namespace TChem {
 
 struct InternalEnergyMass
 {
-  template<typename KineticModelConstDataType>
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
+  using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_model_host_type = KineticModelConstData<host_device_type>;
+
+
+  template<typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd)
+    const KineticModelConstData<DeviceType>& kmcd)
   {
     return kmcd.nSpec; // does not need work size
   }
   // policy is defined inside of the interface
   static void runDeviceBatch( /// thread block size
     const exec_space& exec_space_instance,
-    const ordinal_type team_size,
-    const ordinal_type vector_size,
+    const ordinal_type& team_size,
+    const ordinal_type& vector_size,
     /// input
-    const ordinal_type nBatch,
-    const real_type_2d_view& state,
+    const ordinal_type& nBatch,
+    const real_type_2d_view_type& state,
     /// output
-    const real_type_2d_view& InternalEnergyMass,
-    const real_type_1d_view& InternalEnergyMixMass,
+    const real_type_2d_view_type& InternalEnergyMass,
+    const real_type_1d_view_type& InternalEnergyMixMass,
 
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
+    const kinetic_model_type& kmcd);
   //
   static void runDeviceBatch( /// thread block size
     typename UseThisTeamPolicy<exec_space>::type& policy,
-    const real_type_2d_view& state,
+    const real_type_2d_view_type& state,
     /// output
-    const real_type_2d_view& InternalEnergyMass,
-    const real_type_1d_view& InternalEnergyMixMass,
+    const real_type_2d_view_type& InternalEnergyMass,
+    const real_type_1d_view_type& InternalEnergyMixMass,
 
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
+    const kinetic_model_type& kmcd);
   //
   static void runHostBatch( /// thread block size
     typename UseThisTeamPolicy<host_exec_space>::type& policy,
-    const real_type_2d_view_host& state,
+    const real_type_2d_view_host_type& state,
     /// output
-    const real_type_2d_view_host& InternalEnergyMass,
-    const real_type_1d_view_host& InternalEnergyMixMass,
+    const real_type_2d_view_host_type& InternalEnergyMass,
+    const real_type_1d_view_host_type& InternalEnergyMixMass,
 
     /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd);
+    const kinetic_model_host_type& kmcd);
 };
   //
 

@@ -202,7 +202,10 @@ KineticModelData::allocateViews(FILE* errfile)
     reacArhenFor_ =
       real_type_2d_dual_view(do_not_init_tag("KMD::reacArhenFor"), nReac_, 3);
     isDup_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::isDup"), nReac_);
+
   }
+
+
 
   /* Reactions with reversible Arrhenius parameters given */
   if (nRevReac_ > 0) {
@@ -336,6 +339,11 @@ KineticModelData::allocateViews(FILE* errfile)
     RealNuIJ_ = real_type_2d_dual_view(
       do_not_init_tag("KMD::RealNuIJ"), nRealNuReac_, nSpec_);
   }
+
+  if (nReac_ > 0) {
+  stoiCoefMatrix_ = real_type_2d_dual_view(
+      do_not_init_tag("KMD::stoichiometric_matrix gas phase"), nSpec_, nReac_);
+   }
 
   if (errmsg.length() > 0) {
     fprintf(errfile, "Error: %s\n", errmsg.c_str());
@@ -849,6 +857,8 @@ KineticModelData::initChem()
   auto RealNuIJHost = RealNuIJ_.view_host();
   auto kc_coeffHost = kc_coeff_.view_host();
 
+  auto stoiCoefMatrixHost = stoiCoefMatrix_.view_host();
+
   {
     // Elements
     for (int i = 0; i < nElem_; i++) {
@@ -1262,11 +1272,17 @@ KineticModelData::initChem()
 
       if (verboseEnabled) {
         printf("Reading arbitrary orders: %d, %d \n", nOrdReac_, maxOrdPar_);
+        printf("Reaction index \n" );
+        for (int i = 0; i < nOrdReac_; i++) {
+          printf("%d \n ", reacAOrdHost(i));
+        }
+        printf("Species index \n" );
         for (int i = 0; i < nOrdReac_; i++) {
           for (int j = 0; j < maxOrdPar_; j++)
             printf("%d, ", specAOidxHost(i, j));
           printf("\n");
         }
+        printf("Reaction order \n" );
         for (int i = 0; i < nOrdReac_; i++) {
           for (int j = 0; j < maxOrdPar_; j++)
             printf("%e, ", specAOvalHost(i, j));
@@ -1405,6 +1421,24 @@ KineticModelData::initChem()
       }
     }
 
+    /* stoichiometric matrix gas species*/
+
+    // vskiHost stoichiometric matrix gas species in reaction mechanism
+    for (ordinal_type i = 0; i < nReac_; i++) {
+      // reactans
+      for (ordinal_type j = 0; j < reacNreacHost(i); ++j) {
+        const ordinal_type kspec = reacSidxHost(i, j);
+          stoiCoefMatrixHost(kspec, i) = reacNukiHost(i, j);
+      }
+      //products
+      const ordinal_type joff = maxSpecInReac_ / 2;
+      for (ordinal_type j = 0; j < reacNprodHost(i); ++j) {
+        const ordinal_type kspec = reacSidxHost(i, j + joff);
+          stoiCoefMatrixHost(kspec, i) =reacNukiHost(i, j + joff);
+      }
+    }
+
+
     fclose(echofile);
 
     /// Raise modify flags for all modified dual views
@@ -1466,6 +1500,7 @@ KineticModelData::initChem()
     NuIJ_.modify_host();
     RealNuIJ_.modify_host();
     kc_coeff_.modify_host();
+    stoiCoefMatrix_.modify_host();
 
     /// Sync to device
     syncToDevice();
@@ -2046,37 +2081,593 @@ KineticModelData::modifyArrheniusForwardSurfaceParametersEnd() {
   TCsurf_reacArhenFor_.sync_device();
 }
 
+//Plog reactions
+void
+KineticModelData::modifyArrheniusForwardParametersPLOG_Begin() {
+  /// back up data (soft copy and reference counting keep the memory)
+  auto reacPlogPars = reacPlogPars_.view_host();
+
+  /// create a new allocation and copy the content of the previous arhenius parameters
+  reacPlogPars_ = real_type_2d_dual_view(
+        do_not_init_tag("KMD::reacPlogPars"), reacPlogPars.extent(0), reacPlogPars.extent(1));
+
+  Kokkos::deep_copy(reacPlogPars_.view_host(), reacPlogPars);
+
+  /// raise a flag modify host so that we can transfer data to device
+  reacPlogPars_.modify_host();
+
+}
+
+real_type
+KineticModelData::getArrheniusForwardParameterPLOG(const int i, const int j) {
+  TCHEM_CHECK_ERROR(i >= reacPlogPars_.view_host().extent(0),
+		    "Error: indeix i is greater than the view extent(0)");
+  TCHEM_CHECK_ERROR(j >= reacPlogPars_.view_host().extent(1),
+		    "Error: indeix j is greater than the view extent(1)");
+
+  /// modify arhenius parameter
+  return reacPlogPars_.view_host()(i,j);
+}
+
+void
+KineticModelData::modifyArrheniusForwardParameterPLOG(const int i, const int j, const real_type value) {
+  TCHEM_CHECK_ERROR(i >= reacPlogPars_.view_host().extent(0),
+		    "Error: indeix i is greater than the view extent(0)");
+  TCHEM_CHECK_ERROR(j >= reacPlogPars_.view_host().extent(1),
+		    "Error: indeix j is greater than the view extent(1)");
+
+  /// modify arhenius parameter
+  reacPlogPars_.view_host()(i,j) = value;
+}
+
+
+void
+KineticModelData::modifyArrheniusForwardParametersPLOG_End() {
+  /// device view is now synced with the host view
+  reacPlogPars_.sync_device();
+}
+
+
+
+
 #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+
 
 KineticModelData::KineticModelData(const std::string& mechfile, const bool& hasSurface)
 {
 
 
   YAML::Node doc = YAML::LoadFile(mechfile);
-  int countPhase(0);
-  int surfacePhaseIndex(0);
-  int gasPhaseIndex(0);
-  for (auto const& phase : doc["phases"]) {
-    if (phase["kinetics"].as<std::string>()=="surface") {
-      printf("has a surface phase\n");
-      const std::string phaseName = doc["phases"][countPhase]["name"].as<std::string>();
-      std::cout << "phase name: " << phaseName << "\n";
-      surfacePhaseIndex = countPhase;
-    } else if (phase["kinetics"].as<std::string>()=="gas"){
-      printf("has a gas phase\n");
-      const std::string phaseName = doc["phases"][countPhase]["name"].as<std::string>();
-      std::cout << "phase name: " << phaseName << "\n";
-      gasPhaseIndex = countPhase;
+
+
+  if (doc["cantera-version"]) {
+    // cantera-yaml parser
+    int countPhase(0);
+    int surfacePhaseIndex(0);
+    int gasPhaseIndex(0);
+    for (auto const& phase : doc["phases"]) {
+      if (phase["kinetics"].as<std::string>()=="surface") {
+        surfacePhaseIndex = countPhase;
+      } else if (phase["kinetics"].as<std::string>()=="gas"){
+        gasPhaseIndex = countPhase;
+      }
+
+      countPhase++;
+    }
+
+    initChemYaml(doc, gasPhaseIndex);
+    if (hasSurface) {
+      initChemSurfYaml(doc, surfacePhaseIndex);
+    }
+
+ } else if (doc["NCAR-version" ] ){
+    printf("Using parser for NCAR atmospheric chemistry\n");
+    initChemNCAR(doc);
+ } else {
+   printf("we do not have a parser for this file\n");
+   //exit
+ }
+
+
+
+}
+int
+KineticModelData::initChemNCAR(YAML::Node& root)
+{
+
+  #define DASHLINE(file)                                                         \
+    fprintf(file,                                                                \
+            "------------------------------------------------------------"       \
+            "-------------\n")
+
+  FILE *echofile;
+  echofile = fopen("kmod.echo", "w");
+
+  auto species_names  = root["species"];
+  auto reactions = root["reactions"];
+
+  nSpec_ = species_names.size();
+  nReac_ = reactions.size();
+
+  /* Species' name */
+  sNames_ = string_type_1d_dual_view<LENGTHOFSPECNAME + 1>(
+    do_not_init_tag("KMD::sNames"), nSpec_);
+
+  auto sNamesHost = sNames_.view_host();
+
+  std::map<std::string, int> species_indx;
+  int sp_i(0);
+  // non constant species
+  for (auto const& sp : species_names) {
+    if (sp.second["type"]){
+      // do not add this species in this position
+    } else {
+      std::string sp_name = sp.first.as<std::string>();
+      std::transform(sp_name.begin(),
+      sp_name.end(),sp_name.begin(), ::toupper);
+      species_indx.insert(std::pair<std::string, int>(sp_name, sp_i));
+
+      char* specNm= &*sp_name.begin();
+      strncat(&sNamesHost(sp_i, 0), specNm, LENGTHOFSPECNAME);
+      sp_i ++;
+    }
+
+  }
+  // look for species with constant values
+  nConstSpec_ = ordinal_type(0);
+  for (auto const& sp : species_names) {
+
+    if (sp.second["type"]) {
+      if (sp.second["type"].as<std::string>() == "tracer-CONSTANT") {
+        std::string sp_name = sp.first.as<std::string>();
+        std::transform(sp_name.begin(),
+        sp_name.end(),sp_name.begin(), ::toupper);
+        species_indx.insert(std::pair<std::string, int>(sp_name, sp_i));
+
+        char* specNm= &*sp_name.begin();
+        strncat(&sNamesHost(sp_i, 0), specNm, LENGTHOFSPECNAME);
+        sp_i ++;
+        nConstSpec_++;
+      }
+
+    }
+  }
+
+  fprintf(
+    echofile,
+    "kmod.list : # of species                                      : %d\n",
+    nSpec_);
+  fprintf(
+    echofile,
+    "kmod.list : # of species with constant concentration          : %d\n",
+    nConstSpec_);
+  fprintf(
+    echofile,
+    "kmod.list : # of reactions                                    : %d\n",
+    nReac_);
+  //
+  fprintf(echofile, "No. \t Species\n");
+  for (int i = 0; i < nSpec_; i++)
+    fprintf(echofile, "%-3d\t%-32s\n", i + 1, &sNamesHost(i, 0));
+  DASHLINE(echofile);
+  // fflush(echofile);
+
+  /* reaction info */
+if (nReac_ > 0) {
+  isRev_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::isRev"), nReac_);
+  reacNrp_ =
+    ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
+  reacNreac_ =
+    ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
+  reacNprod_ =
+    ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
+  // reacArhenFor_ =
+  //   real_type_2d_dual_view(do_not_init_tag("KMD::reacArhenFor"), nReac_, 3);
+  // isDup_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::isDup"), nReac_)
+}
+
+  auto isRevHost = isRev_.view_host();
+  auto reacNrpHost = reacNrp_.view_host();
+  auto reacNreacHost = reacNreac_.view_host();
+  auto reacNprodHost = reacNprod_.view_host();
+  /* Arrhenius parameters */
+  // auto reacArhenForHost = reacArhenFor_.view_host();
+
+  ordinal_type countReac(0);
+  ordinal_type countArrheniusReac(0); // count index for arrhenius pressure parameter E.
+  maxSpecInReac_ = 0;
+  nFallReac_ =0; //troe type reactions
+  std::map<std::string,int>::iterator it;
+  // species index and stoicoeff
+  std::vector< std::map<ordinal_type, real_type> > productsInfo, reactantsInfo;
+  std::map<ordinal_type, real_type> reactants_sp, products_sp;//, aux_parameter_arhenius
+  for (auto const& reaction : reactions)
+  {
+    // get stoichimetric coefficients
+    if (reaction["reactants"])
+    {
+      auto reactants = reaction["reactants"];
+      /* no of reactants only */
+      reacNreacHost(countReac) = reactants.size();
+      for (auto const&  reac : reactants)
+      {
+        // get species index
+        it = species_indx.find(reac.first.as<std::string>());
+
+        if (it != species_indx.end())
+        {
+          reactants_sp.insert(std::pair<ordinal_type, real_type>(it->second, reac.second.as<real_type>()));
+          // reacSidxHost(i, count) = it->second;
+        }
+        else
+        {
+          printf("Yaml : Error when interpreting kinetic model  !!!");
+          printf("species does not exit %s\n", reac.first.as<std::string>().c_str() );
+          exit(1);
+        }
+       }
+    }
+    else
+    {
+        printf("error in reactants\n");
+        exit(1);
+    }
+
+    if (reaction["products"])
+    {
+      auto products = reaction["products"];
+      /* no of products */
+      reacNprodHost(countReac) = products.size();
+      for (auto const&  prod : products)
+      {
+        // get species index
+        it = species_indx.find(prod.first.as<std::string>());
+
+        if (it != species_indx.end())
+        {
+          products_sp.insert(std::pair<ordinal_type, real_type>(it->second, prod.second.as<real_type>()));
+        }
+        else
+        {
+          printf("Yaml : Error when interpreting kinetic model  !!!");
+          printf("species does not exit %s\n", prod.first.as<std::string>().c_str() );
+          exit(1);
+        }
+       }
+
+    }
+    else
+    {
+      printf("error in products\n");
+      exit(1);
+    }
+
+    isRevHost(countReac) = 1; // all reaction are ireversible
+
+    reacNrpHost(countReac) = reacNreacHost(countReac)  + reacNprodHost(countReac) ;
+
+    //check max in reactansts
+    maxSpecInReac_ = maxSpecInReac_ > reacNreacHost(countReac) ?
+                     maxSpecInReac_ : reacNreacHost(countReac);
+
+    //check max in products
+    maxSpecInReac_ = maxSpecInReac_ > reacNprodHost(countReac)  ?
+                     maxSpecInReac_ : reacNprodHost(countReac) ;
+
+    productsInfo.push_back(products_sp);
+    reactantsInfo.push_back(reactants_sp);
+    products_sp.clear();
+    reactants_sp.clear();
+
+    // get Arrhenius constants
+    auto reaction_type = reaction["type"].as<std::string>();
+
+    if ( reaction_type == "ARRHENIUS")
+    {
+      countArrheniusReac++;
+    }
+
+    if (reaction_type == "TROE")
+    {
+      nFallReac_++;
 
     }
 
-    countPhase++;
+   countReac++;
+  }
+  //twice because we only consider max (products, reactants)
+  maxSpecInReac_ *=2;
+
+  fprintf( echofile,
+    "kmod.list : Max # of species in a reaction                    : %d\n",
+    maxSpecInReac_);
+
+  //
+  fprintf( echofile,
+    "kmod.list :  # of arrhenius type reactions                    : %d\n",
+    countArrheniusReac);
+
+  //
+  if (nReac_ > 0) {
+    reacSidx_ = ordinal_type_2d_dual_view(
+    do_not_init_tag("KMD::reacNrp"), nReac_, maxSpecInReac_);
+    reacNuki_ = real_type_2d_dual_view(
+    do_not_init_tag("KMD::reacNrp"), nReac_, maxSpecInReac_);
+    // reacScoef_ =
+     // ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacScoef"), nReac_);
   }
 
-  initChemYaml(doc, gasPhaseIndex);
-  if (hasSurface) {
-    initChemSurfYaml(doc, surfacePhaseIndex);
+  auto reacNukiHost = reacNuki_.view_host();
+  auto reacSidxHost = reacSidx_.view_host();
+  // auto reacScoefHost = reacScoef_.view_host();
+
+
+
+  /* Stoichiometric coefficients */
+  for (int i = 0; i < nReac_; i++)
+  {
+    /* by default reaction has integer stoichiometric coefficients */
+    // reacScoefHost(i) = -1;
+
+    int count(0);
+    auto reactants_sp = reactantsInfo[i];
+
+    for (auto & reac : reactants_sp)
+    {
+      // set species index
+      reacSidxHost(i, count) = reac.first;
+      // set stoichiometric coefficient
+      reacNukiHost(i, count) = -reac.second;
+      count++;
+    }
+
+    count = maxSpecInReac_/2;
+    auto products_sp = productsInfo[i];
+
+    for (auto & prod : products_sp)
+    {
+      // set species Index
+      reacSidxHost(i, count) = prod.first;
+      reacNukiHost(i, count) = prod.second;
+      count++;
+    }
+
   }
+
+  if (countArrheniusReac > 0 ) {
+    ArrheniusCoef_ = arrhenius_reaction_type_1d_dual_view(do_not_init_tag("KMD::auxParamReacArhenFor"), countArrheniusReac);
+  }
+
+  auto ArrheniusCoefHost = ArrheniusCoef_.view_host();
+
+  //// k0_A, k0_B, k0_C kinf_A,  kinf_B,  kinf_C, Fc, N
+  ordinal_type number_of_param_troe(8);
+
+  // troe type reactions
+  if (nFallReac_ > 0) {
+    // reactions index
+    reacPfal_ =
+      ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacPfal"), nFallReac_);
+    reacPpar_ = real_type_2d_dual_view(do_not_init_tag("KMD::reacPpar"), nFallReac_, number_of_param_troe);
+  }
+
+  auto reacPfalHost = reacPfal_.view_host();
+  auto reacPparHost = reacPpar_.view_host();
+
+  ordinal_type count_troe(0);
+  ordinal_type count_arrhen_aux_param(0);
+  ordinal_type ireac(0);
+  for (auto const& reaction : reactions)
+  {
+    auto reaction_type = reaction["type"].as<std::string>();
+
+    if ( reaction_type == "ARRHENIUS")
+    {
+      auto rate_coefficients = reaction["coefficients"];
+      ArrheniusReactionType arrhenius_reaction_type;
+      // pre_exponential
+      real_type A_coef(1.0);
+      if (rate_coefficients["A"]) {
+         A_coef = rate_coefficients["A"].as<real_type>();
+         if (reaction["time_unit"]){
+           if (reaction["time_unit"].as<std::string>()=="min"){
+             A_coef /= real_type(60.0);
+           }
+         }
+      }
+      // temperature coefficient
+      real_type D_coef(300.0);
+      if (rate_coefficients["D"])
+      {
+        D_coef = rate_coefficients["D"].as<real_type>();
+      }
+      // temperature coefficient
+      real_type B_coef(0);
+      if (rate_coefficients["B"])
+      {
+        B_coef = rate_coefficients["B"].as<real_type>();
+      }
+      //activation energy
+      real_type Ea_coef(0);
+      if (rate_coefficients["Ea"]) {
+        // Boltzmann's constant (k_B) [JK^{-1}]$
+        Ea_coef = - rate_coefficients["Ea"].as<real_type>()/KBOLT;
+        if (rate_coefficients["C"]){
+          printf("Ea and C are presented in Yaml input file\n");
+          exit(1);
+        }
+      } else if (rate_coefficients["C"]) {
+        Ea_coef = rate_coefficients["C"].as<real_type>();
+      }
+
+      real_type E_coef(0);
+      if (rate_coefficients["E"]) {
+        E_coef = rate_coefficients["E"].as<real_type>();
+      }
+
+      // pre_exponential A_tchem = A/D^B;
+      arrhenius_reaction_type._A = A_coef;
+      arrhenius_reaction_type._B = B_coef;
+      arrhenius_reaction_type._C = Ea_coef;
+      arrhenius_reaction_type._D = D_coef;
+      arrhenius_reaction_type._E = E_coef;
+      arrhenius_reaction_type._reaction_index = ireac;
+      ArrheniusCoefHost(count_arrhen_aux_param)=arrhenius_reaction_type;
+      count_arrhen_aux_param++;
+      // printf("Kforward A_ %e B_ %e C_ %e D_ %e E_ %e \n",A_coef, B_coef,  Ea_coef,  D_coef, E_coef );
+
+    }
+
+    if (reaction_type == "TROE")
+    {
+      auto rate_coefficients = reaction["coefficients"];
+
+      // k0_A, k0_B, k0_C
+      // pre_exponential
+      real_type A_coef(1.0);
+      if (rate_coefficients["k0_A"]) {
+         A_coef = rate_coefficients["k0_A"].as<real_type>();
+         if (reaction["time_unit"]){
+           if (reaction["time_unit"].as<std::string>()=="min"){
+             A_coef /= real_type(60.0);
+           }
+         }
+      }
+
+      // temperature coefficient
+      real_type B_coef(0);
+      if (rate_coefficients["k0_B"])
+      {
+        B_coef = rate_coefficients["k0_B"].as<real_type>();
+      }
+      //activation energy
+      real_type Ea_coef(0);
+      if (rate_coefficients["k0_C"]) {
+        // Boltzmann's constant (k_B) [JK^{-1}]$
+        Ea_coef = rate_coefficients["k0_C"].as<real_type>();
+      }
+      // kinf_A  kinf_B  kinf_C Fc N
+      real_type kinf_A(1);
+      if (rate_coefficients["kinf_A"]) {
+        kinf_A = rate_coefficients["kinf_A"].as<real_type>();
+        if (reaction["time_unit"]){
+          if (reaction["time_unit"].as<std::string>()=="min"){
+            kinf_A /= real_type(60.0);
+          }
+        }
+      }
+
+      real_type kinf_B(0);
+      if (rate_coefficients["kinf_B"]) {
+        kinf_B = rate_coefficients["kinf_B"].as<real_type>();
+      }
+
+      real_type kinf_C(0);
+      if (rate_coefficients["kinf_C"]) {
+        kinf_C = rate_coefficients["kinf_C"].as<real_type>();
+      }
+
+      real_type Fc(0.6);
+      if (rate_coefficients["Fc"]) {
+        Fc = rate_coefficients["Fc"].as<real_type>();
+      }
+
+      real_type N(1.0);
+      if (rate_coefficients["N"]) {
+        N = rate_coefficients["N"].as<real_type>();
+      }
+      // reaction index
+      reacPfalHost(count_troe) = ireac;
+      // auxiliary parameters
+      // From camp ! Include [M] in K0_A_
+      // K0_A_ = K0_A_ * real(1.0d6, kind=dp)
+      reacPparHost(count_troe, 0 ) = A_coef*real_type(1e6);
+      reacPparHost(count_troe, 1 ) = B_coef;
+      reacPparHost(count_troe, 2)  = Ea_coef;
+      //
+      reacPparHost(count_troe, 3 ) = kinf_A;
+      reacPparHost(count_troe, 4 ) = kinf_B;
+      reacPparHost(count_troe, 5)  = kinf_C;
+      reacPparHost(count_troe, 6)  = Fc;
+      reacPparHost(count_troe, 7)  = N;
+      count_troe++;
+
+    }// end troe type
+
+    ireac++;
+  } // end reactions
+
+
+
+
+  fprintf(echofile, "Reaction data : species and Arrhenius pars\n");
+  for (int i = 0; i < nReac_; i++) {
+    fprintf(echofile,
+            "%-5d\t%1d\t%2d\t%2d | ",
+            i + 1,
+            isRevHost(i),
+            reacNreacHost(i),
+            reacNprodHost(i));
+    //
+    for (int j = 0; j < reacNreacHost(i); j++)
+      fprintf(echofile,
+              "%f*%s | ",
+              reacNukiHost(i, j),
+              &sNamesHost(reacSidxHost(i, j), 0));
+
+    /// KJ why do we do this way ?
+    const int joff = maxSpecInReac_ / 2;
+    for (int j = 0; j < reacNprodHost(i); j++)
+      fprintf(echofile,
+              "%f*%s | ",
+              reacNukiHost(i, j + joff),
+              &sNamesHost(reacSidxHost(i, j + joff), 0));
+
+    // fprintf(echofile,
+    //         "%16.8e\t%16.8e\t%16.8e",
+    //         reacArhenForHost(i, 0),
+    //         reacArhenForHost(i, 1),
+    //         reacArhenForHost(i, 2));
+
+
+    fprintf(echofile, "\n");
+
+    if (verboseEnabled)
+      printf("KineticModelData::initChem() : Done reading reaction data\n");
+  }
+
+
+  // end file
+  fclose(echofile);
+
+  sNames_.modify_host();
+  isRev_.modify_host();
+  reacNrp_.modify_host();
+  reacNreac_.modify_host();
+  reacNprod_.modify_host();
+  reacNuki_.modify_host();
+  reacSidx_.modify_host();
+  // reacScoef_.modify_host();
+  // reacArhenFor_.modify_host();
+  ArrheniusCoef_.modify_host();
+
+  reacPfal_.modify_host();
+  reacPpar_.modify_host();
+
+  /* Species' name and weights */
+  sNames_.sync_device();
+  isRev_.sync_device();
+  reacNrp_.sync_device();
+  reacNreac_.sync_device();
+  reacNprod_.sync_device();
+  reacNuki_.sync_device();
+  reacSidx_.sync_device();
+  // reacArhenFor_.sync_device();
+  ArrheniusCoef_.sync_device();
+  reacPfal_.sync_device();
+  reacPpar_.sync_device();
+
+  return (0);
 
 
 }
@@ -2835,19 +3426,19 @@ KineticModelData::initChemYaml(YAML::Node& doc, const int& gasPhaseIndex)
   auto gas_reactions = doc[reactions];
 
    //
-   nElem_ = elements_name.size();
-   nSpec_ = species_name.size();
-   nReac_ = gas_reactions.size();
+  nElem_ = elements_name.size();
+  nSpec_ = species_name.size();
+  nReac_ = gas_reactions.size();
    // nReac_ =
-   fprintf(
+  fprintf(
      echofile,
      "kmod.list : # of elements                                     : %d\n",
      nElem_);
-   fprintf(
+  fprintf(
      echofile,
      "kmod.list : # of species                                      : %d\n",
      nSpec_);
-   fprintf(
+  fprintf(
      echofile,
      "kmod.list : # of reactions                                    : %d\n",
      nReac_);
@@ -3103,194 +3694,190 @@ KineticModelData::initChemYaml(YAML::Node& doc, const int& gasPhaseIndex)
   auto reacNprodHost = reacNprod_.view_host();
   auto isDupHost = isDup_.view_host();
 
-  {
-    int countReac(0);
-    maxSpecInReac_ = 0;
 
-    std::vector< std::map<std::string, real_type> > productsInfo, reactantsInfo;
-    for (auto const& reaction : gas_reactions) {
-      auto equation = reaction ["equation"].as<std::string>();
-      int isRev(1);
+
+  int countReac(0);
+  maxSpecInReac_ = 0;
+
+  std::vector< std::map<std::string, real_type> > productsInfo, reactantsInfo;
+  for (auto const& reaction : gas_reactions) {
+    auto equation = reaction ["equation"].as<std::string>();
+    int isRev(1);
       // std::cout << countReac<< " equation  " << equation << "\n";
 
-      std::map<std::string, real_type> reactants_sp, products_sp;
-      TCMI_getReactansAndProductosFromEquation(equation,
-      isRev, reactants_sp, products_sp);
+    std::map<std::string, real_type> reactants_sp, products_sp;
+    TCMI_getReactansAndProductosFromEquation(equation,
+    isRev, reactants_sp, products_sp);
 
-      isRevHost(countReac) = isRev;
-      reacNrpHost(countReac) = reactants_sp.size() + products_sp.size();
-      /* no of reactants only */
-      reacNreacHost(countReac) = reactants_sp.size();
-      /* no of products */
-      reacNprodHost(countReac) = products_sp.size();
+    isRevHost(countReac) = isRev;
+    reacNrpHost(countReac) = reactants_sp.size() + products_sp.size();
+    /* no of reactants only */
+    reacNreacHost(countReac) = reactants_sp.size();
+    /* no of products */
+    reacNprodHost(countReac) = products_sp.size();
       //check max in reactansts
-      maxSpecInReac_ = maxSpecInReac_ > reactants_sp.size() ?
+    maxSpecInReac_ = maxSpecInReac_ > reactants_sp.size() ?
                        maxSpecInReac_ : reactants_sp.size();
 
-      //check max in products
-      maxSpecInReac_ = maxSpecInReac_ > products_sp.size() ?
+    //check max in products
+    maxSpecInReac_ = maxSpecInReac_ > products_sp.size() ?
                        maxSpecInReac_ : products_sp.size();
 
-      productsInfo.push_back(products_sp);
-      reactantsInfo.push_back(reactants_sp);
-      countReac++;
+    productsInfo.push_back(products_sp);
+    reactantsInfo.push_back(reactants_sp);
+    countReac++;
 
-    }
-    //twice because we only consider max (products, reactants)
-    maxSpecInReac_ *=2;
+  }
+  //twice because we only consider max (products, reactants)
+  maxSpecInReac_ *=2;
 
 
-    fprintf(
+  fprintf(
       echofile,
       "kmod.list : Max # of species in a reaction                    : %d\n",
       maxSpecInReac_);
 
 
-    if (nReac_ > 0) {
-      reacSidx_ = ordinal_type_2d_dual_view(
+  if (nReac_ > 0) {
+    reacSidx_ = ordinal_type_2d_dual_view(
       do_not_init_tag("KMD::reacNrp"), nReac_, maxSpecInReac_);
-      reacNuki_ = real_type_2d_dual_view(
+    reacNuki_ = real_type_2d_dual_view(
       do_not_init_tag("KMD::reacNrp"), nReac_, maxSpecInReac_);
-      reacScoef_ =
-       ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacScoef"), nReac_);
-      reacArhenFor_ =
-        real_type_2d_dual_view(do_not_init_tag("KMD::reacArhenFor"), nReac_, 3);
-    }
+    reacScoef_ =
+      ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacScoef"), nReac_);
+    reacArhenFor_ =
+      real_type_2d_dual_view(do_not_init_tag("KMD::reacArhenFor"), nReac_, 3);
+  }
 
-    auto reacScoefHost = reacScoef_.view_host();
-    auto reacNukiHost = reacNuki_.view_host();
-    auto reacSidxHost = reacSidx_.view_host();
+  auto reacScoefHost = reacScoef_.view_host();
+  auto reacNukiHost = reacNuki_.view_host();
+  auto reacSidxHost = reacSidx_.view_host();
 
-    std::map<std::string,int>::iterator it;
 
-    /* Stoichiometric coefficients */
-    for (int i = 0; i < nReac_; i++) {
+  std::map<std::string,int>::iterator it;
 
-      int nusumk = 0;
-      /* by default reaction has integer stoichiometric coefficients */
-      reacScoefHost(i) = -1;
+  /* Stoichiometric coefficients */
+  for (ordinal_type i = 0; i < nReac_; i++) {
 
-      int count(0);
-      auto reactants_sp = reactantsInfo[i];
+    ordinal_type nusumk(0);
+    /* by default reaction has integer stoichiometric coefficients */
+    reacScoefHost(i) = -1;
 
-      for (auto & reac : reactants_sp)
-      {
-        it = species_indx.find(reac.first);
+    int count(0);
+    auto reactants_sp = reactantsInfo[i];
 
-        if (it != species_indx.end()) {
-          reacSidxHost(i, count) = it->second;
-        } else{
-          printf("Yaml : Error when interpreting kinetic model  !!!");
-          printf("species does not exit %s\n", reac.first.c_str() );
-          exit(1);
-        }
-
-        reacNukiHost(i, count) = -reac.second;
-
-        count++;
-      }
-
-      count = maxSpecInReac_/2;
-      auto products_sp = productsInfo[i];
-
-      for (auto & prod : products_sp)
-      {
-
-        it = species_indx.find(prod.first);
-
-        if (it != species_indx.end()) {
-          reacSidxHost(i, count) = it->second;
-        } else{
-          printf("Yaml : Error when interpreting kinetic model  !!!");
-          printf("species does not exit %s\n", prod.first.c_str() );
-          exit(1);
-        }
-
-        reacNukiHost(i, count) = prod.second;
-        count++;
-      }
-
-    }
-
-    /* Arrhenius parameters */
-    auto reacArhenForHost = reacArhenFor_.view_host();
-
-    int i(0);
-    nFallPar_ = 3; //default value is 3
-    const double unitFactor =
-    TCMI_unitFactorActivationEnergies
-    (units["activation-energy"].as<std::string>());
-
-    for (auto const& reaction : gas_reactions)
+    for (auto & reac : reactants_sp)
     {
+      // get species index
+      it = species_indx.find(reac.first);
 
-      std::string rate_constant_string("rate-constant");
+      if (it != species_indx.end()) {
+        reacSidxHost(i, count) = it->second;
+      } else{
+        printf("Yaml : Error when interpreting kinetic model  !!!");
+        printf("species does not exit %s\n", reac.first.c_str() );
+        exit(1);
+      }
+      // set stoichiometric coefficient
+      reacNukiHost(i, count) = -reac.second;
 
-      auto type = reaction["type"];
-      if (type)
-      {
-        std::string reaction_type = reaction["type"].as<std::string>();
-        if (reaction_type == "falloff")
-        {
-          rate_constant_string = "high-P-rate-constant";
-          nFallReac_++;
-          nThbReac_++;
+      count++;
+    }/* end reactants*/
 
-        }
+    count = maxSpecInReac_/2;
+    auto products_sp = productsInfo[i];
 
-        if (reaction_type == "three-body")
-        {
-          nThbReac_++;
-        }
-
-        if (reaction_type == "pressure-dependent-Arrhenius")
-        {
-          nPlogReac_++;
-        }
-
-
-        if (reaction["Troe"]){
-          nFallPar_ = std::max(nFallPar_,7);
-        }
-
-        if (reaction["SRI"]){
-          nFallPar_ = std::max(nFallPar_,8);
-        }
-        //check number of third-body efficiencies in a reaction
-        if (reaction["efficiencies"])
-        {
-          const int size_of_effi= reaction["efficiencies"].size();
-          maxTbInReac_ = std::max(size_of_effi,maxTbInReac_);
-        }
-
-
-
+    for (auto & prod : products_sp)
+    {
+      it = species_indx.find(prod.first);
+      if (it != species_indx.end()) {
+        reacSidxHost(i, count) = it->second;
+      } else{
+        printf("Yaml : Error when interpreting kinetic model  !!!");
+        printf("species does not exit %s\n", prod.first.c_str() );
+        exit(1);
       }
 
+      reacNukiHost(i, count) = prod.second;
+      count++;
+    } /* end products*/
+
+  }/* end Stoichiometric coefficients */
+
+  /* Arrhenius parameters */
+  auto reacArhenForHost = reacArhenFor_.view_host();
+
+  ordinal_type i(0);
+  nFallPar_ = 3; //default value is 3
+  const double unitFactor =
+  TCMI_unitFactorActivationEnergies(units["activation-energy"].as<std::string>());
+
+  for (auto const& reaction : gas_reactions)
+  {
+    std::string rate_constant_string("rate-constant");
+
+    auto type = reaction["type"];
+    if (type)
+    {
+      std::string reaction_type = reaction["type"].as<std::string>();
+      if (reaction_type == "falloff")
+      {
+        rate_constant_string = "high-P-rate-constant";
+        nFallReac_++;
+        nThbReac_++;
+      }
+
+      if (reaction_type == "three-body")
+      {
+        nThbReac_++;
+      }
+
+      if (reaction_type == "pressure-dependent-Arrhenius")
+      {
+        nPlogReac_++;
+      }
+
+      if (reaction["Troe"]){
+        nFallPar_ = std::max(nFallPar_,7);
+      }
+
+      if (reaction["SRI"]){
+        nFallPar_ = std::max(nFallPar_,8);
+      }
+      //check number of third-body efficiencies in a reaction
+      if (reaction["efficiencies"])
+      {
+        const int size_of_effi= reaction["efficiencies"].size();
+        maxTbInReac_ = std::max(size_of_effi,maxTbInReac_);
+      }
+
+    } /*end type */
+
+
+
+    if (reaction[rate_constant_string])
+    {
       auto rate_constant = reaction[rate_constant_string];
+      const double Areac = rate_constant["A"].as<double>();
+      reacArhenForHost(i, 0) = Areac ;
 
-      if (rate_constant)
-      {
-        const double Areac = rate_constant["A"].as<double>();
-        reacArhenForHost(i, 0) = Areac ;
+      const double breac = rate_constant["b"].as<double>();
+      reacArhenForHost(i, 1) = breac;
 
-        const double breac = rate_constant["b"].as<double>();
-        reacArhenForHost(i, 1) = breac;
+      const double Eareac = rate_constant["Ea"].as<double>();
+      reacArhenForHost(i, 2) = Eareac*unitFactor;
+    } /* rate constant */
 
-        const double Eareac = rate_constant["Ea"].as<double>();
-        reacArhenForHost(i, 2) = Eareac*unitFactor;
-      }
-
-      auto duplicate = reaction["duplicate"];
-      if (duplicate)
-      {
+    auto duplicate = reaction["duplicate"];
+    if (duplicate)
+    {
         isDupHost(i) = 1;
-      }
-      /* Reactions with reversible Arrhenius parameters given */
-      // to be done
+    }
+    /* Reactions with reversible Arrhenius parameters given */
+    // to be done
 
       i++;
-    }
+    } /* gas reactions */
 
     /* Reactions with reversible Arrhenius parameters given */
 
@@ -3436,33 +4023,33 @@ KineticModelData::initChemYaml(YAML::Node& doc, const int& gasPhaseIndex)
               isRevHost(i),
               reacNreacHost(i),
               reacNprodHost(i));
-      //
-      for (int j = 0; j < reacNreacHost(i); j++)
-        fprintf(echofile,
+    //
+    for (int j = 0; j < reacNreacHost(i); j++)
+      fprintf(echofile,
                 "%f*%s | ",
                 reacNukiHost(i, j),
                 &sNamesHost(reacSidxHost(i, j), 0));
 
-      /// KJ why do we do this way ?
-      const int joff = maxSpecInReac_ / 2;
-      for (int j = 0; j < reacNprodHost(i); j++)
+    /// KJ why do we do this way ?
+    const int joff = maxSpecInReac_ / 2;
+    for (int j = 0; j < reacNprodHost(i); j++)
         fprintf(echofile,
                 "%f*%s | ",
                 reacNukiHost(i, j + joff),
                 &sNamesHost(reacSidxHost(i, j + joff), 0));
       //
-      fprintf(echofile,
+    fprintf(echofile,
               "%16.8e\t%16.8e\t%16.8e",
               reacArhenForHost(i, 0),
               reacArhenForHost(i, 1),
               reacArhenForHost(i, 2));
 
-      if (isDupHost(i) == 1)
+    if (isDupHost(i) == 1)
         fprintf(echofile, "  DUPLICATE\n");
-      else
+    else
         fprintf(echofile, "\n");
 
-        if (verboseEnabled)
+    if (verboseEnabled)
 
       printf("KineticModelData::initChem() : Done reading reaction data\n");
     }
@@ -3769,7 +4356,7 @@ KineticModelData::initChemYaml(YAML::Node& doc, const int& gasPhaseIndex)
 
 
 
-  }
+
 
   fclose(echofile);
 
@@ -3816,6 +4403,30 @@ KineticModelData::initChemYaml(YAML::Node& doc, const int& gasPhaseIndex)
   //   fprintf(errfile, "Error: %s\n", errmsg.c_str());
   //   std::runtime_error("Error: TChem::KineticModelData \n" + errmsg);
   // }
+
+  /* stoichiometric matrix gas species*/
+
+  if (nReac_ > 0) {
+  stoiCoefMatrix_ = real_type_2d_dual_view(
+      do_not_init_tag("KMD::stoichiometric_matrix gas phase"), nSpec_, nReac_);
+   }
+
+  auto stoiCoefMatrixHost = stoiCoefMatrix_.view_host();
+
+  // vskiHost stoichiometric matrix gas species in reaction mechanism
+  for (ordinal_type i = 0; i < nReac_; i++) {
+    // reactans
+    for (ordinal_type j = 0; j < reacNreacHost(i); ++j) {
+      const ordinal_type kspec = reacSidxHost(i, j);
+        stoiCoefMatrixHost(kspec, i) = reacNukiHost(i, j);
+    }
+    //products
+    const ordinal_type joff = maxSpecInReac_ / 2;
+    for (ordinal_type j = 0; j < reacNprodHost(i); ++j) {
+      const ordinal_type kspec = reacSidxHost(i, j + joff);
+        stoiCoefMatrixHost(kspec, i) =reacNukiHost(i, j + joff);
+    }
+  }
 
   auto reacAOrdHost = reacAOrd_.view_host();
   auto specAOidxHost = specAOidx_.view_host();
@@ -3886,6 +4497,7 @@ KineticModelData::initChemYaml(YAML::Node& doc, const int& gasPhaseIndex)
   NuIJ_.modify_host();
   RealNuIJ_.modify_host();
   kc_coeff_.modify_host();
+  stoiCoefMatrix_.modify_host();
 
   /// Sync to device
   syncToDevice();

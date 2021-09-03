@@ -62,6 +62,10 @@ namespace TChem {
 using exec_space = Kokkos::DefaultExecutionSpace;
 using host_exec_space = Kokkos::DefaultHostExecutionSpace;
 
+/// this is for user interface
+using interf_device_type = typename Tines::UseThisDevice<exec_space>::type;
+using interf_host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+
 template<typename ExecSpace>
 struct UseThisTeamPolicy
 {
@@ -72,6 +76,23 @@ struct UseThisTeamPolicy
 using real_type = double;
 using ordinal_type = int;
 using size_type = size_t;
+
+//   template<typename T, int N>
+//   struct UseThisValueType {
+// #if defined(TCHEM_ENABLE_SACADO_JACOBIAN)
+//     using type = Sacado::Fad::SLFad<T,N>;
+// #else
+//     using type = T;
+// #endif
+//   };
+
+// pdf data struc
+struct PlugFlowReactorData
+{
+  real_type Area;
+  real_type Pcat;
+};
+
 
 /// temporary testing/debugging only
 //#define TCHEM_ENABLE_SERIAL_TEST_OUTPUT 1
@@ -154,6 +175,14 @@ static constexpr real_type NAVOG = 6.02214179E23;
 // constexpr real_type RUNIV = 8.3144621;
 static constexpr real_type RUNIV = 8.314472;
 
+// Avogadro's number (mole^{-1}).
+static constexpr real_type AVAGADRO = 6.02214179E23;
+
+// from camp converson #/cc -> ppm conversion prefactor
+//CONV_PPM = AVAGADRO / RUNIV * 10^(-12)
+static constexpr real_type CONV_PPM = 7.24296358205307E+10;
+
+
 /**
  * \def CALJO
  * Conversion from calories to Joule
@@ -227,6 +256,19 @@ using coverage_modification_type_0d_view_host =
 using coverage_modification_type_1d_view_host =
   typename coverage_modification_type_1d_dual_view::t_host;
 
+//
+struct ArrheniusReactionType
+{
+  ordinal_type _reaction_index;
+  real_type _E;
+  real_type _A;
+  real_type _B;
+  real_type _C;
+  real_type _D;
+};
+
+using arrhenius_reaction_type_1d_dual_view = Tines::value_type_1d_dual_view<ArrheniusReactionType, exec_space>;
+
 /// time marching data structure
 struct TimeAdvance
 {
@@ -234,74 +276,79 @@ struct TimeAdvance
   real_type _dt, _dtmin, _dtmax;
   ordinal_type _max_num_newton_iterations;
   ordinal_type _num_time_iterations_per_interval;
+  ordinal_type _jacobian_interval;
 };
 
 /// time tolerence; real_type_2d_view numberOfTimeODEs x 2 (atol,rtol)
 /// newton tolerence; real_type_1d_view (atol, rtol)
 using time_advance_type = TimeAdvance;
-using time_advance_type_0d_dual_view =
-  Kokkos::DualView<time_advance_type, Kokkos::LayoutRight, exec_space>;
-using time_advance_type_1d_dual_view =
-  Kokkos::DualView<time_advance_type*, Kokkos::LayoutRight, exec_space>;
+using time_advance_type_0d_dual_view = Tines::value_type_0d_dual_view<time_advance_type,interf_device_type>;
+using time_advance_type_1d_dual_view = Tines::value_type_1d_dual_view<time_advance_type,interf_device_type>;
 
-using time_advance_type_0d_view =
-  typename time_advance_type_0d_dual_view::t_dev;
-using time_advance_type_1d_view =
-  typename time_advance_type_1d_dual_view::t_dev;
+using time_advance_type_0d_view = Tines::value_type_0d_view<time_advance_type,interf_device_type>;
+using time_advance_type_1d_view = Tines::value_type_1d_view<time_advance_type,interf_device_type>;
 
-using time_advance_type_0d_view_host =
-  typename time_advance_type_0d_dual_view::t_host;
-using time_advance_type_1d_view_host =
-  typename time_advance_type_1d_dual_view::t_host;
+using time_advance_type_0d_view_host = Tines::value_type_0d_view<time_advance_type,interf_host_device_type>;
+using time_advance_type_1d_view_host = Tines::value_type_1d_view<time_advance_type,interf_host_device_type>;
 
 /// view
-using real_type_0d_dual_view =
-  Kokkos::DualView<real_type, Kokkos::LayoutRight, exec_space>;
-using real_type_1d_dual_view =
-  Kokkos::DualView<real_type*, Kokkos::LayoutRight, exec_space>;
-using real_type_2d_dual_view =
-  Kokkos::DualView<real_type**, Kokkos::LayoutRight, exec_space>;
-using real_type_3d_dual_view =
-  Kokkos::DualView<real_type***, Kokkos::LayoutRight, exec_space>;
+using real_type_0d_dual_view = Tines::value_type_0d_dual_view<real_type,interf_device_type>;
+using real_type_1d_dual_view = Tines::value_type_1d_dual_view<real_type,interf_device_type>;
+using real_type_2d_dual_view = Tines::value_type_2d_dual_view<real_type,interf_device_type>;
+using real_type_3d_dual_view = Tines::value_type_3d_dual_view<real_type,interf_device_type>;
 
-using ordinal_type_0d_dual_view =
-  Kokkos::DualView<ordinal_type, Kokkos::LayoutRight, exec_space>;
-using ordinal_type_1d_dual_view =
-  Kokkos::DualView<ordinal_type*, Kokkos::LayoutRight, exec_space>;
-using ordinal_type_2d_dual_view =
-  Kokkos::DualView<ordinal_type**, Kokkos::LayoutRight, exec_space>;
-using ordinal_type_3d_dual_view =
-  Kokkos::DualView<ordinal_type***, Kokkos::LayoutRight, exec_space>;
+using ordinal_type_0d_dual_view = Tines::value_type_0d_dual_view<ordinal_type,interf_device_type>;
+using ordinal_type_1d_dual_view = Tines::value_type_1d_dual_view<ordinal_type,interf_device_type>;
+using ordinal_type_2d_dual_view = Tines::value_type_2d_dual_view<ordinal_type,interf_device_type>;
+using ordinal_type_3d_dual_view = Tines::value_type_3d_dual_view<ordinal_type,interf_device_type>;
 
 template<int S>
-using string_type_1d_dual_view =
-  Kokkos::DualView<char* [S], Kokkos::LayoutRight, exec_space>;
+using string_type_1d_dual_view = Tines::value_type_1d_dual_view<char[S],interf_device_type>;
 
-using real_type_0d_view = typename real_type_0d_dual_view::t_dev;
-using real_type_1d_view = typename real_type_1d_dual_view::t_dev;
-using real_type_2d_view = typename real_type_2d_dual_view::t_dev;
-using real_type_3d_view = typename real_type_3d_dual_view::t_dev;
+using real_type_0d_view = Tines::value_type_0d_view<real_type,interf_device_type>;
+using real_type_1d_view = Tines::value_type_1d_view<real_type,interf_device_type>;
+using real_type_2d_view = Tines::value_type_2d_view<real_type,interf_device_type>;
+using real_type_3d_view = Tines::value_type_3d_view<real_type,interf_device_type>;
 
-using ordinal_type_0d_view = typename ordinal_type_0d_dual_view::t_dev;
-using ordinal_type_1d_view = typename ordinal_type_1d_dual_view::t_dev;
-using ordinal_type_2d_view = typename ordinal_type_2d_dual_view::t_dev;
-using ordinal_type_3d_view = typename ordinal_type_3d_dual_view::t_dev;
-
-template<int S>
-using string_type_1d_view = typename string_type_1d_dual_view<S>::t_dev;
-
-using real_type_0d_view_host = typename real_type_0d_dual_view::t_host;
-using real_type_1d_view_host = typename real_type_1d_dual_view::t_host;
-using real_type_2d_view_host = typename real_type_2d_dual_view::t_host;
-using real_type_3d_view_host = typename real_type_3d_dual_view::t_host;
-
-using ordinal_type_0d_view_host = typename ordinal_type_0d_dual_view::t_host;
-using ordinal_type_1d_view_host = typename ordinal_type_1d_dual_view::t_host;
-using ordinal_type_2d_view_host = typename ordinal_type_2d_dual_view::t_host;
-using ordinal_type_3d_view_host = typename ordinal_type_3d_dual_view::t_host;
+using ordinal_type_0d_view = Tines::value_type_0d_view<ordinal_type,interf_device_type>;
+using ordinal_type_1d_view = Tines::value_type_1d_view<ordinal_type,interf_device_type>;
+using ordinal_type_2d_view = Tines::value_type_2d_view<ordinal_type,interf_device_type>;
+using ordinal_type_3d_view = Tines::value_type_3d_view<ordinal_type,interf_device_type>;
 
 template<int S>
-using string_type_1d_view_host = typename string_type_1d_dual_view<S>::t_host;
+using string_type_1d_view = Tines::value_type_1d_dual_view<char[S],interf_device_type>;
+
+using real_type_0d_view_host = Tines::value_type_0d_view<real_type,interf_host_device_type>;
+using real_type_1d_view_host = Tines::value_type_1d_view<real_type,interf_host_device_type>;
+using real_type_2d_view_host = Tines::value_type_2d_view<real_type,interf_host_device_type>;
+using real_type_3d_view_host = Tines::value_type_3d_view<real_type,interf_host_device_type>;
+
+using ordinal_type_0d_view_host = Tines::value_type_0d_view<ordinal_type,interf_host_device_type>;
+using ordinal_type_1d_view_host = Tines::value_type_1d_view<ordinal_type,interf_host_device_type>;
+using ordinal_type_2d_view_host = Tines::value_type_2d_view<ordinal_type,interf_host_device_type>;
+using ordinal_type_3d_view_host = Tines::value_type_3d_view<ordinal_type,interf_host_device_type>;
+
+template<int S>
+using string_type_1d_view_host = Tines::value_type_1d_dual_view<char[S],interf_host_device_type>;
+
+using real_type_0d_const_view_host = typename real_type_0d_view_host::const_type;
+using real_type_1d_const_view_host = typename real_type_1d_view_host::const_type;
+using real_type_2d_const_view_host = typename real_type_2d_view_host::const_type;
+using real_type_3d_const_view_host = typename real_type_3d_view_host::const_type;
+
+// cstr data struc
+template<typename DeviceType>
+struct TransientContStirredTankReactorData
+{
+  real_type mdotIn; // inlet mass flow kg/s
+  real_type Vol; // volumen of reactor m3
+  Tines::value_type_1d_view<real_type,DeviceType> Yi; // initial condition mass fraction
+  real_type Acat; // Catalytic area m2: chemical active area
+  real_type pressure;
+  real_type EnthalpyIn;
+  real_type isoThermic{1}; // 0 is isoThermic 1 is not isoThermic
+  ordinal_type number_of_algebraic_constraints{0};
+};
 
 /// utility function
 using do_not_init_tag = std::string; // Kokkos::ViewAllocateWithoutInitializing;
@@ -614,7 +661,39 @@ struct FakeTeam
   }
 };
 
+
 namespace Impl {
+
+  // default
+  //#define TCHEM_LEAGUE_RANGE_DYNAMIC
+  //#define TCHEM_LEAGUE_RANGE_STATIC
+  
+/// decoupling team from nbatch
+template<typename MemberType>
+static KOKKOS_INLINE_FUNCTION void
+getLeagueRange(const MemberType & member, const ordinal_type n,
+	       ordinal_type & ibeg, ordinal_type & iend, ordinal_type & iinc) 
+{
+#if defined(TCHEM_LEAGUE_RANGE_DYNAMIC)
+  ibeg = member.league_rank();
+  iend = n;
+  iinc = member.league_size();
+#elif defined(TCHEM_LEAGUE_RANGE_STATIC)
+  const ordinal_type lsize = member.league_size();
+  const ordinal_type istep = (n/lsize) + (n%lsize > 0);
+  ibeg = member.league_rank*istep;
+  const ordinal_Type itmp = ibeg + istep;
+  iend = itmp < n ? itmp : n;
+  iinc = 1;
+#else
+  TCHEM_CHECK_ERROR(member.league_size() != n, "Error: league size does not match to input");	
+  ibeg = member.league_rank();
+  iend = ibeg+1;
+  iinc = 1;	
+#endif
+}
+
+
 /// state vector standard interface defining the internal structure
 /// 0. Density (R)
 /// 1. Pressure (P)
@@ -820,6 +899,7 @@ readSample(const std::string& filename,
                   LENGTHOFSPECNAME) == 0) {
         indx.push_back(i);
         printf("species %s index %d \n", &speciesNamesHost(i, 0), i);
+        break;
       }
     }
   }

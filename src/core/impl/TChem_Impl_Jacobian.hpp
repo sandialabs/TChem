@@ -92,13 +92,29 @@ struct Jacobian
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
+    using kmcd_type = KineticModelConstDataType;
+    using device_type = typename kmcd_type::device_type;
+    using Gk = GkFcn<real_type,device_type>;
+    using EnthalpySpecMs = EnthalpySpecMsFcn<real_type,device_type>;
+    using KForwardReverse= KForwardReverse<real_type,device_type>;
+    using MolarConcentrations = MolarConcentrations<real_type,device_type>;
+    using ThirdBodyConcentrations = ThirdBodyConcentrations<real_type,device_type>;
+    using RateOfProgress = RateOfProgress<real_type,device_type>;
+    using Crnd = Crnd<real_type,device_type>;
+    using RhoMixMs = RhoMixMs<real_type,device_type>;
+    using CpMixMs = CpMixMs<real_type, device_type>;
+
+
     const real_type zero(0); //, one(1);
     // const real_type t_1 = one/t;
     const real_type tln = ats<real_type>::log(t);
 
+    const real_type rhomix = RhoMixMs::team_invoke(member, t, p, Ys, kmcd);
+
     /// initialize and transform molar concentrations (kmol/m3) to (moles/cm3)
     {
-      MolarConcentrations::team_invoke(member, t, p, Ys, concX, kmcd);
+
+      MolarConcentrations::team_invoke(member, t, p, rhomix, Ys, concX, kmcd);
 
       const real_type one_e_minus_three(1e-3);
       Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
@@ -135,7 +151,7 @@ struct Jacobian
 
     /// compute rate-of-progress
     RateOfProgress::team_invoke(
-      member, kfor, krev, concX, ropFor, ropRev, iter, kmcd);
+      member,  kfor, krev, concX, ropFor, ropRev, iter, kmcd);
 
     /// compute pressure dependent factors */
     Crnd::team_invoke(member, t, kfor, concX, concM, crnd, iter, kmcd);
@@ -345,7 +361,6 @@ struct Jacobian
     }
 
     /* get density, cpmix, species cp, species enthalpies */
-    const real_type rhomix = RhoMixMs::team_invoke(member, t, p, Ys, kmcd);
     /// derivative should be invoked first as cpks is used later
     const real_type cpmix_der =
       CpMixMsDerivative::team_invoke(member, t, Ys, cpks, kmcd);

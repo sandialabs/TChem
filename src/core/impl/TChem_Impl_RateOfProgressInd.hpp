@@ -32,6 +32,7 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct RateOfProgressInd
 {
   ///
@@ -41,33 +42,57 @@ struct RateOfProgressInd
   ///  \return omega : array of \f$N_{spec}\f$ molar reaction rates
   ///  \f$\dot{\omega}_i\f$ \f$\left[kmol/(m^3\cdot s)\right]\f$
   ///
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename OrdinalType1DViewType,
-           typename KineticModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+
+  using ordinary_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type= KineticModelConstData<device_type>;
+
+  KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
+    const kinetic_model_type& kmcd)
+  {
+    return (4 * kmcd.nSpec + 6 * kmcd.nReac);
+  }
+
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
     /// input
-    const real_type& t,
-    const real_type& p,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec) mass fraction
+    const value_type& t,
+    const value_type& p,
+    const value_type& density,
+    const value_type_1d_view_type& Ys, /// (kmcd.nSpec) mass fraction
     /// output
-    const RealType1DViewType& ropFor, ///
-    const RealType1DViewType& ropRev,
+    const value_type_1d_view_type& ropFor, ///
+    const value_type_1d_view_type& ropRev,
     /// workspace
-    const RealType1DViewType& gk,
-    const RealType1DViewType& hks,
-    const RealType1DViewType& cpks,
-    const RealType1DViewType& concX,
-    const RealType1DViewType& concM,
-    const RealType1DViewType& kfor,
-    const RealType1DViewType& krev,
-    const RealType1DViewType& Crnd,
-    const OrdinalType1DViewType& iter,
+    const value_type_1d_view_type& gk,
+    const value_type_1d_view_type& hks,
+    const value_type_1d_view_type& cpks,
+    const value_type_1d_view_type& concX,
+    const value_type_1d_view_type& concM,
+    const value_type_1d_view_type& kfor,
+    const value_type_1d_view_type& krev,
+    const value_type_1d_view_type& Crnd,
+    const ordinary_type_1d_view_type& iter,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
     ///const real_type zero(0); // not used
+    using Gk = GkFcn<value_type, device_type>;
+    using KForwardReverse = KForwardReverse<value_type, device_type>;
+    using MolarConcentrations = MolarConcentrations<value_type, device_type>;
+    using ThirdBodyConcentrations = ThirdBodyConcentrations<value_type, device_type>;
+    using RateOfProgress = RateOfProgress<value_type, device_type>;
+    using Crnd_type = Impl::Crnd<value_type, device_type>;
+
 
     /// 0. compute (-ln(T)+dS/R-dH/RT) for each species
     Gk ::team_invoke(member,
@@ -95,6 +120,7 @@ struct RateOfProgressInd
     MolarConcentrations::team_invoke(member,
                                      t,
                                      p,
+                                     density,
                                      Ys, // need to be mass fraction
                                      concX,
                                      kmcd);
@@ -103,7 +129,7 @@ struct RateOfProgressInd
     // (moles/cm3)
     {
       const real_type one_e_minus_three(1e-3);
-      Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
+      Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
                            [&](const ordinal_type& i) {
                              concX(i) = concX(i) * one_e_minus_three;
                              // concX(i) = Xc(i)*one_e_minus_three;
@@ -128,7 +154,7 @@ struct RateOfProgressInd
                                 kmcd);
 
     /// 5. compute pressure dependent factors
-    Crnd::team_invoke(member,
+    Crnd_type::team_invoke(member,
                       t,
                       kfor,
                       concX,
@@ -143,7 +169,7 @@ struct RateOfProgressInd
 
     /// 9. transform from mole/(cm3.s) to kmol/(m3.s)
     const real_type one_e_3(1e3);
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nReac),
+    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac),
                          [&](const ordinal_type& i) {
                            ropFor(i) *= Crnd(i) * one_e_3;
                            ropRev(i) *= Crnd(i) * one_e_3;
@@ -153,24 +179,23 @@ struct RateOfProgressInd
   }
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
+           typename WorkViewType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
     const real_type& t,
     const real_type& p,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec)
+    const real_type& density,
+    const real_type_1d_view_type& Ys, /// (kmcd.nSpec)
     /// output
-    const RealType1DViewType& ropFor, ///
-    const RealType1DViewType& ropRev,
+    const real_type_1d_view_type& ropFor, ///
+    const real_type_1d_view_type& ropRev,
     /// workspace
     const WorkViewType& work,
     /// kmcd.nSpec(4) : concX,gk,hks,cpks,
     /// kmcd.nReac(5) : concM,kfor,krev,rop,Crnd
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
     ///const real_type zero(0); /// not used
 
@@ -179,33 +204,99 @@ struct RateOfProgressInd
     ///
     auto w = (real_type*)work.data();
 
-    auto gk = RealType1DViewType(w, kmcd.nSpec);
+    auto gk = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto hks = RealType1DViewType(w, kmcd.nSpec);
+    auto hks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto cpks = RealType1DViewType(w, kmcd.nSpec);
+    auto cpks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto concX = RealType1DViewType(w, kmcd.nSpec);
+    auto concX = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
 
-    auto concM = RealType1DViewType(w, kmcd.nReac);
+    auto concM = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto kfor = RealType1DViewType(w, kmcd.nReac);
+    auto kfor = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto krev = RealType1DViewType(w, kmcd.nReac);
+    auto krev = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-    auto Crnd = RealType1DViewType(w, kmcd.nReac);
+    auto Crnd = real_type_1d_view_type(w, kmcd.nReac);
     w += kmcd.nReac;
-
-    auto iter = Kokkos::View<ordinal_type*,
-                             Kokkos::LayoutRight,
-                             typename WorkViewType::memory_space>(
-      (ordinal_type*)w, kmcd.nReac * 2);
+    //
+    auto iter = ordinary_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
 
     team_invoke_detail(member,
                        t,
                        p,
+                       density,
+                       Ys,
+                       ropFor,
+                       ropRev,
+                       gk,
+                       hks,
+                       cpks,
+                       concX,
+                       concM,
+                       kfor,
+                       krev,
+                       Crnd,
+                       iter,
+                       kmcd);
+  }
+  template<typename MemberType,
+           typename WorkViewType>
+  KOKKOS_FORCEINLINE_FUNCTION static void team_invoke_sacado(
+    const MemberType& member,
+    /// input
+    const value_type& t,
+    const value_type& p,
+    const value_type& density,
+    const value_type_1d_view_type& Ys, /// (kmcd.nSpec)
+    /// output
+    const value_type_1d_view_type& ropFor, ///
+    const value_type_1d_view_type& ropRev,
+    /// workspace
+    const WorkViewType& work,
+    /// kmcd.nSpec(4) : concX,gk,hks,cpks,
+    /// kmcd.nReac(5) : concM,kfor,krev,rop,Crnd
+    /// const input from kinetic model
+    const kinetic_model_type& kmcd)
+  {
+    ///const real_type zero(0); /// not used
+
+    ///
+    /// workspace needed gk, hks, kfor, krev
+    ///
+
+    const ordinal_type sacadoStorageDimension = ats<value_type>::sacadoStorageDimension(t);
+    auto w = (real_type*)work.data();
+    const ordinal_type len = value_type().length();
+
+    auto gk = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+    auto hks = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+    auto cpks = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+    auto concX = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
+    w += kmcd.nSpec*len;
+
+    auto concM = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+    auto kfor = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+    auto krev = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+    auto Crnd = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+    w += kmcd.nReac*len;
+    //
+    auto iter = ordinary_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
+    w += kmcd.nReac * 2;
+
+    team_invoke_detail(member,
+                       t,
+                       p,
+                       density,
                        Ys,
                        ropFor,
                        ropRev,
@@ -221,6 +312,7 @@ struct RateOfProgressInd
                        kmcd);
   }
 };
+
 
 } // namespace Impl
 } // namespace TChem

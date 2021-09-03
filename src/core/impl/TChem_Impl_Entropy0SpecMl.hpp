@@ -27,30 +27,39 @@ Sandia National Laboratories, Livermore, CA, USA
 
 namespace TChem {
 namespace Impl {
-
+template<typename ValueType, typename DeviceType>
 struct Entropy0SpecMlFcn
 {
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+
   template<typename MemberType,
-           typename RealType,
-           typename RealType1DViewType,
            typename KineticModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const RealType& t,
+    const value_type& t,
     /// output (nspec)
-    const RealType1DViewType& s0i,
+    const value_type_1d_view_type& s0i,
     /// workspace
-    const RealType1DViewType& cpks,
+    const value_type_1d_view_type& cpks,
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
-    const real_type one[3] = { 0.5, (1.0 / 3.0), 0.25 };
-    const RealType tLoc = getValueInRangev2(kmcd.TthrmMin, kmcd.TthrmMax, t);
-    const RealType delT = t - tLoc;
-    const RealType tln = ats<RealType>::log(tLoc);
+    using CpSpecMl = CpSpecMlFcn<value_type,device_type>;
+
+    const scalar_type one[3] = { 0.5, (1.0 / 3.0), 0.25 };
+    const value_type tLoc = getValueInRangev2(kmcd.TthrmMin, kmcd.TthrmMax, t);
+    const value_type delT = t - tLoc;
+    const value_type tln = ats<value_type>::log(tLoc);
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
         const ordinal_type ipol = tLoc > kmcd.Tmi(i);
         // this assumes nNASAinter_ = 2, nCpCoef_ = 5 (confirm this)
         // icpst = i*7*2+ipol*7 ;
@@ -65,18 +74,17 @@ struct Entropy0SpecMlFcn
       });
 
     /* Check if temperature outside bounds */
-    if (ats<RealType>::abs(delT) > REACBALANCE()) {
+    if (ats<value_type>::abs(delT) > REACBALANCE()) {
       CpSpecMl::team_invoke(member, tLoc, cpks, kmcd);
-      const RealType t_tLoc = t / tLoc;
-      Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
+      const value_type t_tLoc = t / tLoc;
+      Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
                            [&](const ordinal_type& i) {
-                             s0i(i) += cpks(i) * ats<RealType>::log(t_tLoc);
+                             s0i(i) += cpks(i) * ats<value_type>::log(t_tLoc);
                            });
     }
   }
 };
-using Entr0SpecMlFcn = Entropy0SpecMlFcn; /// backward compatibility
-using Entropy0SpecMl = Entropy0SpecMlFcn; /// front interface
+
 
 struct Entropy0SpecMlFcnDerivative
 {
@@ -94,6 +102,10 @@ struct Entropy0SpecMlFcnDerivative
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
+    using kmcd_type = KineticModelConstDataType;
+    using device_type = typename kmcd_type::exec_space_type;
+    using CpSpecMs = CpSpecMsFcn<real_type, device_type>;
+
     const real_type tLoc = getValueInRange(kmcd.TthrmMin, kmcd.TthrmMax, t);
     const real_type delT = t - tLoc;
     const real_type tln = ats<real_type>::log(tLoc);
@@ -101,11 +113,11 @@ struct Entropy0SpecMlFcnDerivative
     if (ats<real_type>::abs(delT) > REACBALANCE()) {
       CpSpecMs::team_invoke(member, t, cpks, kmcd);
       Kokkos::parallel_for(
-        Kokkos::TeamVectorRange(member, kmcd.nSpec),
+        Tines::RangeFactory<real_type>::TeamVectorRange(member, kmcd.nSpec),
         [&](const ordinal_type& i) { ei(i) = cpks(i) / tLoc; });
     } else {
       Kokkos::parallel_for(
-        Kokkos::TeamVectorRange(member, kmcd.nSpec),
+        Tines::RangeFactory<real_type>::TeamVectorRange(member, kmcd.nSpec),
         [&](const ordinal_type& i) {
           const ordinal_type ipol = tLoc > kmcd.Tmi(i);
           // this assumes nNASAinter_ = 2, nCpCoef_ = 5 (confirm this)

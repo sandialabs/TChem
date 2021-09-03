@@ -29,11 +29,11 @@ namespace TChem {
 void
 NetProductionRatePerMole::runHostBatch( /// input
   const ordinal_type nBatch,
-  const real_type_2d_view_host& state,
+  const real_type_2d_view_host_type& state,
   /// output
-  const real_type_2d_view_host& omega,
+  const real_type_2d_view_host_type& omega,
   /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
+  const kinetic_model_host_type& kmcd)
 {
   Kokkos::Profiling::pushRegion("TChem::NetProductionRatePerMole::runHostBatch");
   using policy_type = Kokkos::TeamPolicy<host_exec_space>;
@@ -41,7 +41,7 @@ NetProductionRatePerMole::runHostBatch( /// input
   const ordinal_type level = 1;
   const ordinal_type per_team_extent = getWorkSpaceSize(kmcd);
   const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    Scratch<real_type_1d_view_host_type>::shmem_size(per_team_extent);
 
   // policy_type policy(nBatch); // error
   policy_type policy(nBatch, Kokkos::AUTO()); // fine
@@ -52,23 +52,25 @@ NetProductionRatePerMole::runHostBatch( /// input
     policy,
     KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
       const ordinal_type i = member.league_rank();
-      const real_type_1d_view_host state_at_i =
+      const real_type_1d_view_host_type state_at_i =
         Kokkos::subview(state, i, Kokkos::ALL());
-      const real_type_1d_view_host omega_at_i =
+      const real_type_1d_view_host_type omega_at_i =
         Kokkos::subview(omega, i, Kokkos::ALL());
-      Scratch<real_type_1d_view_host> work(member.team_scratch(level),
+      Scratch<real_type_1d_view_host_type> work(member.team_scratch(level),
                                            per_team_extent);
 
-      const Impl::StateVector<real_type_1d_view_host> sv_at_i(kmcd.nSpec,
+      const Impl::StateVector<real_type_1d_view_host_type> sv_at_i(kmcd.nSpec,
                                                               state_at_i);
       TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                         "Error: input state vector is not valid");
       {
         const real_type t = sv_at_i.Temperature();
         const real_type p = sv_at_i.Pressure();
-        const real_type_1d_view_host Xc = sv_at_i.MassFractions();
-        Impl::ReactionRates ::team_invoke(
-          member, t, p, Xc, omega_at_i, work, kmcd);
+        const real_type density = sv_at_i.Density();
+
+        const real_type_1d_view_host_type Xc = sv_at_i.MassFractions();
+        Impl::ReactionRates<real_type, host_device_type >::team_invoke(
+          member, t, p, density, Xc, omega_at_i, work, kmcd);
       }
     });
   Kokkos::Profiling::popRegion();
@@ -77,11 +79,11 @@ NetProductionRatePerMole::runHostBatch( /// input
 void
 NetProductionRatePerMole::runDeviceBatch( /// input
   const ordinal_type nBatch,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_2d_view& omega,
+  const real_type_2d_view_type& omega,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
   Kokkos::Profiling::pushRegion("TChem::NetProductionRatePerMole::runDeviceBatch");
   using policy_type = Kokkos::TeamPolicy<exec_space>;
@@ -89,7 +91,7 @@ NetProductionRatePerMole::runDeviceBatch( /// input
   const ordinal_type level = 1;
   const ordinal_type per_team_extent = getWorkSpaceSize(kmcd);
   const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
 
   // policy_type policy(nBatch); // error
   policy_type policy(nBatch, Kokkos::AUTO()); // fine
@@ -100,28 +102,27 @@ NetProductionRatePerMole::runDeviceBatch( /// input
     policy,
     KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
       const ordinal_type i = member.league_rank();
-      const real_type_1d_view state_at_i =
+      const real_type_1d_view_type state_at_i =
         Kokkos::subview(state, i, Kokkos::ALL());
-      const real_type_1d_view omega_at_i =
+      const real_type_1d_view_type omega_at_i =
         Kokkos::subview(omega, i, Kokkos::ALL());
-      Scratch<real_type_1d_view> work(member.team_scratch(level),
+      Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                       per_team_extent);
 
-      const Impl::StateVector<real_type_1d_view> sv_at_i(kmcd.nSpec,
+      const Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec,
                                                          state_at_i);
       TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                         "Error: input state vector is not valid");
       {
         const real_type t = sv_at_i.Temperature();
         const real_type p = sv_at_i.Pressure();
-        const real_type_1d_view Xc = sv_at_i.MassFractions();
-        Impl::ReactionRates ::team_invoke(
-          member, t, p, Xc, omega_at_i, work, kmcd);
+        const real_type density = sv_at_i.Density();
+        const real_type_1d_view_type Xc = sv_at_i.MassFractions();
+        Impl::ReactionRates<real_type, device_type >::team_invoke(
+          member, t, p, density, Xc, omega_at_i, work, kmcd);
 
-        //
         member.team_barrier();
 
-        //
         Kokkos::parallel_for(
           Kokkos::TeamVectorRange(member, kmcd.nSpec),
           [&](const ordinal_type& k) {

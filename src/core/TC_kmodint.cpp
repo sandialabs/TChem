@@ -152,6 +152,8 @@ Sandia National Laboratories, Livermore, CA, USA
                        activation energy are to be modified)
 
 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
 
 #include <assert.h>
 #include <ctype.h>
@@ -6482,3 +6484,4 @@ TCKMI_outmath(element* listelem,
   return (0);
 
 } /* Done with "TCKMI_outmath" */
+#pragma GCC diagnostic pop

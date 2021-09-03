@@ -28,26 +28,40 @@ namespace TChem {
 
 struct RateOfProgressSurface
 {
-  template<typename KineticModelConstDataType,
-           typename KineticModelConstSurfDataType>
+
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
+  using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+
+  using kinetic_model_host_type = KineticModelConstData<host_device_type>;
+
+  template<typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticModelConstSurfDataType& kmcdSurf)
+    const KineticModelConstData<DeviceType >& kmcd,
+    const KineticSurfModelConstData<DeviceType>& kmcdSurf)
   {
     return (4 * kmcd.nSpec + 4 * kmcdSurf.nSpec + 4 * kmcdSurf.nReac);
   }
 
   static void runDeviceBatch( /// input
     const ordinal_type nBatch,
-    const real_type_2d_view& state,
-    const real_type_2d_view& zSurf,
+    const real_type_2d_view_type& state,
+    const real_type_2d_view_type& site_fraction,
     /// output
-    const real_type_2d_view& RoPFor,
-    const real_type_2d_view& RoPRev,
+    const real_type_2d_view_type& RoPFor,
+    const real_type_2d_view_type& RoPRev,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
+    const kinetic_model_type& kmcd,
     /// const data from kinetic model surface
-    const KineticSurfModelConstDataDevice& kmcdSurf);
+    const kinetic_surf_model_type& kmcdSurf);
 };
 
 } // namespace TChem

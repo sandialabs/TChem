@@ -30,15 +30,64 @@ namespace TChem {
 
 struct IgnitionZeroD
 {
-  template<typename KineticModelConstDataType>
+  template<typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd)
+    const KineticModelConstData<DeviceType>& kmcd)
   {
-    return (Impl::IgnitionZeroD::getWorkSpaceSize(kmcd) +
-            /// value array (in/out)
-            Impl::IgnitionZeroD_Problem<
-              KineticModelConstDataType>::getNumberOfEquations(kmcd));
+    using device_type = DeviceType;
+    using problem_type = Impl::IgnitionZeroD_Problem<real_type, device_type>;
+    const ordinal_type m = problem_type::getNumberOfEquations(kmcd);
+
+    ordinal_type work_size(0);
+#if defined(TCHEM_ENABLE_SACADO_JACOBIAN_IGNITION_ZERO_D_REACTOR)
+    if (m < 16) {
+      using value_type = Sacado::Fad::SLFad<real_type,16>;
+      work_size = Impl::IgnitionZeroD<value_type, device_type>::getWorkSpaceSize(kmcd);
+    } else if  (m < 32) {
+      using value_type = Sacado::Fad::SLFad<real_type,32>;
+      work_size = Impl::IgnitionZeroD<value_type, device_type>::getWorkSpaceSize(kmcd);
+    } else if  (m < 64) {
+      using value_type = Sacado::Fad::SLFad<real_type,64>;
+      work_size = Impl::IgnitionZeroD<value_type, device_type>::getWorkSpaceSize(kmcd);
+    } else if  (m < 128) {
+      using value_type = Sacado::Fad::SLFad<real_type,128>;
+      work_size = Impl::IgnitionZeroD<value_type, device_type>::getWorkSpaceSize(kmcd);
+    } else if  (m < 256) {
+      using value_type = Sacado::Fad::SLFad<real_type,256>;
+      work_size = Impl::IgnitionZeroD<value_type, device_type>::getWorkSpaceSize(kmcd);
+    } else if  (m < 512) {
+      using value_type = Sacado::Fad::SLFad<real_type,512>;
+      work_size = Impl::IgnitionZeroD<value_type, device_type>::getWorkSpaceSize(kmcd);
+    } else if (m < 1024){
+      using value_type = Sacado::Fad::SLFad<real_type,1024>;
+      work_size = Impl::IgnitionZeroD<value_type, device_type>::getWorkSpaceSize(kmcd);
+    } else{
+      TCHEM_CHECK_ERROR(0,
+                        "Error: Number of equations is bigger than size of sacado fad type");
+    }
+#else
+    {
+      work_size = Impl::IgnitionZeroD<real_type, device_type>::getWorkSpaceSize(kmcd);
+    }
+#endif
+    return work_size + m;
   }
+
+  static void runDeviceBatch( /// thread block size
+    typename UseThisTeamPolicy<exec_space>::type& policy,
+    /// global tolerence parameters that governs all samples
+    const real_type_1d_view& tol_newton,
+    const real_type_2d_view& tol_time,
+    /// sample specific input
+    const real_type_2d_view& fac,
+    const time_advance_type_1d_view& tadv,
+    const real_type_2d_view& state,
+    /// output
+    const real_type_1d_view& t_out,
+    const real_type_1d_view& dt_out,
+    const real_type_2d_view& state_out,
+    /// const data from kinetic model
+    const KineticModelConstData<interf_device_type >& kmcd);
 
   /// tadv - an input structure for time marching
   /// state (nSpec+3) - initial condition of the state vector
@@ -60,7 +109,7 @@ struct IgnitionZeroD
     const real_type_1d_view_host& dt_out,
     const real_type_2d_view_host& state_out,
     /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd);
+    const KineticModelConstData<interf_host_device_type>& kmcd);
 
   static void runDeviceBatch( /// thread block size
     typename UseThisTeamPolicy<exec_space>::type& policy,
@@ -76,7 +125,7 @@ struct IgnitionZeroD
     const real_type_1d_view& dt_out,
     const real_type_2d_view& state_out,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
+    const Kokkos::View<KineticModelConstData<interf_device_type>*,interf_device_type>& kmcds);
 
   static void runHostBatch( /// input
     typename UseThisTeamPolicy<host_exec_space>::type& policy,
@@ -92,23 +141,7 @@ struct IgnitionZeroD
     const real_type_1d_view_host& dt_out,
     const real_type_2d_view_host& state_out,
     /// const data from kinetic model
-    const Kokkos::View<KineticModelConstDataHost*,host_exec_space>& kmcds);
-
-  static void runDeviceBatch( /// thread block size
-    typename UseThisTeamPolicy<exec_space>::type& policy,
-    /// global tolerence parameters that governs all samples
-    const real_type_1d_view& tol_newton,
-    const real_type_2d_view& tol_time,
-    /// sample specific input
-    const real_type_2d_view& fac,
-    const time_advance_type_1d_view& tadv,
-    const real_type_2d_view& state,
-    /// output
-    const real_type_1d_view& t_out,
-    const real_type_1d_view& dt_out,
-    const real_type_2d_view& state_out,
-    /// const data from kinetic model
-    const Kokkos::View<KineticModelConstDataDevice*,exec_space>& kmcds);
+    const Kokkos::View<KineticModelConstData<interf_host_device_type>*,interf_host_device_type>& kmcds);
 
 };
 

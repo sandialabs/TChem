@@ -1,0 +1,73 @@
+{
+  "camp-data" : [
+  {
+    "type" : "RELATIVE_TOLERANCE",
+    "value" : 1.0e-10
+  },
+  {
+    "name" : "A",
+    "type" : "CHEM_SPEC",
+    "absolute integration tolerance" : 1.0e-10
+  },
+  {
+    "name" : "D",
+    "type" : "CHEM_SPEC",
+    "tracer type" : "CONSTANT"
+  },
+  {
+    "name" : "B",
+    "type" : "CHEM_SPEC",
+    "absolute integration tolerance" : 1.0e-10
+  },
+  {
+    "name" : "C",
+    "type" : "CHEM_SPEC",
+    "absolute integration tolerance" : 1.0e-10
+  },
+  {
+    "name" : "arrhenius",
+    "type" : "MECHANISM",
+    "reactions" : [
+      {
+	"type" : "ARRHENIUS",
+	"reactants" : {
+	  "A" : {},
+	  "D" : {}
+	},
+	"products" : {
+	  "B" : {}
+	}
+      },
+      {
+	"type" : "ARRHENIUS",
+	"reactants" : {
+	  "A" : {}
+	},
+	"products" : {
+	  "B" : {}
+	},
+	"A" : 1476.0,
+	"Ea" : 5.5e-21,
+	"B" : 150.0,
+	"E" : 0.15,
+	"time unit" : "MIN"
+      },
+      {
+	"type" : "ARRHENIUS",
+	"reactants" : {
+	  "B" : {}
+	},
+	"products" : {
+	  "C" : {},
+	  "D" : {}
+	},
+	"A" : 21.0,
+	"C" : -4000.0,
+	"B" : 11.0,
+	"D" : 315.0,
+	"E" : 0.05
+      }
+    ]
+  }
+  ]
+}

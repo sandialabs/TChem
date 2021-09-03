@@ -30,8 +30,6 @@ using real_type = TChem::real_type;
 using real_type_1d_view = TChem::real_type_1d_view;
 using real_type_2d_view = TChem::real_type_2d_view;
 
-using pfr_data_type = TChem::pfr_data_type;
-using pfr_data_type_0d_view = TChem::pfr_data_type_0d_view;
 
 int
 main(int argc, char* argv[])
@@ -93,18 +91,15 @@ main(int argc, char* argv[])
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
-    /// construct kmd and use the view for testing
-    // TChem::KineticModelData kmd(chemFile, thermFile);
-    // const auto kmcd = kmd.createConstData<TChem::exec_space>();
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
-    // need to fix it
     TChem::KineticModelData kmdSurf(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
     const auto kmcd =
       kmdSurf
-        .createConstData<TChem::exec_space>(); // data struc with gas phase info
+        .createConstData<device_type>(); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<TChem::exec_space>(); // data struc with
+      kmdSurf.createConstSurfData<device_type>(); // data struc with
                                                         // surface phase info
 
     /// input: state vectors: temperature, pressure and mass fraction
@@ -133,7 +128,7 @@ main(int argc, char* argv[])
     real_type Area(0.00053);
     real_type Pcat(0.025977239243415308);
 
-    pfr_data_type pfrd;
+    PlugFlowReactorData pfrd;
     pfrd.Area = Area; // m2
     pfrd.Pcat = Pcat; //
 

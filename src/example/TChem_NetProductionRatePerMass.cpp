@@ -65,7 +65,7 @@ main(int argc, char* argv[])
     &nBatch);
   //
   opts.set_option<bool>(
-    "use_sample_format", "If true, input file does not header or format", &use_sample_format);
+    "use_sample_format", "If true, input file does not have header or format", &use_sample_format);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
 
@@ -77,13 +77,18 @@ main(int argc, char* argv[])
   {
     const bool detail = false;
 
+
+
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
     const auto exec_space_instance = TChem::exec_space();
 
+
+    using device_type = typename Tines::UseThisDevice<exec_space>::type;
+
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
-    const auto kmcd = kmd.createConstData<TChem::exec_space>();
+    const auto kmcd = kmd.createConstData<device_type>();
 
 
     const ordinal_type stateVecDim =

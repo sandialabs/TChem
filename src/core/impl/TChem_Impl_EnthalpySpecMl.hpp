@@ -27,30 +27,41 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 namespace Impl {
 
+//
+template<typename ValueType, typename DeviceType>
 struct EnthalpySpecMlFcn
 {
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+
   template<typename MemberType,
-           typename RealType,
-           typename RealType1DViewType,
            typename KineticModelConstDataType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const RealType& t,
+    const value_type& t,
     /// output (nspec)
-    const RealType1DViewType& hi,
+    const value_type_1d_view_type& hi,
     /// workspace (nspec)
-    const RealType1DViewType& cpks,
+    const value_type_1d_view_type& cpks,
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
     //constant number
-    const real_type one[4] = { 0.5, (1.0 / 3.0), 0.25, 0.2 };
+    using CpSpecMl = CpSpecMlFcn<value_type,device_type>;
+
+    const scalar_type one[4] = { 0.5, (1.0 / 3.0), 0.25, 0.2 };
     const auto tLoc = getValueInRangev2(kmcd.TthrmMin, kmcd.TthrmMax, t);
 
     // const RealType tln = ats<RealType>::log(tLoc);
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
         const ordinal_type ipol = tLoc > kmcd.Tmi(i);
         // this assumes nNASAinter_ = 2, nCpCoef_ = 5 (confirm this)
         // icpst = i*7*2+ipol*7 ;
@@ -68,10 +79,10 @@ struct EnthalpySpecMlFcn
       });
 
     const auto delT = t - tLoc;
-    if (ats<RealType>::abs(delT) > REACBALANCE()) {
+    if (ats<value_type>::abs(delT) > REACBALANCE()) {
       CpSpecMl::team_invoke(member, tLoc, cpks, kmcd);
       Kokkos::parallel_for(
-        Kokkos::TeamVectorRange(member, kmcd.nSpec),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
         [&](const ordinal_type& i) { hi(i) += cpks(i) * delT; });
     }
 
@@ -89,8 +100,6 @@ struct EnthalpySpecMlFcn
 #endif
   }
 };
-using HspecMlFcn = EnthalpySpecMlFcn;     /// backward compatibility
-using EnthalpySpecMl = EnthalpySpecMlFcn; /// front interface
 
 } // namespace Impl
 } // namespace TChem

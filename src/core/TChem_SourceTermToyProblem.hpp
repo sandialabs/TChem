@@ -30,33 +30,45 @@ namespace TChem {
 struct SourceTermToyProblem
 {
 
-  template<typename KineticModelConstDataType>
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
+  using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_model_host_type = KineticModelConstData<host_device_type>;
+
+  template<typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd)
+    const KineticModelConstData<DeviceType>& kmcd)
   {
-    return Impl::SourceTermToyProblem::getWorkSpaceSize(kmcd);
+    return Impl::SourceTermToyProblem<real_type, DeviceType>::getWorkSpaceSize(kmcd);
   }
 
   //
   static void runDeviceBatch( /// input
     typename UseThisTeamPolicy<exec_space>::type& policy,
-    const real_type_1d_view& theta,
-    const real_type_1d_view& lambda,
-    const real_type_2d_view& state,
+    const real_type_1d_view_type& theta,
+    const real_type_1d_view_type& lambda,
+    const real_type_2d_view_type& state,
     /// output
-    const real_type_2d_view& SourceTermToyProblem,
+    const real_type_2d_view_type& SourceTermToyProblem,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
+    const kinetic_model_type& kmcd);
   //
   static void runHostBatch( /// input
     typename UseThisTeamPolicy<host_exec_space>::type& policy,
-    const real_type_1d_view_host& theta,
-    const real_type_1d_view_host& lambda,
-    const real_type_2d_view_host& state,
+    const real_type_1d_view_host_type& theta,
+    const real_type_1d_view_host_type& lambda,
+    const real_type_2d_view_host_type& state,
     /// output
-    const real_type_2d_view_host& SourceTermToyProblem,
+    const real_type_2d_view_host_type& SourceTermToyProblem,
     /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd);
+    const kinetic_model_host_type& kmcd);
 
 };
 

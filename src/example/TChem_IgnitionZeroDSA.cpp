@@ -23,6 +23,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_Util.hpp"
 
 #include "TChem_IgnitionZeroD.hpp"
+#include "TChem_ConstantVolumeIgnitionReactor.hpp"
 
 using ordinal_type = TChem::ordinal_type;
 using real_type = TChem::real_type;
@@ -56,8 +57,8 @@ main(int argc, char* argv[])
   real_type dtmin(1e-8), dtmax(1e-1);
   real_type rtol_time(1e-4), atol_newton(1e-10), rtol_newton(1e-6);
   int num_time_iterations_per_interval(1e1), max_num_time_iterations(1e3),
-    max_num_newton_iterations(100);
-  int output_frequency(-1);
+    max_num_newton_iterations(100), jacobian_interval(1);
+  int output_frequency(1);
 
   real_type T_threshold(1500);
 
@@ -65,10 +66,14 @@ main(int argc, char* argv[])
   ;
   bool verbose(true);
   bool OnlyComputeIgnDelayTime(false);
+  bool run_ignition_zero_d(true);
 
   std::string chemFile("chem.inp");
   std::string thermFile("therm.dat");
   std::string inputFile("sample.dat");
+  std::string outputFile("IgnSolution.dat");
+  std::string ignition_delay_time_file("IgnitionDelayTime.dat");
+  std::string ignition_delay_time_w_threshold_temperature_file("IgnitionDelayTimeTthreshold.dat");
 
   bool use_prefixPath(true);
 
@@ -94,14 +99,28 @@ main(int argc, char* argv[])
     "atol-newton", "Absolute tolerance used in newton solver", &atol_newton);
   opts.set_option<real_type>(
     "rtol-newton", "Relative tolerance used in newton solver", &rtol_newton);
+  opts.set_option<bool>(
+    "run-ignition-zero-d",
+    "if true code runs ignition zero d reactor; else code runs constant volume ignition reactor", &run_ignition_zero_d);
+  opts.set_option<std::string>("outputfile",
+    "Output file name e.g., IgnSolution.dat", &outputFile);
+  opts.set_option<std::string>("ignition-delay-time-file",
+    "Output of ignition delay time second using second-derivative method e.g., IgnitionDelayTime.dat",
+     &ignition_delay_time_file);
+  opts.set_option<std::string>("ignition-delay-time-w-threshold-temperature-file",
+    "Output of ignition delay time second using threshold-temperature method  e.g., IgnitionDelayTimeTthreshold.dat",
+    &ignition_delay_time_w_threshold_temperature_file);
   opts.set_option<real_type>(
-    "tol-time", "Tolerence used for adaptive time stepping", &rtol_time);
+    "tol-time", "Tolerance used for adaptive time stepping", &rtol_time);
   opts.set_option<int>("time-iterations-per-interval",
                        "Number of time iterations per interval to store qoi",
                        &num_time_iterations_per_interval);
   opts.set_option<int>("max-time-iterations",
                        "Maximum number of time iterations",
                        &max_num_time_iterations);
+  opts.set_option<int>("jacobian-interval",
+                       "Jacobians are evaluated once in this interval",
+                       &jacobian_interval);
   opts.set_option<int>("max-newton-iterations",
                        "Maximum number of newton iterations",
                        &max_num_newton_iterations);
@@ -133,20 +152,34 @@ main(int argc, char* argv[])
       chemFile      = prefixPath + "chem.inp";
       thermFile     = prefixPath + "therm.dat";
       inputFile     = prefixPath + "sample.dat";
+
       printf("Using a prefix path %s \n",prefixPath.c_str() );
     }
 
   Kokkos::initialize(argc, argv);
   {
+      printf("----------------------------------------------------- \n");
+      printf("---------------------WARNING------------------------- \n");
+    if (run_ignition_zero_d){
+      printf("   TChem is running Ignition Zero D Reactor \n");
+    } else {
+      printf("   TChem is running Constant Volume Ignition Reactor \n");
+
+    }
+      printf("----------------------------------------------------- \n");
+      printf("----------------------------------------------------- \n");
+
     const bool detail = false;
 
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
-    const TChem::KineticModelConstData<TChem::exec_space> kmcd =
-      kmd.createConstData<TChem::exec_space>();
+    const TChem::KineticModelConstData<device_type> kmcd =
+      kmd.createConstData<device_type>();
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
@@ -160,7 +193,7 @@ main(int argc, char* argv[])
              T_threshold);
     }
 
-    FILE* fout = fopen("IgnSolution.dat", "w");
+    FILE* fout = fopen(outputFile.c_str(), "w");
 
     /// input from a file; this is not necessary as the input is created
     /// by other applications.
@@ -183,19 +216,6 @@ main(int argc, char* argv[])
                               nBatch);
     }
     real_type_2d_view state("StateVector Devices", nBatch, stateVecDim);
-
-    // real_type_3d_view output;
-    // // save data: only if  output_frequency is provided by user.
-    // if (output_frequency > 0){
-    //   const ordinal_type ntimes = max_num_time_iterations / output_frequency;
-    //
-    //   const ordinal_type tnvar = stateVecDim + 3;
-    //
-    //   printf("total number of variable %d\n", tnvar);
-    //
-    //   output = real_type_3d_view("outputdata", ntimes, nBatch, tnvar);
-    //
-    // }
 
     // #endif
     // Temperature at iter and iter-1 for each sample, row: sample, colum iter
@@ -293,9 +313,19 @@ main(int argc, char* argv[])
       /// team policy
       policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
 
+      if (team_size > 0 && vector_size > 0) {
+        policy = policy_type(exec_space_instance, nBatch, team_size, vector_size);
+      }
+
       const ordinal_type level = 1;
-      const ordinal_type per_team_extent =
-        TChem::IgnitionZeroD::getWorkSpaceSize(kmcd);
+      ordinal_type per_team_extent(0);
+
+      if (run_ignition_zero_d){
+        per_team_extent = TChem::IgnitionZeroD::getWorkSpaceSize(kmcd);
+      } else {
+        per_team_extent = TChem::ConstantVolumeIgnitionReactor::getWorkSpaceSize(kmcd);
+      }
+
       const ordinal_type per_team_scratch =
         TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
       policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
@@ -314,13 +344,22 @@ main(int argc, char* argv[])
           dt_host = real_type_1d_view_host("dt host", nBatch);
         }
 
-        using problem_type = TChem::Impl::IgnitionZeroD_Problem<decltype(kmcd)>;
+        ordinal_type number_of_equations(0);
+
+        if (run_ignition_zero_d){
+          using problem_type = TChem::Impl::IgnitionZeroD_Problem<real_type, device_type>;
+          number_of_equations = problem_type::getNumberOfTimeODEs(kmcd);
+        }else {
+          using problem_type = TChem::Impl::ConstantVolumeIgnitionReactor_Problem<real_type, device_type>;
+          number_of_equations = problem_type::getNumberOfTimeODEs(kmcd);
+        }
+
         real_type_2d_view tol_time(
-          "tol time", problem_type::getNumberOfTimeODEs(kmcd), 2);
+          "tol time", number_of_equations, 2);
         real_type_1d_view tol_newton("tol newton", 2);
 
         real_type_2d_view fac(
-          "fac", nBatch, problem_type::getNumberOfEquations(kmcd));
+          "fac", nBatch, number_of_equations);
 
         /// tune tolerence
         {
@@ -348,6 +387,7 @@ main(int argc, char* argv[])
         tadv_default._max_num_newton_iterations = max_num_newton_iterations;
         tadv_default._num_time_iterations_per_interval =
           num_time_iterations_per_interval;
+        tadv_default._jacobian_interval = jacobian_interval;
 
         time_advance_type_1d_view tadv("tadv", nBatch);
         Kokkos::deep_copy(tadv, tadv_default);
@@ -398,10 +438,15 @@ main(int argc, char* argv[])
         }
 
         real_type tsum(0);
-        for (; iter < max_num_time_iterations && tsum <= tend; ++iter) {
+        for (; iter < max_num_time_iterations && tsum <= tend*0.9999; ++iter) {
 
+          if (run_ignition_zero_d){
           TChem::IgnitionZeroD::runDeviceBatch(
             policy, tol_newton, tol_time, fac, tadv, state, t, dt, state, kmcd);
+          } else {
+          ConstantVolumeIgnitionReactor::runDeviceBatch(
+            policy, tol_newton, tol_time, fac, tadv, state, t, dt, state, kmcd);
+          }
 
           /// print of store QOI for the first sample
           /// Ignition delay time Temperature threshold
@@ -427,7 +472,7 @@ main(int argc, char* argv[])
                 const real_type temp_at_i = state(i, 2);
                 // dTdt at i-3/2
                 // at first iteration TempIgn and TimeIgn are zero
-                // It takes two iteration to fill out an value in TempIgn(i,0)
+                // It takes two iterations to fill out an value in TempIgn(i,0)
                 const real_type dTdt_at_in32 =
                   TempIgn(i, 0) == 0 ? 0
                                      : (TempIgn(i, 1) - TempIgn(i, 0)) /
@@ -522,20 +567,14 @@ main(int argc, char* argv[])
       });
 #endif
 
-    // if (output_frequency > 0){
-    //     /// create a mirror view to save output from a device
-    //     auto output_host = Kokkos::create_mirror_view(output);
-    //     Kokkos::deep_copy(output_host, output);
-    //     TChem::Test::write3DMatrix("ign.dat", output_host);
-    // }
 
     auto IgnDelayTimes_host = Kokkos::create_mirror_view(IgnDelayTimes);
     Kokkos::deep_copy(IgnDelayTimes_host, IgnDelayTimes);
-    TChem::Test::write1DVector("IgnitionDelayTime.dat", IgnDelayTimes_host);
+    TChem::Test::write1DVector(ignition_delay_time_file, IgnDelayTimes_host);
 
     auto IgnDelayTimesT_host = Kokkos::create_mirror_view(IgnDelayTimesT);
     Kokkos::deep_copy(IgnDelayTimesT_host, IgnDelayTimesT);
-    TChem::Test::write1DVector("IgnitionDelayTimeTthreshold.dat",
+    TChem::Test::write1DVector(ignition_delay_time_w_threshold_temperature_file,
                                IgnDelayTimesT_host);
 
     fclose(fout);

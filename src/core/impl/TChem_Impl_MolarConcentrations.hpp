@@ -21,7 +21,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #ifndef __TCHEM_IMPL_MOLARCONCENTRATIONS_HPP__
 #define __TCHEM_IMPL_MOLARCONCENTRATIONS_HPP__
 
-#include "TChem_Impl_RhoMixMs.hpp"
+
 #include "TChem_Util.hpp"
 
 namespace TChem {
@@ -31,28 +31,36 @@ namespace Impl {
 /// Computes molar concentrations based on temperature and species mass
 /// fractions (getMs2Cc) \f[ [X_k]=Y_k\cdot\rho/W_k \f]
 ///
+template<typename ValueType, typename DeviceType>
 struct MolarConcentrations
 {
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type= KineticModelConstData<device_type>;
+
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const real_type& t,           /// temperature
-    const real_type& p,           /// pressure
-    const RealType1DViewType& Ys, /// mole fractions? mass fraction
+    const value_type& t,           /// temperature
+    const value_type& p,           /// pressure
+    const value_type& density,
+    const value_type_1d_view_type& Ys, /// mole fractions? mass fraction
     /// output
-    const RealType1DViewType& concX,
+    const value_type_1d_view_type& concX,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
-    const real_type rhomix = kmcd.rho < real_type(0)
-                               ? RhoMixMs::team_invoke(member, t, p, Ys, kmcd)
-                               : kmcd.rho;
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
+
+    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
                          [&](const ordinal_type& i) {
-                           concX(i) = Ys(i) * rhomix / kmcd.sMass(i);
+                           concX(i) = Ys(i) * density / kmcd.sMass(i);
                          });
 #if defined(TCHEM_ENABLE_SERIAL_TEST_OUTPUT) && !defined(__CUDA_ARCH__)
     if (member.league_rank() == 0) {

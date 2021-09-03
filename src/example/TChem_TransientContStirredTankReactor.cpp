@@ -46,10 +46,10 @@ using time_advance_type_1d_view_host = TChem::time_advance_type_1d_view_host;
 #define TCHEM_EXAMPLE_SimpleSurface_QOI_PRINT
 
 
-#if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
+// #if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
 #include "TChem_SimpleSurface.hpp"
 #include "TChem_InitialCondSurface.hpp"
-#endif
+// #endif
 
 int
 main(int argc, char* argv[])
@@ -64,18 +64,18 @@ main(int argc, char* argv[])
   std::string thermSurfFile("thermSurf.dat");
   std::string inputFile("sample.dat");
   std::string inputFileSurf( "inputSurf.dat");
+  std::string outputFile("CSTRSolution.dat");
 
   real_type mdotIn(3.596978981250784e-06);
   real_type Vol(0.00013470);
   real_type Acat (0.0013074);
 
-
   const real_type zero(0);
   real_type tbeg(0), tend(0.025);
   real_type dtmin(1e-10), dtmax(1e-6);
-  real_type rtol_time(1e-4), atol_newton(1e-12), rtol_newton(1e-6);
+  real_type atol_time(1e-12),rtol_time(1e-4), atol_newton(1e-12), rtol_newton(1e-6);
   int num_time_iterations_per_interval(1e1), max_num_time_iterations(4e3),
-    max_num_newton_iterations(100);
+    max_num_newton_iterations(100), jacobian_interval(1);
 
   int nBatch(1), team_size(-1), vector_size(-1);
   bool verbose(true);
@@ -85,67 +85,61 @@ main(int argc, char* argv[])
   bool isoThermic(false);
   bool saveInitialCondition(true);
 
-#if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
   bool transient_initial_condition(false);
-  bool initial_condition(true);
-#endif
-  /// parse command line arguments
+  bool initial_condition(false);
+  int number_of_algebraic_constraints(0);
+
   TChem::CommandLineParser opts(
-    "This example computes Temperature, density, mass fraction and site "
-    "fraction for a plug flow reactor");
+    "This example computes temperature, mass fraction, and site "
+    "fraction for a Transient continuous stirred tank reactor");
   opts.set_option<std::string>(
     "prefixPath", "prefixPath e.g.,inputs/", &prefixPath);
-  //
   opts.set_option<bool>(
       "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
-
   opts.set_option<real_type>("Acat", "Catalytic area [m2]", &Acat);
   opts.set_option<real_type>("Vol", "Reactor Volumen [m3]", &Vol);
   opts.set_option<real_type>("mdotIn", "Inlet mass flow rate [kg/s]", &mdotIn);
   opts.set_option<bool>("isoThermic", "if True, reaction is isotermic", &isoThermic);
-  opts.set_option<bool>("save_initial_condition", "if True, solution containts initial condition", &saveInitialCondition);
-
-
-#if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
+  opts.set_option<bool>("save_initial_condition", "if True, solution containts"
+                        "initial condition", &saveInitialCondition);
   opts.set_option<bool>(
-    "transient_initial_condition", "If true, use a transient solver to obtain initial condition of the constraint", &transient_initial_condition);
-    opts.set_option<bool>(
-      "initial_condition", "If true, use a newton solver to obtain initial condition of the constraint", &initial_condition);
-
-#endif
-
-  //
+    "transient_initial_condition", "If true, use a transient solver "
+    "to obtain initial condition of surface species", &transient_initial_condition);
+  opts.set_option<bool>(
+      "initial_condition", "If true, use a newton solver to obtain initial"
+      "condition of surface species", &initial_condition);
   opts.set_option<std::string>
-  ("chemfile", "Chem file name e.g., chem.inp",
+  ("chemfile", "Chem file name of gas phase e.g., chem.inp",
   &chemFile);
+  opts.set_option<std::string>
+  ("thermfile", "Therm file name of gas phase  e.g., therm.dat", &thermFile);
 
   opts.set_option<std::string>
-  ("thermfile", "Therm file name e.g., therm.dat", &thermFile);
-
-  opts.set_option<std::string>
-  ("chemSurffile","Chem file name e.g., chemSurf.inp",
+  ("chemSurffile","Chem file name of surface phase e.g., chemSurf.inp",
    &chemSurfFile);
 
   opts.set_option<std::string>
-  ("thermSurffile", "Therm file name e.g.,thermSurf.dat",
+  ("thermSurffile", "Therm file name of surface phase e.g.,thermSurf.dat",
   &thermSurfFile);
 
   opts.set_option<std::string>
-  ("samplefile", "Input state file name e.g., input.dat", &inputFile);
+  ("samplefile", "Input state file name of gas phase e.g., input.dat", &inputFile);
 
   opts.set_option<std::string>
-  ("inputSurffile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
+  ("inputSurffile", "Input state file name of surface e.g., inputSurfGas.dat", &inputFileSurf);
 
   opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
   opts.set_option<real_type>("tend", "Time end", &tend);
   opts.set_option<real_type>("dtmin", "Minimum time step size", &dtmin);
   opts.set_option<real_type>("dtmax", "Maximum time step size", &dtmax);
   opts.set_option<real_type>(
-    "atol-newton", "Absolute tolerence used in newton solver", &atol_newton);
+    "atol-newton", "Absolute tolerance used in newton solver", &atol_newton);
   opts.set_option<real_type>(
-    "rtol-newton", "Relative tolerence used in newton solver", &rtol_newton);
+    "rtol-newton", "Relative tolerance used in newton solver", &rtol_newton);
   opts.set_option<real_type>(
     "tol-time", "Tolerence used for adaptive time stepping", &rtol_time);
+  opts.set_option<real_type>(
+    "atol-time", "Absolute tolerance used for adaptive time stepping", &atol_time);
   opts.set_option<int>("time-iterations-per-interval",
                        "Number of time iterations per interval to store qoi",
                        &num_time_iterations_per_interval);
@@ -155,10 +149,11 @@ main(int argc, char* argv[])
   opts.set_option<int>("max-newton-iterations",
                        "Maximum number of newton iterations",
                        &max_num_newton_iterations);
-  opts.set_option<int>(
-    "batchsize",
-    "Batchsize the same state vector described in statefile is cloned",
-    &nBatch);
+  opts.set_option<int>("number-of-algebraic-constraints",
+                       "Number of algebraic constraints",
+                       &number_of_algebraic_constraints);
+  opts.set_option<int>("jacobian-interval", "Jacobians are evaluated in "
+  "this interval during Newton solve", &jacobian_interval);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
 
@@ -166,6 +161,8 @@ main(int argc, char* argv[])
     "output_frequency", "save data at this iterations", &output_frequency);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
+  opts.set_option<std::string>("outputfile",
+  "Output file name e.g., CSTRSolution.dat", &outputFile);
 
 
   const bool r_parse = opts.parse(argc, argv);
@@ -185,9 +182,7 @@ main(int argc, char* argv[])
     printf("Using a prefix path %s \n",prefixPath.c_str() );
   }
 
-  printf("Inlet mass faction %e\n", mdotIn );
-  printf("Catalytic Area %e\n",Acat);
-  printf("Vol %e\n",Vol );
+
 
   Kokkos::initialize(argc, argv);
   {
@@ -195,6 +190,14 @@ main(int argc, char* argv[])
 
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
+
+    if (verbose) {
+      printf("Inlet mass faction %e\n", mdotIn );
+      printf("Catalytic Area %e\n",Acat);
+      printf("Vol %e\n",Vol );
+    }
+
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
     const auto exec_space_instance = TChem::exec_space();
     using policy_type =
@@ -206,9 +209,9 @@ main(int argc, char* argv[])
       chemFile, thermFile, chemSurfFile, thermSurfFile);
     const auto kmcd =
       kmdSurf
-        .createConstData<TChem::exec_space>(); // data struc with gas phase info
+        .createConstData<device_type>(); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<TChem::exec_space>(); // data struc with
+      kmdSurf.createConstSurfData<device_type>(); // data struc with
                                                         // surface phase info
 
     const ordinal_type stateVecDim =
@@ -258,11 +261,8 @@ main(int argc, char* argv[])
 
     Kokkos::Impl::Timer timer;
 
-#if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
-    FILE* fout = fopen("CSTRSolutionDAE.dat", "w");
-#else
-  FILE* fout = fopen("CSTRSolution.dat", "w");
-#endif
+    FILE* fout = fopen(outputFile.c_str(), "w");
+
     auto writeState =
       [](const ordinal_type iter,
          const real_type_1d_view_host _t,
@@ -317,17 +317,13 @@ main(int argc, char* argv[])
     Kokkos::deep_copy(state, state_host);
     Kokkos::deep_copy(siteFraction, siteFraction_host);
 
-#if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
+// #if defined(TCHEM_ENABLE_PROBLEM_DAE_CSTR)
 
     if (transient_initial_condition) {
 
       printf("Running transient initial condition \n" );
 
       policy_type policy_surf(exec_space_instance, nBatch, Kokkos::AUTO());
-
-      using problem_type_surf =
-        Impl::SimpleSurface_Problem<KineticModelConstDataDevice,
-                                    KineticSurfModelConstDataDevice>;
 
       const ordinal_type level = 1;
       const ordinal_type per_team_extent =
@@ -351,14 +347,14 @@ main(int argc, char* argv[])
         tadv_default_surf._dtmin = 1e-20;
         tadv_default_surf._dtmax = 1e-3;
         tadv_default_surf._max_num_newton_iterations = 20;
-        tadv_default_surf._num_time_iterations_per_interval = 10;
+        tadv_default_surf._num_time_iterations_per_interval = 2000;
+        tadv_default_surf._jacobian_interval = jacobian_interval;
 
         time_advance_type_1d_view tadv_surf("tadv simple surface", nBatch);
         Kokkos::deep_copy(tadv_surf, tadv_default_surf);
 
         real_type_2d_view tol_time_surf(
-          "tol time simple surface", problem_type_surf::
-          getNumberOfTimeODEs(kmcdSurf), 2);
+          "tol time simple surface", kmcdSurf.nSpec, 2);
         real_type_1d_view tol_newton_surf("tol newton simple surface", 2);
 
         /// tune tolerence
@@ -369,7 +365,7 @@ main(int argc, char* argv[])
           const real_type atol_time_surf = 1e-12;
           const real_type rtol_time_surf = 1e-8;
 
-          const real_type atol_newton_surf = 1e-14;
+          const real_type atol_newton_surf = 1e-18;
           const real_type rtol_newton_surf = 1e-8;
 
           for (ordinal_type i = 0, iend = tol_time_surf.extent(0); i < iend; ++i) {
@@ -384,7 +380,7 @@ main(int argc, char* argv[])
         }
 
         ordinal_type iter = 0;
-        const ordinal_type  max_num_time_iterations_surface(1000);
+        const ordinal_type  max_num_time_iterations_surface(1);
 
         real_type tsum(0);
         for (; iter < max_num_time_iterations_surface && tsum <= tend; ++iter) {
@@ -420,39 +416,77 @@ main(int argc, char* argv[])
 
     }
     //Run a newton solver to check that constraint is satified.
+    //
+    // if (initial_condition){
+    //   real_type_2d_view facSurf("facSurf", nBatch, kmcdSurf.nSpec);
+    //
+    //   /// team policy
+    //   policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
+    //
+    //   const ordinal_type level = 1;
+    //   const ordinal_type per_team_extent =
+    //     TChem::InitialCondSurface::getWorkSpaceSize(kmcd, kmcdSurf);
+    //   const ordinal_type per_team_scratch =
+    //     TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    //   policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+    //
+    //   // solve initial condition for PFR solution
+    //   TChem::InitialCondSurface::runDeviceBatch(policy,
+    //                                             state,
+    //                                             siteFraction, // input
+    //                                             siteFraction, // output
+    //                                             facSurf,
+    //                                             kmcd,
+    //                                             kmcdSurf);
+    //
+    //   printf("Done with initial Condition for DAE system\n");
+    // }
 
-    if (initial_condition){
-      real_type_2d_view facSurf("facSurf", nBatch, kmcdSurf.nSpec);
-
-      /// team policy
-      policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
-
-      const ordinal_type level = 1;
-      const ordinal_type per_team_extent =
-        TChem::InitialCondSurface::getWorkSpaceSize(kmcd, kmcdSurf);
-      const ordinal_type per_team_scratch =
-        TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
-      policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
-
-      // solve initial condition for PFR solution
-      TChem::InitialCondSurface::runDeviceBatch(policy,
-                                                state,
-                                                siteFraction, // input
-                                                siteFraction, // output
-                                                facSurf,
-                                                kmcd,
-                                                kmcdSurf);
-
-      printf("Done with initial Condition for DAE system\n");
-    }
-
-#endif
+// #endif
     const real_type t_deepcopy = timer.seconds();
 
     timer.reset();
     {
 
       {
+
+        //setting up cstr reactor
+        printf("Setting up CSTR reactor\n");
+        TransientContStirredTankReactorData<device_type> cstr;
+        cstr.mdotIn = mdotIn; // inlet mass flow kg/s
+        cstr.Vol    = Vol; // volumen of reactor m3
+        cstr.Acat   = Acat; // Catalytic area m2: chemical active area
+        cstr.pressure = state_host(0, 1);
+        cstr.isoThermic = 1;
+        if (isoThermic) cstr.isoThermic = 0; // 0 constant temperature
+        // cstr.temperature = state_host(0, 2);
+        if (number_of_algebraic_constraints > kmcdSurf.nSpec) {
+          number_of_algebraic_constraints = kmcdSurf.nSpec;
+
+          printf("------------------------------------------------------------------------- \n");
+          printf("-----------------------------------WARNING------------------------------- \n");
+          printf(" Number of algebraic constraints is bigger than number of surface species \n");
+          printf(" Setting number of algebraic constrains equal to number of surface species %d \n", kmcdSurf.nSpec);
+          printf("------------------------------------------------------------------------- \n");
+          printf("------------------------------------------------------------------------- \n");
+
+        }
+
+        cstr.number_of_algebraic_constraints = number_of_algebraic_constraints;
+
+        cstr.Yi = real_type_1d_view("Mass fraction at inlet", kmcd.nSpec);
+        printf("Reactor residence time [s] %e\n", state_host(0, 0)*cstr.Vol/cstr.mdotIn);
+
+        // work batch = 1
+        Kokkos::parallel_for(
+          Kokkos::RangePolicy<TChem::exec_space>(0, nBatch),
+          KOKKOS_LAMBDA(const ordinal_type& i) {
+            //mass fraction
+            for (ordinal_type k = 0; k < kmcd.nSpec; k++) {
+              cstr.Yi(k) = state(i,k+3);
+            }
+        });
+
 
 
         real_type_1d_view t("time", nBatch);
@@ -469,11 +503,9 @@ main(int argc, char* argv[])
         }
 
         using problem_type =
-          TChem::Impl::TransientContStirredTankReactor_Problem<decltype(kmcd),
-                                               decltype(kmcdSurf),
-                                               cstr_data_type>;
+          TChem::Impl::TransientContStirredTankReactor_Problem<real_type,device_type>;
         real_type_2d_view tol_time(
-          "tol time", problem_type::getNumberOfTimeODEs(kmcd, kmcdSurf), 2);
+          "tol time", problem_type::getNumberOfTimeODEs(kmcd, kmcdSurf, cstr), 2);
         real_type_1d_view tol_newton("tol newton", 2);
 
         real_type_2d_view fac(
@@ -484,7 +516,7 @@ main(int argc, char* argv[])
           auto tol_time_host = Kokkos::create_mirror_view(tol_time);
           auto tol_newton_host = Kokkos::create_mirror_view(tol_newton);
 
-          const real_type atol_time = 1e-12;
+          // const real_type atol_time = 1e-18;
           for (ordinal_type i = 0, iend = tol_time.extent(0); i < iend; ++i) {
             tol_time_host(i, 0) = atol_time;
             tol_time_host(i, 1) = rtol_time;
@@ -505,6 +537,7 @@ main(int argc, char* argv[])
         tadv_default._max_num_newton_iterations = max_num_newton_iterations;
         tadv_default._num_time_iterations_per_interval =
           num_time_iterations_per_interval;
+        tadv_default._jacobian_interval = jacobian_interval;
 
         time_advance_type_1d_view tadv("tadv", nBatch);
         Kokkos::deep_copy(tadv, tadv_default);
@@ -522,29 +555,7 @@ main(int argc, char* argv[])
         auto siteFraction_at_i_host =
           Kokkos::create_mirror_view(siteFraction_at_i);
 
-        //setting up cstr reactor
-        printf("Setting up CSTR reactor\n");
-        cstr_data_type cstr;
-        cstr.mdotIn = mdotIn; // inlet mass flow kg/s
-        cstr.Vol    = Vol; // volumen of reactor m3
-        cstr.Acat   = Acat; // Catalytic area m2: chemical active area
-        cstr.pressure = state_host(0, 1);
-        cstr.isoThermic = 1;
-        if (isoThermic) cstr.isoThermic = 0; // 0 constant temperature
-        // cstr.temperature = state_host(0, 2);
 
-        cstr.Yi = real_type_1d_view("Mass fraction at inlet", kmcd.nSpec);
-        printf("Reactor residence time [s] %e\n", state_host(0, 0)*cstr.Vol/cstr.mdotIn);
-
-        // work batch = 1
-        Kokkos::parallel_for(
-          Kokkos::RangePolicy<TChem::exec_space>(0, nBatch),
-          KOKKOS_LAMBDA(const ordinal_type& i) {
-            //mass fraction
-            for (ordinal_type k = 0; k < kmcd.nSpec; k++) {
-              cstr.Yi(k) = state(i,k+3);
-            }
-        });
 
         {
           real_type_2d_view EnthalpyMass("EnthalpyMass", 1, kmcd.nSpec);
@@ -626,13 +637,13 @@ main(int argc, char* argv[])
 
         const ordinal_type level = 1;
         const ordinal_type per_team_extent =
-          TChem::TransientContStirredTankReactor::getWorkSpaceSize(kmcd, kmcdSurf, cstr);
+          TChem::TransientContStirredTankReactor::getWorkSpaceSize(kmcd, kmcdSurf);
         const ordinal_type per_team_scratch =
           TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
         policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
         real_type tsum(0);
-        for (; iter < max_num_time_iterations && tsum <= tend; ++iter) {
+        for (; iter < max_num_time_iterations && tsum <= tend*0.9999; ++iter) {
 
           TChem::TransientContStirredTankReactor::runDeviceBatch(policy,
                                                  tol_newton,
@@ -652,6 +663,7 @@ main(int argc, char* argv[])
                                                  kmcdSurf,
                                                  cstr);
           //
+
 
           /// print of store QOI for the first sample
 #if defined(TCHEM_EXAMPLE_SimpleSurface_QOI_PRINT)

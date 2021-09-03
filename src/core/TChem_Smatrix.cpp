@@ -23,25 +23,22 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 
   template<typename PolicyType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename RealType3DViewType,
-           typename KineticModelConstType>
-
-  //
+           typename DeviceType>
   void
   Smatrix_TemplateRun( /// input
     const std::string& profile_name,
-    const RealType1DViewType& dummy_1d,
     /// team size setting
     const PolicyType& policy,
-    const RealType2DViewType& state,
-    const RealType3DViewType& Smatrix,
-    const KineticModelConstType& kmcd
+    const Tines::value_type_2d_view<real_type, DeviceType>& state,
+    const Tines::value_type_3d_view<real_type, DeviceType>& Smatrix,
+    const KineticModelConstData<DeviceType >& kmcd
   )
   {
     Kokkos::Profiling::pushRegion(profile_name);
     using policy_type = PolicyType;
+    using device_type = DeviceType;
+    using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
+    using real_type_2d_view_type = Tines::value_type_2d_view<real_type, device_type>;
 
     const ordinal_type level = 1;
     const ordinal_type per_team_extent = Smatrix::getWorkSpaceSize(kmcd);
@@ -51,24 +48,24 @@ namespace TChem {
       policy,
       KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
         const ordinal_type i = member.league_rank();
-        const RealType1DViewType state_at_i =
+        const real_type_1d_view_type state_at_i =
           Kokkos::subview(state, i, Kokkos::ALL());
-        const RealType2DViewType Smatrix_at_i =
+        const real_type_2d_view_type Smatrix_at_i =
           Kokkos::subview(Smatrix, i, Kokkos::ALL(), Kokkos::ALL());
 
-        Scratch<RealType1DViewType> work(member.team_scratch(level),
+        Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                         per_team_extent);
 
-        const Impl::StateVector<RealType1DViewType> sv_at_i(kmcd.nSpec,
+        const Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec,
                                                            state_at_i);
         TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                           "Error: input state vector is not valid");
         {
           const real_type t = sv_at_i.Temperature();
           const real_type p = sv_at_i.Pressure();
-          const RealType1DViewType Ys = sv_at_i.MassFractions();
+          const real_type_1d_view_type Ys = sv_at_i.MassFractions();
 
-          Impl::Smatrix ::team_invoke(member, t, p, Ys, Smatrix_at_i, work, kmcd);
+          Impl::Smatrix<real_type, device_type> ::team_invoke(member, t, p, Ys, Smatrix_at_i, work, kmcd);
         }
       });
     Kokkos::Profiling::popRegion();
@@ -77,11 +74,11 @@ namespace TChem {
 void
 Smatrix::runDeviceBatch( /// input
   const ordinal_type nBatch,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_3d_view& Smatrix,
+  const real_type_3d_view_type& Smatrix,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
 
   using policy_type = Kokkos::TeamPolicy<exec_space>;
@@ -96,7 +93,6 @@ Smatrix::runDeviceBatch( /// input
 
   Smatrix_TemplateRun( /// input
     "TChem::Smatrix::runDeviceBatch",
-    real_type_1d_view(),
     /// team size setting
     policy,
     state,
@@ -108,16 +104,15 @@ Smatrix::runDeviceBatch( /// input
 void
 Smatrix::runDeviceBatch( /// input
   typename UseThisTeamPolicy<exec_space>::type& policy,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_3d_view& Smatrix,
+  const real_type_3d_view_type& Smatrix,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
 
   Smatrix_TemplateRun( /// input
     "TChem::Smatrix::runDeviceBatch",
-    real_type_1d_view(),
     /// team size setting
     policy,
     state,
@@ -129,16 +124,15 @@ Smatrix::runDeviceBatch( /// input
 void
 Smatrix::runHostBatch( /// input
   typename UseThisTeamPolicy<host_exec_space>::type& policy,
-  const real_type_2d_view_host& state,
+  const real_type_2d_view_host_type& state,
   /// output
-  const real_type_3d_view_host& Smatrix,
+  const real_type_3d_view_host_type& Smatrix,
   /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
+  const kinetic_model_host_type& kmcd)
 {
 
   Smatrix_TemplateRun( /// input
     "TChem::Smatrix::runHostBatch",
-    real_type_1d_view_host(),
     /// team size setting
     policy,
     state,
@@ -150,11 +144,11 @@ Smatrix::runHostBatch( /// input
 void
 Smatrix::runHostBatch( /// input
   const ordinal_type nBatch,
-  const real_type_2d_view_host& state,
+  const real_type_2d_view_host_type& state,
   /// output
-  const real_type_3d_view_host& Smatrix,
+  const real_type_3d_view_host_type& Smatrix,
   /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
+  const kinetic_model_host_type& kmcd)
 {
 
   using policy_type = Kokkos::TeamPolicy<host_exec_space>;
@@ -169,7 +163,6 @@ Smatrix::runHostBatch( /// input
 
   Smatrix_TemplateRun( /// input
     "TChem::Smatrix::runHostBatch",
-    real_type_1d_view_host(),
     /// team size setting
     policy,
     state,

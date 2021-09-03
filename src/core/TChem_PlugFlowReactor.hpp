@@ -28,31 +28,25 @@ Sandia National Laboratories, Livermore, CA, USA
 
 namespace TChem {
 
-struct PlugFlowReactorData
-{
-  real_type Area;
-  real_type Pcat;
-};
-using pfr_data_type = PlugFlowReactorData;
-using pfr_data_type_0d_dual_view =
-  Kokkos::DualView<pfr_data_type, Kokkos::LayoutRight, exec_space>;
-using pfr_data_type_0d_view = typename pfr_data_type_0d_dual_view::t_dev;
-using pfr_data_type_0d_view_host = typename pfr_data_type_0d_dual_view::t_host;
-
-// using pfr_data_type_1d_dual_view =
-// Kokkos::DualView<pfr_data_type*,Kokkos::LayoutRight,exec_space>; using
-// pfr_data_type_1d_view = typename pfr_data_type_1d_dual_view::t_dev; using
-// pfr_data_type_1d_view_host = typename pfr_data_type_1d_dual_view::t_host;
-
 struct PlugFlowReactor
 {
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
-  template<typename MemberType, typename RealType1DViewType>
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type,device_type>;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+
+  template<typename MemberType,
+           typename RealType1DViewType>
   static KOKKOS_INLINE_FUNCTION void packToValues(
     const MemberType& member,
     /// input (pressure is not used)
     const real_type& temperature,
-    const RealType1DViewType& Ys,
+    const RealType1DViewType & Ys,
     const real_type& density,
     const real_type& velocity,
     const RealType1DViewType& Zs,
@@ -78,18 +72,17 @@ struct PlugFlowReactor
   }
 
   template<typename MemberType,
-           typename RealType0DViewType,
-           typename RealType1DViewType>
+           typename DeviceType>
   static KOKKOS_INLINE_FUNCTION void unpackFromValues(
     const MemberType& member,
     /// input
-    const RealType1DViewType& vals,
+    const Tines::value_type_1d_view<real_type,DeviceType> & vals,
     /// output (store back to state vector)
-    const RealType0DViewType& temperature,
-    const RealType1DViewType& Ys,
-    const RealType0DViewType& density,
-    const RealType0DViewType& velocity,
-    const RealType1DViewType& Zs)
+    const Tines::value_type_0d_view<real_type,DeviceType>& temperature,
+    const Tines::value_type_1d_view<real_type,DeviceType>& Ys,
+    const Tines::value_type_0d_view<real_type,DeviceType>& density,
+    const Tines::value_type_0d_view<real_type,DeviceType>& velocity,
+    const Tines::value_type_1d_view<real_type,DeviceType>& Zs)
   {
 
     const ordinal_type m(Ys.extent(0) + 1);
@@ -112,21 +105,41 @@ struct PlugFlowReactor
     member.team_barrier();
   }
 
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename PlugFlowReactorConstDataType>
+  template< typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
-    const PlugFlowReactorConstDataType& pfrd)
+    const KineticModelConstData<DeviceType>& kmcd,
+    const KineticSurfModelConstData<DeviceType>& kmcdSurf)
   {
-    return (
-      Impl::PlugFlowReactor::getWorkSpaceSize(kmcd, kmcdSurf, pfrd) +
-      Impl::PlugFlowReactor_Problem<
-        KineticModelConstDataType,
-        KineticSurfModelConstDataType,
-        PlugFlowReactorConstDataType>::getNumberOfEquations(kmcd, kmcdSurf));
+    using device_type = DeviceType;
+    using problem_type = Impl::PlugFlowReactor_Problem<real_type, device_type>;
+    const ordinal_type m = problem_type::getNumberOfEquations(kmcd, kmcdSurf);
+
+    ordinal_type workSize(0);
+#if defined(TCHEM_ENABLE_SACADO_JACOBIAN_PLUG_FLOW_REACTOR)
+    if (m < 128) {
+      using value_type = Sacado::Fad::SLFad<real_type,128>;
+      workSize = Impl::PlugFlowReactor<value_type, device_type>::getWorkSpaceSize(kmcd, kmcdSurf)  + m ;
+    } else if  (m < 256) {
+      using value_type = Sacado::Fad::SLFad<real_type,256>;
+      workSize = Impl::PlugFlowReactor<value_type, device_type>::getWorkSpaceSize(kmcd, kmcdSurf)  + m ;
+    } else if  (m < 512) {
+      using value_type = Sacado::Fad::SLFad<real_type,512>;
+      workSize = Impl::PlugFlowReactor<value_type, device_type>::getWorkSpaceSize(kmcd, kmcdSurf)  + m ;
+    } else if (m < 1024){
+      using value_type = Sacado::Fad::SLFad<real_type,1024>;
+      workSize = Impl::PlugFlowReactor<value_type, device_type>::getWorkSpaceSize(kmcd, kmcdSurf)  + m ;
+    } else{
+      TCHEM_CHECK_ERROR(0,
+                        "Error: Number of equations is bigger than size of sacado fad type");
+    }
+#else
+    {
+      workSize = Impl::PlugFlowReactor<real_type, device_type>::getWorkSpaceSize(kmcd, kmcdSurf)  + m ;
+    }
+#endif
+    return workSize ;
   }
+
 
   /// tadv - an input structure for time marching
   /// state (nSpec+3) - initial condition of the state vector
@@ -138,51 +151,48 @@ struct PlugFlowReactor
   static void runDeviceBatch( /// thread block size
     typename UseThisTeamPolicy<exec_space>::type& policy,
     /// input
-    const real_type_1d_view& tol_newton,
-    const real_type_2d_view& tol_time,
+    const real_type_1d_view_type& tol_newton,
+    const real_type_2d_view_type& tol_time,
     /// sample specific input
-    const real_type_2d_view& fac,
+    const real_type_2d_view_type& fac,
     const time_advance_type_1d_view& tadv,
-    const real_type_2d_view& state,
-    const real_type_2d_view& zSurf,
-    const real_type_1d_view& velocity,
+    const real_type_2d_view_type& state,
+    const real_type_2d_view_type& site_fraction,
+    const real_type_1d_view_type& velocity,
     /// output
-    const real_type_1d_view& t_out,
-    const real_type_1d_view& dt_out,
-    const real_type_2d_view& state_out,
-    const real_type_2d_view& Z_out,
-    const real_type_1d_view& velocity_out,
+    const real_type_1d_view_type& t_out,
+    const real_type_1d_view_type& dt_out,
+    const real_type_2d_view_type& state_out,
+    const real_type_2d_view_type& site_fraction_out,
+    const real_type_1d_view_type& velocity_out,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
-    const KineticSurfModelConstDataDevice& kmcdSurf,
-    // const pfr_data_type_0d_view& pfrd,
-    const real_type Area,
-    const real_type Pcat);
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
+    const PlugFlowReactorData& pfrd);
 
-  //
-  static void
-  runDeviceBatch( /// thread block size
-    typename UseThisTeamPolicy<exec_space>::type& policy,
-    /// input
-    const real_type_1d_view& tol_newton,
-    const real_type_2d_view& tol_time,
-    const real_type_2d_view& fac,
-    const time_advance_type_1d_view& tadv,
-    const real_type_2d_view& state,
-    const real_type_2d_view& zSurf,
-    const real_type_1d_view& velocity,
-    /// output
-    const real_type_1d_view& t_out,
-    const real_type_1d_view& dt_out,
-    const real_type_2d_view& state_out,
-    const real_type_2d_view& Z_out,
-    const real_type_1d_view& velocity_out,
-    /// const data from kinetic model
-    const Kokkos::View<KineticModelConstDataDevice*,exec_space>& kmcds,
-    const Kokkos::View<KineticSurfModelConstDataDevice*,exec_space>& kmcdSurfs,
-    // const pfr_data_type_0d_view& pfrd_info,
-    const real_type Area,
-    const real_type Pcat);
+    static void
+    runDeviceBatch( /// thread block size
+      typename UseThisTeamPolicy<exec_space>::type& policy,
+      /// input
+      const real_type_1d_view_type& tol_newton,
+      const real_type_2d_view_type& tol_time,
+      const real_type_2d_view_type& fac,
+      const time_advance_type_1d_view& tadv,
+      const real_type_2d_view_type& state,
+      const real_type_2d_view_type& site_fraction,
+      const real_type_1d_view_type& velocity,
+      /// output
+      const real_type_1d_view_type& t_out,
+      const real_type_1d_view_type& dt_out,
+      const real_type_2d_view_type& state_out,
+      const real_type_2d_view_type& site_fraction_out,
+      const real_type_1d_view_type& velocity_out,
+      /// const data from kinetic model
+      const Kokkos::View<kinetic_model_type*,device_type>& kmcds,
+      const Kokkos::View<kinetic_surf_model_type*,device_type>& kmcdSurfs,
+      // const pfr_data_type_0d_view& pfrd_info,
+      const real_type Area,
+      const real_type Pcat);
 };
 
 } // namespace TChem

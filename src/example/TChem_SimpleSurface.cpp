@@ -64,7 +64,7 @@ main(int argc, char* argv[])
   real_type tbeg(0), tend(100);
   real_type dtmin(1e-10), dtmax(1e-6);
   int num_time_iterations_per_interval(1e1), max_num_time_iterations(1e3),
-    max_num_newton_iterations(100);
+    max_num_newton_iterations(100), jacobian_interval(1);
   real_type rtol_time(1e-4), atol_newton(1e-12), rtol_newton(1e-6);
 
   int nBatch(1);
@@ -116,6 +116,7 @@ main(int argc, char* argv[])
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
+    opts.set_option<int>("jacobian-interval", "Jacobians are evaluated in this interval during Newton solve", &jacobian_interval); 
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
     opts.set_option<real_type>(
@@ -146,6 +147,7 @@ main(int argc, char* argv[])
 
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
     /// construct kmd and use the view for testing
 
@@ -153,9 +155,9 @@ main(int argc, char* argv[])
       chemFile, thermFile, chemSurfFile, thermSurfFile);
     const auto kmcd =
       kmdSurf
-        .createConstData<TChem::exec_space>(); // data struc with gas phase info
+        .createConstData<device_type>(); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<TChem::exec_space>(); // data struc with
+      kmdSurf.createConstSurfData<device_type>(); // data struc with
                                                         // surface phase info
 
     const ordinal_type stateVecDim =
@@ -266,9 +268,9 @@ main(int argc, char* argv[])
 
       policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
 
-      using problem_type =
-        Impl::SimpleSurface_Problem<KineticModelConstDataDevice,
-                                    KineticSurfModelConstDataDevice>;
+      // using problem_type =
+      //   Impl::SimpleSurface_Problem<KineticModelConstDataDevice,
+      //                               KineticSurfModelConstDataDevice>;
 
       const ordinal_type level = 1;
       const ordinal_type per_team_extent =
@@ -300,13 +302,13 @@ main(int argc, char* argv[])
         tadv_default._max_num_newton_iterations = max_num_newton_iterations;
         tadv_default._num_time_iterations_per_interval =
           num_time_iterations_per_interval;
+        tadv_default._jacobian_interval = jacobian_interval;
 
         time_advance_type_1d_view tadv("tadv", nBatch);
         Kokkos::deep_copy(tadv, tadv_default);
-
+        const ordinal_type NumberOfTimeODEs(kmcdSurf.nSpec);
         real_type_2d_view tol_time(
-          "tol time simple surface", problem_type::
-          getNumberOfTimeODEs(kmcdSurf), 2);
+          "tol time simple surface", NumberOfTimeODEs, 2);
         real_type_1d_view tol_newton("tol newton simple surface", 2);
 
         /// tune tolerence

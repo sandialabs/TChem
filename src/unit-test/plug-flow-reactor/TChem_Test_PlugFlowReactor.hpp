@@ -30,12 +30,22 @@ TEST(PlugFlowReactor, single)
   std::string save="1";
   std::string transient_initial_condition="true";
   std::string initial_condition="false";
+  std::string atol_newton="1e-14";
+  std::string rtol_newton="1e-8";
+  std::string tol_z="1e-8";
+  std::string dtmin="1e-20";
+  std::string dtmax="1e-3";
 
   std::string invoke=(exec +" "+
            "--prefixPath="+ prefixPath +" "+
            "--max-z-iterations=" + max_z_iterations +" "+
            "--transient_initial_condition=" + transient_initial_condition +" "+
            "--initial_condition="+ initial_condition +" "
+           "--atol_newton=" + atol_newton +" "+
+           "--rtol_newton=" + rtol_newton +" "+
+           "--tol_z=" +tol_z +" "+
+           "--dzmin=" + dtmin + " "+
+           "--dzmax=" + dtmax + " "+
            "--output_frequency=" + save);
 
   const auto invoke_c_str = invoke.c_str();

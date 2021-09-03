@@ -37,38 +37,51 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct Smatrix
 {
-  template<typename KineticModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using ordinal_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
+
+  using kinetic_model_type      = KineticModelConstData<device_type>;
+
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
     return 2 * kmcd.nSpec;
   }
 
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
     /// input
     const real_type& t,
     const real_type& p,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec)
+    const real_type_1d_view_type& Ys, /// (kmcd.nSpec)
     /// output
-    const RealType2DViewType& Smat, /// (1)
+    const real_type_2d_view_type& Smat, /// (1)
     /// workspace
-    const RealType1DViewType& hks,
-    const RealType1DViewType& cpks,
+    const real_type_1d_view_type& hks,
+    const real_type_1d_view_type& cpks,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
+    using EnthalpySpecMs = EnthalpySpecMsFcn<real_type,device_type>;
+    using RhoMixMs = RhoMixMs<real_type,device_type>;
+    using CpMixMs = CpMixMs<real_type, device_type>;
+
     const real_type zero(0), one(1);
 
     const ordinal_type Nvars = kmcd.nSpec + one;
 
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nReac),
+    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac),
                          [=](const ordinal_type& i) {
                            for (ordinal_type j = 0; j < Nvars; ++j) {
                              Smat(j, i) = zero;
@@ -91,7 +104,7 @@ struct Smatrix
       // reactans
       real_type sumEnerR(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcd.reacNreac(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNreac(i)),
         [&](const ordinal_type& j, real_type& update) {
           const ordinal_type kspec = kmcd.reacSidx(i, j);
           update += hks(kspec) * kmcd.sMass(kspec) * kmcd.reacNuki(i, j);
@@ -102,7 +115,7 @@ struct Smatrix
       const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
       real_type sumEnerP(0);
       Kokkos::parallel_reduce(
-        Kokkos::TeamVectorRange(member, kmcd.reacNprod(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNprod(i)),
         [=](const ordinal_type& j, real_type& update) {
           const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
           update += hks(kspec) * kmcd.sMass(kspec) * kmcd.reacNuki(i, j + joff);
@@ -113,22 +126,20 @@ struct Smatrix
 
       // species equations
 
-      Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.reacNreac(i)),
+      Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNreac(i)),
                            [&](const ordinal_type& j) {
                              const ordinal_type kspec = kmcd.reacSidx(i, j);
                              Smat(kspec + 1, i) =
                                kmcd.sMass(kspec) * kmcd.reacNuki(i, j) / rhomix;
-                             // Kokkos::atomic_fetch_add(&Smat(kspec+ 1,i),
-                             // val);
                            });
 
       Kokkos::parallel_for(
-        Kokkos::TeamVectorRange(member, kmcd.reacNprod(i)),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.reacNprod(i)),
         [=](const ordinal_type& j) {
           const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
-          Smat(kspec + 1, i) =
+          const real_type val =
             kmcd.sMass(kspec) * kmcd.reacNuki(i, j + joff) / rhomix;
-          // Kokkos::atomic_fetch_add(&Smat(kspec+ 1,i), val);
+          Kokkos::atomic_fetch_add(&Smat(kspec+ 1,i), val);
         });
     }
 
@@ -136,22 +147,19 @@ struct Smatrix
   }
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType>
+           typename WorkViewType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
     const real_type& t,
     const real_type& p,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec)
+    const real_type_1d_view_type& Ys, /// (kmcd.nSpec)
     /// output
-    const RealType2DViewType& Smat,
+    const real_type_2d_view_type& Smat,
     /// workspace
     const WorkViewType& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
     // const real_type zero(0);
 
@@ -160,9 +168,9 @@ struct Smatrix
     ///
     auto w = (real_type*)work.data();
 
-    auto hks = RealType1DViewType(w, kmcd.nSpec);
+    auto hks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto cpks = RealType1DViewType(w, kmcd.nSpec);
+    auto cpks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
 
     team_invoke_detail(member,

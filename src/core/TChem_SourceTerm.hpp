@@ -27,55 +27,66 @@ Sandia National Laboratories, Livermore, CA, USA
 
 namespace TChem {
 
-struct SourceTerm
-{
-
-
-
-  template<typename KineticModelConstDataType>
-  static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd)
+  struct SourceTerm
   {
-    return Impl::SourceTerm::getWorkSpaceSize(kmcd);
-  }
 
-  static void runDeviceBatch( /// input
-    const ordinal_type nBatch,
-    const real_type_2d_view& state,
-    /// output
-    const real_type_2d_view& SourceTerm,
-    /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
+    using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
+    using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+    using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
 
-  static void runHostBatch( ///
-    const ordinal_type nBatch,
-    const real_type_2d_view_host& state,
-    const real_type_2d_view_host& SourceTerm,
-    const KineticModelConstDataHost& kmcd);
+    using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
+    using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
 
-//
-  static void runDeviceBatch( /// input
-    typename UseThisTeamPolicy<exec_space>::type& policy,
-    const real_type_2d_view& state,
-    /// output
-    const real_type_2d_view& SourceTerm,
-    /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd);
-  //
-  static void runHostBatch( /// input
-    typename UseThisTeamPolicy<host_exec_space>::type& policy,
-    const real_type_2d_view_host& state,
-    /// output
-    const real_type_2d_view_host& SourceTerm,
-    /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd);
+    using kinetic_model_type = KineticModelConstData<device_type>;
+    using kinetic_model_host_type = KineticModelConstData<host_device_type>;
 
+    template<typename DeviceType>
+    static inline ordinal_type getWorkSpaceSize(const KineticModelConstData<DeviceType>& kmcd)
+    {
+      return Impl::SourceTerm<real_type,DeviceType>::getWorkSpaceSize(kmcd);
+    }
 
+    static void runDeviceBatch(/// input
+                               typename UseThisTeamPolicy<exec_space>::type& policy,
+                               const real_type_2d_view_type& state,
+                               /// output
+                               const real_type_2d_view_type& source_term,
+                               /// workspace
+                               const real_type_2d_view_type& workspace,
+                               /// const data from kinetic model
+                               const kinetic_model_type& kmcd);
 
-};
+    static void runHostBatch(/// input
+                             typename UseThisTeamPolicy<host_exec_space>::type& policy,
+                             const real_type_2d_view_host_type& state,
+                             /// output
+                             const real_type_2d_view_host_type& source_term,
+                             /// workspace
+                             const real_type_2d_view_host_type& workspace,
+                             /// const data from kinetic model
+                             const kinetic_model_host_type& kmcd);
 
+    static void runDeviceBatch(/// input
+                               const real_type_2d_view_type& state,
+                               /// output
+                               const real_type_2d_view_type& source_term,
+                               /// workspace
+                               const real_type_2d_view_type& workspace,
+                               /// const data from kinetic model
+                               const kinetic_model_type& kmcd);
 
+    static void runHostBatch(/// input
+                             const real_type_2d_view_host_type& state,
+                             /// output
+                             const real_type_2d_view_host_type& source_term,
+                             /// workspace
+                             const real_type_2d_view_host_type& workspace,
+                             /// const data from kinetic model
+                             const kinetic_model_host_type& kmcd);
+
+  };
 
 } // namespace TChem
 

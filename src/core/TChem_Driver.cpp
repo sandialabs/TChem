@@ -47,11 +47,9 @@ namespace TChem {
     _tol_newton = real_type_1d_view("tol newton", 2);
     _fac = real_type_2d_view ("fac", _n_sample, number_of_equations);
 
-    _t._dev = real_type_1d_view("time", _n_sample);
-    _t._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _t._dev);
+    _t = real_type_1d_dual_view("time", _n_sample);
 
-    _dt._dev = real_type_1d_view("delta time", _n_sample);
-    _dt._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _dt._dev);
+    _dt = real_type_1d_dual_view("delta time", _n_sample);
   }
 
   void
@@ -62,8 +60,8 @@ namespace TChem {
     TCHEM_CHECK_ERROR(isTimeAdvanceCreated(), "Time adance first needs to be created; use createTimeAdvance()");
 
     Kokkos::deep_copy(_tadv, tadv_default);
-    Kokkos::deep_copy(_t._dev, tadv_default._tbeg);
-    Kokkos::deep_copy(_dt._dev, tadv_default._dtmin);
+    Kokkos::deep_copy(_t.view_device(), tadv_default._tbeg);     _t.modify_device();
+    Kokkos::deep_copy(_dt.view_device(), tadv_default._dtmin);    _dt.modify_device();
 
     {
       auto tol_time = Kokkos::create_mirror_view(Kokkos::HostSpace(), _tol_time);
@@ -90,10 +88,8 @@ namespace TChem {
     _tol_time = real_type_2d_view();
     _tol_newton = real_type_1d_view();
     _fac = real_type_2d_view();
-    _dt._dev = real_type_1d_view();
-    _dt._host = real_type_1d_view_host();
-    _t._dev = real_type_1d_view();
-    _t._host = real_type_1d_view_host();
+    _dt = real_type_1d_dual_view();
+    _t = real_type_1d_dual_view();
   }
 
   Driver::
@@ -105,9 +101,7 @@ namespace TChem {
     _kmcd_device(),
     _kmcd_host(),
     _n_sample(0),
-    _state_need_sync(0),
     _state(),
-    _net_production_rate_per_mass_need_sync(0),
     _net_production_rate_per_mass(),
     _tadv(),
     _t(),
@@ -118,19 +112,14 @@ namespace TChem {
     _policy(),
     _is_time_advance_set(),
     //  jacobian homogeneous gas reactor
-    _jacobian_homogeneous_gas_reactor_need_sync(0),
     _jacobian_homogeneous_gas_reactor(),
     // rhs homogeneous gas reactor
-    _rhs_homogeneous_gas_reactor_need_sync(0),
     _rhs_homogeneous_gas_reactor(),
     // enthalpy mix
-    _enthalpy_mass_need_sync(0),
-    _enthalpy_mix_mass_need_sync(0),
     _enthalpy_mass(),
     _enthalpy_mix_mass(),
     _policy_enthalpy(),
     // k forward and reverse
-    _kforward_reverse_need_sync(0),
     _kforward(),
     _kreverse(),
     _policy_KForRev()
@@ -146,9 +135,7 @@ namespace TChem {
     _kmcd_device(),
     _kmcd_host(),
     _n_sample(0),
-    _state_need_sync(0),
     _state(),
-    _net_production_rate_per_mass_need_sync(0),
     _net_production_rate_per_mass(),
     _tadv(),
     _t(),
@@ -159,19 +146,14 @@ namespace TChem {
     _policy(),
     _is_time_advance_set(),
     //  jacobian homogeneous gas reactor
-    _jacobian_homogeneous_gas_reactor_need_sync(0),
     _jacobian_homogeneous_gas_reactor(),
     // rhs homogeneous gas reactor
-    _rhs_homogeneous_gas_reactor_need_sync(0),
     _rhs_homogeneous_gas_reactor(),
     // enthalpy mix
-    _enthalpy_mass_need_sync(0),
-    _enthalpy_mix_mass_need_sync(0),
     _enthalpy_mass(),
     _enthalpy_mix_mass(),
     _policy_enthalpy(),
     // k forward and reverse
-    _kforward_reverse_need_sync(0),
     _kforward(),
     _kreverse(),
     _policy_KForRev()
@@ -193,8 +175,8 @@ namespace TChem {
     _therm_file = therm_file;
 
     _kmd = KineticModelData(_chem_file, _therm_file);
-    _kmcd_device = _kmd.createConstData<exec_space>();
-    _kmcd_host = _kmd.createConstData<host_exec_space>();
+    _kmcd_device = _kmd.createConstData<interf_device_type>();
+    _kmcd_host = _kmd.createConstData<interf_host_device_type>();
 
     _kmd_created = true;
 
@@ -211,8 +193,8 @@ namespace TChem {
     _therm_file = std::string();
 
     _kmd = KineticModelData();
-    _kmcd_device = KineticModelConstData<exec_space>();
-    _kmcd_host = KineticModelConstData<host_exec_space>();
+    _kmcd_device = KineticModelConstData<interf_device_type>();
+    _kmcd_host = KineticModelConstData<interf_host_device_type>();
 
     _kmd_created = false;
 
@@ -296,7 +278,7 @@ namespace TChem {
   bool
   Driver::
   isStateVectorCreated() const {
-    return (_state._dev.span() > 0);
+    return (_state.span() > 0);
   }
 
   void
@@ -305,17 +287,13 @@ namespace TChem {
     TCHEM_CHECK_ERROR(_n_sample <= 0, "# of samples should be nonzero");
     TCHEM_CHECK_ERROR(!_kmd_created, "Kinetic mode first needs to be created");
     const ordinal_type len = Impl::getStateVectorSize(_kmcd_device.nSpec);
-    _state._dev = real_type_2d_view("state dev", _n_sample, len);
-    _state._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _state._dev);
-    _state_need_sync = NoNeedSync;
+    _state = real_type_2d_dual_view("state dev", _n_sample, len);
   }
 
   void
   Driver::
   freeStateVector() {
-    _state._dev = real_type_2d_view();
-    _state._host = real_type_2d_view_host();
-    _state_need_sync = NoNeedSync;
+    _state = real_type_2d_dual_view();
   }
 
   void
@@ -325,76 +303,66 @@ namespace TChem {
       createStateVector();
     }
     const auto src = state_at_i;
-    const auto tgt = Kokkos::subview(_state._host, i, Kokkos::ALL());
+    const auto tgt = Kokkos::subview(_state.view_host(), i, Kokkos::ALL());
     Kokkos::deep_copy(tgt, src);
-
-    _state_need_sync = NeedSyncToDevice;
+    _state.modify_host();
   }
 
   void
   Driver::
   setStateVectorHost(const real_type_2d_view_host& state) {
-    if (!_state._dev.span()) {
+    if (!_state.span()) {
       createStateVector();
     }
     using range_type = Kokkos::pair<ordinal_type,ordinal_type>;
     const auto src = state;
-    const auto tgt = Kokkos::subview(_state._host, range_type(0,src.extent(0)), range_type(0,src.extent(1)));
+    const auto tgt = Kokkos::subview(_state.view_host(), range_type(0,src.extent(0)), range_type(0,src.extent(1)));
     Kokkos::deep_copy(tgt, src);
-
-    _state_need_sync = NeedSyncToDevice;
+    _state.modify_host();
   }
 
   void
   Driver::
   getStateVectorHost(const ordinal_type i, real_type_1d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_state._dev.span() == 0, "State vector should be constructed");
-    if (_state_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_state._host, _state._dev);
-      _state_need_sync = NoNeedSync;
-    }
-    view = real_type_1d_const_view_host(&_state._host(i,0), _state._host.extent(1));
+    TCHEM_CHECK_ERROR(_state.span() == 0, "State vector should be constructed");
+    _state.sync_host();
+    auto hv = _state.view_host();
+    view = real_type_1d_const_view_host(&hv(i,0), hv.extent(1));
   }
 
   void
   Driver::
   getStateVectorHost(real_type_2d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_state._dev.span() == 0, "State vector should be constructed");
-    if (_state_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_state._host, _state._dev);
-      _state_need_sync = NoNeedSync;
-    }
-    view = real_type_2d_const_view_host(&_state._host(0,0), _state._host.extent(0), _state._host.extent(1));
+    TCHEM_CHECK_ERROR(_state.span() == 0, "State vector should be constructed");
+    _state.sync_host();
+    auto hv = _state.view_host();
+    view = real_type_2d_const_view_host(&hv(0,0), hv.extent(0), hv.extent(1));
   }
 
   void
   Driver::
   getStateVectorNonConstHost(const ordinal_type i, real_type_1d_view_host& view) {
-    TCHEM_CHECK_ERROR(_state._dev.span() == 0, "State vector should be constructed");
-    if (_state_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_state._host, _state._dev);
-      _state_need_sync = NoNeedSync;
-    }
-    view = real_type_1d_view_host(&_state._host(i,0), _state._host.extent(1));
-    _state_need_sync = NeedSyncToDevice;
+    TCHEM_CHECK_ERROR(_state.span() == 0, "State vector should be constructed");
+    _state.sync_host();
+    auto hv = _state.view_host();
+    view = real_type_1d_view_host(&hv(i,0), hv.extent(1));
+    _state.modify_host();
   }
 
   void
   Driver::
   getStateVectorNonConstHost(real_type_2d_view_host& view) {
-    TCHEM_CHECK_ERROR(_state._dev.span() == 0, "State vector should be constructed");
-    if (_state_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_state._host, _state._dev);
-      _state_need_sync = NoNeedSync;
-    }
-    view = real_type_2d_view_host(&_state._host(0,0), _state._host.extent(0), _state._host.extent(1));
-    _state_need_sync = NeedSyncToDevice;
+    TCHEM_CHECK_ERROR(_state.span() == 0, "State vector should be constructed");
+    _state.sync_host();
+    auto hv = _state.view_host();    
+    view = real_type_2d_view_host(&hv(0,0), hv.extent(0), hv.extent(1));
+    _state.modify_host();
   }
 
   bool
   Driver::
   isNetProductionRatePerMassCreated() const {
-    return (_net_production_rate_per_mass._dev.span() > 0);
+    return (_net_production_rate_per_mass.span() > 0);
   }
 
     void
@@ -403,62 +371,52 @@ namespace TChem {
     TCHEM_CHECK_ERROR(_n_sample <= 0, "# of samples should be nonzero");
     TCHEM_CHECK_ERROR(!_kmd_created, "Kinetic mode first needs to be created");
     const ordinal_type len = _kmcd_device.nSpec;
-    _net_production_rate_per_mass._dev = real_type_2d_view("net_production_rate_per_mass dev", _n_sample, len);
-    _net_production_rate_per_mass._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _net_production_rate_per_mass._dev);
-    _net_production_rate_per_mass_need_sync = NoNeedSync;
+    _net_production_rate_per_mass = real_type_2d_dual_view("net_production_rate_per_mass dev", _n_sample, len);
   }
 
 
   void
   Driver::
   freeNetProductionRatePerMass() {
-    _net_production_rate_per_mass._dev = real_type_2d_view();
-    _net_production_rate_per_mass._host = real_type_2d_view_host();
-    _net_production_rate_per_mass_need_sync = NoNeedSync;
+    _net_production_rate_per_mass = real_type_2d_dual_view();
   }
 
   void
   Driver::
   getNetProductionRatePerMassHost(const ordinal_type i, real_type_1d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_net_production_rate_per_mass._dev.span() == 0, "State vector should be constructed");
-    if (_net_production_rate_per_mass_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_net_production_rate_per_mass._host, _net_production_rate_per_mass._dev);
-      _net_production_rate_per_mass_need_sync = NoNeedSync;
-    }
-    view = real_type_1d_const_view_host(&_net_production_rate_per_mass._host(i,0), _net_production_rate_per_mass._host.extent(1));
+    TCHEM_CHECK_ERROR(_net_production_rate_per_mass.span() == 0, "State vector should be constructed");
+    _net_production_rate_per_mass.sync_host();
+    auto hv = _net_production_rate_per_mass.view_host();
+    view = real_type_1d_const_view_host(&hv(i,0), hv.extent(1));
   }
 
   void
   Driver::
   getNetProductionRatePerMassHost(real_type_2d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_net_production_rate_per_mass._dev.span() == 0, "State vector should be constructed");
-    if (_net_production_rate_per_mass_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_net_production_rate_per_mass._host, _net_production_rate_per_mass._dev);
-      _net_production_rate_per_mass_need_sync = NoNeedSync;
-    }
-    view = real_type_2d_const_view_host(&_net_production_rate_per_mass._host(0,0), _net_production_rate_per_mass._host.extent(0), _net_production_rate_per_mass._host.extent(1));
+    TCHEM_CHECK_ERROR(_net_production_rate_per_mass.span() == 0, "State vector should be constructed");
+    _net_production_rate_per_mass.sync_host();
+    auto hv = _net_production_rate_per_mass.view_host();
+    view = real_type_2d_const_view_host(&hv(0,0), hv.extent(0), hv.extent(1));
   }
 
   void
   Driver::
   computeNetProductionRatePerMassDevice() {
     TCHEM_CHECK_ERROR(_kmd_created, "Kinetic mode first needs to be created");
-    if (_state_need_sync == NeedSyncToDevice) {
-      Kokkos::deep_copy(_state._dev, _state._host);
-      _state_need_sync = NoNeedSync;
-    }
-    if (_net_production_rate_per_mass._dev.span() == 0) {
+    _state.sync_device();
+    
+    if (_net_production_rate_per_mass.span() == 0) {
       createNetProductionRatePerMass();
     }
     NetProductionRatePerMass::runDeviceBatch
-      (_n_sample, _state._dev, _net_production_rate_per_mass._dev, _kmcd_device);
-    _net_production_rate_per_mass_need_sync = NeedSyncToHost;
+      (_n_sample, _state.view_device(), _net_production_rate_per_mass.view_device(), _kmcd_device);
+    _net_production_rate_per_mass.modify_device();
   }
 
   bool
   Driver::
   isJacobianHomogeneousGasReactorCreated() const {
-    return (_jacobian_homogeneous_gas_reactor._dev.span() > 0);
+    return (_jacobian_homogeneous_gas_reactor.span() > 0);
   }
 
   void
@@ -466,66 +424,55 @@ namespace TChem {
   createJacobianHomogeneousGasReactor() {
     TCHEM_CHECK_ERROR(_n_sample <= 0, "# of samples should be nonzero");
     TCHEM_CHECK_ERROR(!_kmd_created, "Kinetic mode first needs to be created");
-  const ordinal_type len = _kmcd_device.nSpec + 1;
-  _jacobian_homogeneous_gas_reactor._dev = real_type_3d_view("jacobian homogeneous gas reactor dev", _n_sample, len, len);
-  _jacobian_homogeneous_gas_reactor._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _jacobian_homogeneous_gas_reactor._dev);
-  _jacobian_homogeneous_gas_reactor_need_sync = NoNeedSync;
-}
+    const ordinal_type len = _kmcd_device.nSpec + 1;
 
-
-
-  void
-  Driver::
-  freeJacobianHomogeneousGasReactor() {
-    _jacobian_homogeneous_gas_reactor._dev = real_type_3d_view();
-    _jacobian_homogeneous_gas_reactor._host = real_type_3d_view_host();
-    _jacobian_homogeneous_gas_reactor_need_sync = NoNeedSync;
+    _jacobian_homogeneous_gas_reactor = real_type_3d_dual_view("jacobian homogeneous gas reactor dev", _n_sample, len, len);
   }
 
   void
   Driver::
+  freeJacobianHomogeneousGasReactor() {
+    _jacobian_homogeneous_gas_reactor = real_type_3d_dual_view();
+  }
+  
+  void
+  Driver::
   getJacobianHomogeneousGasReactorHost(const ordinal_type i, real_type_2d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_jacobian_homogeneous_gas_reactor._dev.span() == 0, "Jacobian of homogeneous gas reactor should be constructed");
-    if (_jacobian_homogeneous_gas_reactor_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_jacobian_homogeneous_gas_reactor._host, _jacobian_homogeneous_gas_reactor._dev);
-      _jacobian_homogeneous_gas_reactor_need_sync = NoNeedSync;
-    }
-    view = real_type_2d_const_view_host(&_jacobian_homogeneous_gas_reactor._host(i,0,0),
-     _jacobian_homogeneous_gas_reactor._host.extent(1), _jacobian_homogeneous_gas_reactor._host.extent(2));
+    TCHEM_CHECK_ERROR(_jacobian_homogeneous_gas_reactor.span() == 0, "Jacobian of homogeneous gas reactor should be constructed");
+    _jacobian_homogeneous_gas_reactor.sync_host();
+    auto hv = _jacobian_homogeneous_gas_reactor.view_host();
+    view = real_type_2d_const_view_host(&hv(i,0,0), hv.extent(1), hv.extent(2));
   }
 
   void
   Driver::
   getJacobianHomogeneousGasReactorHost(real_type_3d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_jacobian_homogeneous_gas_reactor._dev.span() == 0, "State vector should be constructed");
-    if (_jacobian_homogeneous_gas_reactor_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_jacobian_homogeneous_gas_reactor._host, _jacobian_homogeneous_gas_reactor._dev);
-      _jacobian_homogeneous_gas_reactor_need_sync = NoNeedSync;
-    }
-    view = real_type_3d_const_view_host(&_jacobian_homogeneous_gas_reactor._host(0,0,0),
-    _jacobian_homogeneous_gas_reactor._host.extent(0), _jacobian_homogeneous_gas_reactor._host.extent(1), _jacobian_homogeneous_gas_reactor._host.extent(2));
+    TCHEM_CHECK_ERROR(_jacobian_homogeneous_gas_reactor.span() == 0, "State vector should be constructed");
+    _jacobian_homogeneous_gas_reactor.sync_host();
+    auto hv = _jacobian_homogeneous_gas_reactor.view_host();
+    view = real_type_3d_const_view_host(&hv(0,0,0), hv.extent(0), hv.extent(1), hv.extent(2));
   }
 
   void
   Driver::
   computeJacobianHomogeneousGasReactorDevice() {
     TCHEM_CHECK_ERROR(_kmd_created, "Kinetic mode first needs to be created");
-    if (_state_need_sync == NeedSyncToDevice) {
-      Kokkos::deep_copy(_state._dev, _state._host);
-      _state_need_sync = NoNeedSync;
-    }
-    if (_jacobian_homogeneous_gas_reactor._dev.span() == 0) {
+    _state.sync_device();
+    
+    if (_jacobian_homogeneous_gas_reactor.span() == 0) {
       createJacobianHomogeneousGasReactor();
     }
 
-    JacobianReduced::runDeviceBatch( _n_sample, _state._dev, _jacobian_homogeneous_gas_reactor._dev, _kmcd_device);
-    _jacobian_homogeneous_gas_reactor_need_sync = NeedSyncToHost;
+    real_type_2d_view workspace;
+    JacobianReduced::runDeviceBatch
+      ( _state.view_device(), _jacobian_homogeneous_gas_reactor.view_device(), workspace, _kmcd_device);
+    _jacobian_homogeneous_gas_reactor.modify_device();
   }
-  // RHS Homogeneous Gas Reactor
+
   bool
   Driver::
   isRHS_HomogeneousGasReactorCreated() const {
-    return (_rhs_homogeneous_gas_reactor._dev.span() > 0);
+    return (_rhs_homogeneous_gas_reactor.span() > 0);
   }
 
   void
@@ -533,65 +480,52 @@ namespace TChem {
   createRHS_HomogeneousGasReactor() {
     TCHEM_CHECK_ERROR(_n_sample <= 0, "# of samples should be nonzero");
     TCHEM_CHECK_ERROR(!_kmd_created, "Kinetic mode first needs to be created");
-  const ordinal_type len = _kmcd_device.nSpec + 1;
-  _rhs_homogeneous_gas_reactor._dev = real_type_2d_view("jacobian homogeneous gas reactor dev", _n_sample, len);
-  _rhs_homogeneous_gas_reactor._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _rhs_homogeneous_gas_reactor._dev);
-  _rhs_homogeneous_gas_reactor_need_sync = NoNeedSync;
-}
-
+    const ordinal_type len = _kmcd_device.nSpec + 1;
+    _rhs_homogeneous_gas_reactor = real_type_2d_dual_view("jacobian homogeneous gas reactor dev", _n_sample, len);
+  }
 
   void
   Driver::
   freeRHS_HomogeneousGasReactor() {
-    _rhs_homogeneous_gas_reactor._dev = real_type_2d_view();
-    _rhs_homogeneous_gas_reactor._host = real_type_2d_view_host();
-    _rhs_homogeneous_gas_reactor_need_sync = NoNeedSync;
+    _rhs_homogeneous_gas_reactor = real_type_2d_dual_view();
   }
 
   void
   Driver::
   getRHS_HomogeneousGasReactorHost(const ordinal_type i, real_type_1d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_rhs_homogeneous_gas_reactor._dev.span() == 0, "RHS of homogeneous gas reactor should be constructed");
-    if (_rhs_homogeneous_gas_reactor_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_rhs_homogeneous_gas_reactor._host, _rhs_homogeneous_gas_reactor._dev);
-      _rhs_homogeneous_gas_reactor_need_sync = NoNeedSync;
-    }
-    view = real_type_1d_const_view_host(&_rhs_homogeneous_gas_reactor._host(i,0),
-     _rhs_homogeneous_gas_reactor._host.extent(1));
+    TCHEM_CHECK_ERROR(_rhs_homogeneous_gas_reactor.span() == 0, "RHS of homogeneous gas reactor should be constructed");
+    _rhs_homogeneous_gas_reactor.sync_host();
+    auto hv = _rhs_homogeneous_gas_reactor.view_host();
+    view = real_type_1d_const_view_host(&hv(i,0), hv.extent(1));
   }
 
   void
   Driver::
   getRHS_HomogeneousGasReactorHost(real_type_2d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_rhs_homogeneous_gas_reactor._dev.span() == 0, "State vector should be constructed");
-    if (_rhs_homogeneous_gas_reactor_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_rhs_homogeneous_gas_reactor._host, _rhs_homogeneous_gas_reactor._dev);
-      _rhs_homogeneous_gas_reactor_need_sync = NoNeedSync;
-    }
-    view = real_type_2d_const_view_host(&_rhs_homogeneous_gas_reactor._host(0,0),
-    _jacobian_homogeneous_gas_reactor._host.extent(0), _jacobian_homogeneous_gas_reactor._host.extent(1));
+    TCHEM_CHECK_ERROR(_rhs_homogeneous_gas_reactor.span() == 0, "State vector should be constructed");
+    _rhs_homogeneous_gas_reactor.sync_host();
+    auto hv = _rhs_homogeneous_gas_reactor.view_host();
+    view = real_type_2d_const_view_host(&hv(0,0), hv.extent(0), hv.extent(1));
   }
 
   void
   Driver::
   computeRHS_HomogeneousGasReactorDevice() {
     TCHEM_CHECK_ERROR(_kmd_created, "Kinetic mode first needs to be created");
-    if (_state_need_sync == NeedSyncToDevice) {
-      Kokkos::deep_copy(_state._dev, _state._host);
-      _state_need_sync = NoNeedSync;
-    }
-    if (_rhs_homogeneous_gas_reactor._dev.span() == 0) {
+    _state.sync_device();
+
+    if (_rhs_homogeneous_gas_reactor.span() == 0) {
       createRHS_HomogeneousGasReactor();
     }
 
-    SourceTerm::runDeviceBatch( _n_sample, _state._dev, _rhs_homogeneous_gas_reactor._dev, _kmcd_device);
-
+    real_type_2d_view workspace;
+    SourceTerm::runDeviceBatch(_state.view_device(), _rhs_homogeneous_gas_reactor.view_device(), workspace, _kmcd_device);
   }
-  // K forward and reverse
+
   bool
   Driver::
   isReactionRateConstantsCreated() const {
-    return (_kforward._dev.span() > 0);
+    return (_kforward.span() > 0);
   }
 
   void
@@ -599,103 +533,89 @@ namespace TChem {
   createReactionRateConstants() {
     TCHEM_CHECK_ERROR(_n_sample <= 0, "# of samples should be nonzero");
     TCHEM_CHECK_ERROR(!_kmd_created, "Kinetic mode first needs to be created");
-  const ordinal_type len = _kmcd_device.nReac;
-  _kforward._dev = real_type_2d_view("Forward rate constant dev", _n_sample, len);
-  _kforward._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _kforward._dev);
-  _kreverse._dev = real_type_2d_view("reverse rate constant dev", _n_sample, len);
-  _kreverse._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _kreverse._dev);
-  _kforward_reverse_need_sync = NoNeedSync;
+    const ordinal_type len = _kmcd_device.nReac;
+    _kforward = real_type_2d_dual_view("Forward rate constant dev", _n_sample, len);
+    _kreverse = real_type_2d_dual_view("reverse rate constant dev", _n_sample, len);
 
-  // create policy for enthalpy
-  const auto exec_space_instance = exec_space();
-  _policy_KForRev = policy_type(exec_space_instance, _n_sample, Kokkos::AUTO());
-  const ordinal_type level = 1;
-  const ordinal_type per_team_extent = TChem::KForwardReverse::getWorkSpaceSize(_kmcd_device);
-  const ordinal_type per_team_scratch =
-    TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
-  _policy_KForRev.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
-}
-
-
-  void
-  Driver::
-  freeReactionRateConstants() {
-    _kforward._dev = real_type_2d_view();
-    _kforward._host = real_type_2d_view_host();
-    _kreverse._dev = real_type_2d_view();
-    _kreverse._host = real_type_2d_view_host();
-    _kforward_reverse_need_sync = NoNeedSync;
+    // KK: Why do we create policy here ?
+    // create policy for enthalpy
+    const auto exec_space_instance = exec_space();
+    _policy_KForRev = policy_type(exec_space_instance, _n_sample, Kokkos::AUTO());
+    const ordinal_type level = 1;
+    const ordinal_type per_team_extent = TChem::KForwardReverse::getWorkSpaceSize(_kmcd_device);
+    const ordinal_type per_team_scratch = TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    _policy_KForRev.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
   }
 
   void
   Driver::
-  getReactionRateConstantsHost(const ordinal_type i, real_type_1d_const_view_host& view1
-      , real_type_1d_const_view_host& view2) {
-    TCHEM_CHECK_ERROR(_kforward._dev.span() == 0, "Forward rate constant should be constructed");
-    if (_kforward_reverse_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_kforward._host, _kforward._dev);
-      _kforward_reverse_need_sync = NoNeedSync;
+  freeReactionRateConstants() {
+    _kforward = real_type_2d_dual_view();
+    _kreverse = real_type_2d_dual_view();
+  }
+
+  /// KK: why do we name view1 view2 instead of forward reverse names ? 
+  void
+  Driver::
+  getReactionRateConstantsHost(const ordinal_type i, 
+                               real_type_1d_const_view_host& view1,
+                               real_type_1d_const_view_host& view2) {
+    TCHEM_CHECK_ERROR(_kforward.span() == 0, "Forward rate constant should be constructed");
+    _kforward.sync_host();
+    {
+      auto hv = _kforward.view_host();
+      view1 = real_type_1d_const_view_host(&hv(i,0), hv.extent(1));
     }
-    view1 = real_type_1d_const_view_host(&_kforward._host(i,0),
-     _kforward._host.extent(1));
-
-     TCHEM_CHECK_ERROR(_kreverse._dev.span() == 0, "Reverse rate constant should be constructed");
-     if (_kforward_reverse_need_sync == NeedSyncToHost) {
-       Kokkos::deep_copy(_kreverse._host, _kreverse._dev);
-       _kforward_reverse_need_sync = NoNeedSync;
-     }
-     view1 = real_type_1d_const_view_host(&_kreverse._host(i,0),
-      _kreverse._host.extent(1));
-
+    TCHEM_CHECK_ERROR(_kreverse.span() == 0, "Reverse rate constant should be constructed");
+    _kreverse.sync_host();
+    {
+      auto hv = _kreverse.view_host();
+      view2 = real_type_1d_const_view_host(&hv(i,0), hv.extent(1));
+    }
   }
 
   void
   Driver::
   getReactionRateConstantsHost(real_type_2d_const_view_host& view1,
                                real_type_2d_const_view_host& view2) {
-    TCHEM_CHECK_ERROR(_kforward._dev.span() == 0, "Forward rate constant should be constructed");
-    if (_kforward_reverse_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_kforward._host, _kforward._dev);
-      _kforward_reverse_need_sync = NoNeedSync;
+    TCHEM_CHECK_ERROR(_kforward.span() == 0, "Forward rate constant should be constructed");
+    _kforward.sync_host();
+    {
+      auto hv = _kforward.view_host();
+      view1 = real_type_2d_const_view_host(&hv(0,0), hv.extent(0), hv.extent(1));
     }
-    view1 = real_type_2d_const_view_host(&_kforward._host(0,0),
-    _kforward._host.extent(0), _kforward._host.extent(1));
-
-    TCHEM_CHECK_ERROR(_kreverse._dev.span() == 0, "Reverse rate constant should be constructed");
-    if (_kforward_reverse_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_kreverse._host, _kreverse._dev);
-      _kforward_reverse_need_sync = NoNeedSync;
+    TCHEM_CHECK_ERROR(_kreverse.span() == 0, "Reverse rate constant should be constructed");
+    _kreverse.sync_host();
+    {
+      auto hv = _kreverse.view_host();
+      view2 = real_type_2d_const_view_host(&hv(0,0), hv.extent(0), hv.extent(1));
     }
-    view2 = real_type_2d_const_view_host(&_kreverse._host(0,0),
-    _kreverse._host.extent(0), _kreverse._host.extent(1));
   }
 
   void
   Driver::
   computeReactionRateConstantsDevice() {
     TCHEM_CHECK_ERROR(_kmd_created, "Kinetic mode first needs to be created");
-    if (_state_need_sync == NeedSyncToDevice) {
-      Kokkos::deep_copy(_state._dev, _state._host);
-      _state_need_sync = NoNeedSync;
-    }
-    if (_kforward._dev.span() == 0) {
+    _state.sync_device();
+
+    if (_kforward.span() == 0 || _kreverse.span() == 0) {
       createReactionRateConstants();
     }
-
+    
     KForwardReverse::runDeviceBatch( _policy_KForRev,
-                                     _state._dev,
-                                     _kforward._host,
-                                     _kreverse._dev,
+                                     _state.view_device(),
+                                     _kforward.view_device(),
+                                     _kreverse.view_device(),
                                      _kmcd_device);
-
-
+    _kforward.modify_device();
+    _kreverse.modify_device();
   }
 
   // enthalpy mass
   bool
   Driver::
   isEnthapyMassCreated() const {
-    return (_enthalpy_mass._dev.span() > 0);
+    return (_enthalpy_mass.span() > 0);
   }
 
   void
@@ -703,91 +623,75 @@ namespace TChem {
   createEnthapyMass() {
     TCHEM_CHECK_ERROR(_n_sample <= 0, "# of samples should be nonzero");
     TCHEM_CHECK_ERROR(!_kmd_created, "Kinetic mode first needs to be created");
-  const ordinal_type len = _kmcd_device.nSpec;
-  _enthalpy_mass._dev = real_type_2d_view("jacobian homogeneous gas reactor dev", _n_sample, len);
-  _enthalpy_mass._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _enthalpy_mass._dev);
-  _enthalpy_mix_mass._dev = real_type_1d_view("jacobian homogeneous gas reactor dev", _n_sample);
-  _enthalpy_mix_mass._host = Kokkos::create_mirror_view(Kokkos::HostSpace(), _enthalpy_mix_mass._dev);
-  _enthalpy_mass_need_sync = NoNeedSync;
-  _enthalpy_mix_mass_need_sync = NoNeedSync;
-  // create policy for enthalpy
-  const auto exec_space_instance = exec_space();
-  _policy_enthalpy = policy_type(exec_space_instance, _n_sample, Kokkos::AUTO());
-  const ordinal_type level = 1;
-  const ordinal_type per_team_extent = TChem::EnthalpyMass::getWorkSpaceSize(_kmcd_device);
-  const ordinal_type per_team_scratch =
-    TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
-  _policy_enthalpy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
-}
+    const ordinal_type len = _kmcd_device.nSpec;
+    _enthalpy_mass = real_type_2d_dual_view("jacobian homogeneous gas reactor dev", _n_sample, len);
+    _enthalpy_mix_mass = real_type_1d_dual_view("jacobian homogeneous gas reactor dev", _n_sample);
+
+    // create policy for enthalpy
+    const auto exec_space_instance = exec_space();
+    _policy_enthalpy = policy_type(exec_space_instance, _n_sample, Kokkos::AUTO());
+    const ordinal_type level = 1;
+    const ordinal_type per_team_extent = TChem::EnthalpyMass::getWorkSpaceSize(_kmcd_device);
+    const ordinal_type per_team_scratch =
+      TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    _policy_enthalpy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+  }
 
   void
   Driver::
   freeEnthapyMass() {
-    _enthalpy_mass._dev = real_type_2d_view();
-    _enthalpy_mass._host = real_type_2d_view_host();
-    _enthalpy_mix_mass._dev = real_type_1d_view();
-    _enthalpy_mix_mass._host = real_type_1d_view_host();
-    _enthalpy_mass_need_sync = NoNeedSync;
-    _enthalpy_mix_mass_need_sync = NoNeedSync;
+    _enthalpy_mass = real_type_2d_dual_view();
+    _enthalpy_mix_mass = real_type_1d_dual_view();
   }
 
   void
   Driver::
   getEnthapyMixMassHost(real_type_1d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_enthalpy_mix_mass._dev.span() == 0, "enthalpy-mix view should be constructed");
-    if (_enthalpy_mix_mass_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_enthalpy_mix_mass._host, _enthalpy_mix_mass._dev);
-      _enthalpy_mix_mass_need_sync = NoNeedSync;
-    }
-    view = real_type_1d_const_view_host(&_enthalpy_mix_mass._host(0),
-     _enthalpy_mix_mass._host.extent(0));
+    TCHEM_CHECK_ERROR(_enthalpy_mix_mass.span() == 0, "enthalpy-mix view should be constructed");
+    _enthalpy_mix_mass.sync_host();
+    auto hv = _enthalpy_mix_mass.view_host();
+    view = real_type_1d_const_view_host(&hv(0), hv.extent(0));
   }
 
   void
   Driver::
   getEnthapyMassHost(real_type_2d_const_view_host& view) {
-    TCHEM_CHECK_ERROR(_enthalpy_mass._dev.span() == 0, "enthalpy view should be constructed");
-    if (_enthalpy_mass_need_sync == NeedSyncToHost) {
-      Kokkos::deep_copy(_enthalpy_mass._host, _enthalpy_mass._dev);
-      _enthalpy_mass_need_sync = NoNeedSync;
-    }
-    view = real_type_2d_const_view_host(&_enthalpy_mass._host(0,0),
-    _enthalpy_mass._host.extent(0), _enthalpy_mass._host.extent(1));
+    TCHEM_CHECK_ERROR(_enthalpy_mass.span() == 0, "enthalpy view should be constructed");
+    _enthalpy_mass.sync_host();
+    auto hv = _enthalpy_mass.view_host();
+    view = real_type_2d_const_view_host(&hv(0,0), hv.extent(0), hv.extent(1));
   }
 
   void
   Driver::
   computeEnthapyMassDevice() {
     TCHEM_CHECK_ERROR(_kmd_created, "Kinetic mode first needs to be created");
-    if (_state_need_sync == NeedSyncToDevice) {
-      Kokkos::deep_copy(_state._dev, _state._host);
-      _state_need_sync = NoNeedSync;
-    }
-    if (_enthalpy_mass._dev.span() == 0) {
+    _state.sync_device();
+
+    if (_enthalpy_mass.span() == 0) {
       createEnthapyMass();
     }
 
-
     TChem::EnthalpyMass::runDeviceBatch(_policy_enthalpy,
-                                        _state._dev,
-                                        _enthalpy_mass._dev,
-                                        _enthalpy_mix_mass._dev,
+                                        _state.view_device(),
+                                        _enthalpy_mass.view_device(),
+                                        _enthalpy_mix_mass.view_device(),
                                         _kmcd_device);
   }
-
 
   void
   Driver::
   unsetTimeAdvance() {
     _is_time_advance_set = false;
   }
-
+  
   void
   Driver::
   setTimeAdvanceHomogeneousGasReactor(const real_type & tbeg,
 				      const real_type & tend,
 				      const real_type & dtmin,
 				      const real_type & dtmax,
+                                      const ordinal_type & jacobian_interval,
 				      const ordinal_type & max_num_newton_iterations,
 				      const ordinal_type & num_time_iterations_per_interval,
 				      const real_type& atol_newton, const real_type&rtol_newton,
@@ -796,10 +700,10 @@ namespace TChem {
     const ordinal_type worksize = TChem::IgnitionZeroD::getWorkSpaceSize(_kmcd_device);
     createTeamExecutionPolicy(worksize);
 
-    using problem_type = TChem::Impl::IgnitionZeroD_Problem<decltype(_kmcd_device)>;
+    using problem_type = TChem::Impl::IgnitionZeroD_Problem<real_type, interf_device_type>;
     createTimeAdvance(problem_type::getNumberOfTimeODEs(_kmcd_device),
 		      problem_type::getNumberOfEquations(_kmcd_device));
-
+    
     TChem::time_advance_type tadv_default;
     tadv_default._tbeg = tbeg;
     tadv_default._tend = tend;
@@ -808,7 +712,7 @@ namespace TChem {
     tadv_default._dtmax = dtmax;
     tadv_default._max_num_newton_iterations = max_num_newton_iterations;
     tadv_default._num_time_iterations_per_interval = num_time_iterations_per_interval;
-
+    tadv_default._jacobian_interval = jacobian_interval;
     setTimeAdvance(tadv_default, atol_newton, rtol_newton, atol_time, rtol_time);
 
     _is_time_advance_set = true;
@@ -820,18 +724,30 @@ namespace TChem {
     TCHEM_CHECK_ERROR(_kmd_created, "Kinetic mode first needs to be created");
     TCHEM_CHECK_ERROR(_is_time_advance_set, "invoke setTimeAdvanceHomogeneousGasReactor first");
 
+    _state.sync_device();
+    _t.sync_device();
+    _dt.sync_device();
+
     TChem::IgnitionZeroD::runDeviceBatch(
       _policy, _tol_newton, _tol_time, _fac, _tadv,
-      _state._dev, _t._dev, _dt._dev, _state._dev, _kmcd_device);
+      _state.view_device(), _t.view_device(), _dt.view_device(), _state.view_device(), _kmcd_device);
     Kokkos::fence();
 
+    _state.modify_device();
+    _t.modify_device();
+    _dt.modify_device();
+    
+    /// to avoid implicitly capturing "this" pointer
+    auto tadv = _tadv;
+    auto t_dv = _t.view_device();
+    auto dt_dv = _dt.view_device();
     real_type tsum(0);
     Kokkos::parallel_reduce(
       Kokkos::RangePolicy<exec_space>(0, _n_sample),
       KOKKOS_LAMBDA(const ordinal_type& i, real_type& update) {
-        _tadv(i)._tbeg = _t._dev(i);
-        _tadv(i)._dt = _dt._dev(i);
-        update += _t._dev(i);
+        tadv(i)._tbeg = t_dv(i);
+        tadv(i)._dt = dt_dv(i);
+        update += t_dv(i);
       },
       tsum);
 
@@ -843,15 +759,17 @@ namespace TChem {
   void
   Driver::
   getTimeStepHost(real_type_1d_const_view_host& view) {
-    Kokkos::deep_copy(_t._host, _t._dev);
-    view = real_type_1d_const_view_host(&_t._host(0), _t._host.extent(0));
+    _t.sync_host();
+    auto hv = _t.view_host();
+    view = real_type_1d_const_view_host(&hv(0), hv.extent(0));
   }
 
   void
   Driver::
   getTimeStepSizeHost(real_type_1d_const_view_host& view) {
-    Kokkos::deep_copy(_dt._host, _dt._dev);
-    view = real_type_1d_const_view_host(&_dt._host(0), _dt._host.extent(0));
+    _dt.sync_host();
+    auto hv = _dt.view_host();
+    view = real_type_1d_const_view_host(&hv(0), hv.extent(0));
   }
 
   void
@@ -879,19 +797,24 @@ namespace TChem {
   void
   Driver::
   showViews(const std::string& label) {
-    auto show_2d_view_info = [](std::string name, real_type_2d_view_host view, ordinal_type sync) {
+    auto show_2d_view_info = [](std::string name, real_type_2d_dual_view view) {
       if (view.span() > 0) {
+        auto hv = view.view_host();
 	std::cout << name
-		  << ", (" << view.extent(0) << "," << view.extent(1) << "), ";
-	if (sync == NoNeedSync) std::cout << "NoNeedSync";
-	if (sync == NeedSyncToDevice) std::cout << "NeedSyncToDevice";
-	if (sync == NeedSyncToHost) std::cout << "NeedSyncToHost";
+		  << ", (" << hv.extent(0) << "," << hv.extent(1) << "), ";
+	if (view.need_sync_host()) {
+          std::cout << "NeedSyncHost";
+        } else if (view.need_sync_device()) { 
+          std::cout << "NeedSyncToDevice";
+        } else {
+          std::cout << "Sync'ed";
+        }
 	std::cout << "\n";
       }
     };
     std::cout << label << std::endl;
-    show_2d_view_info("StateVector", _state._host, _state_need_sync);
-    show_2d_view_info("NetProductionRatePerMass", _net_production_rate_per_mass._host, _net_production_rate_per_mass_need_sync);
+    show_2d_view_info("StateVector", _state);
+    show_2d_view_info("NetProductionRatePerMass", _net_production_rate_per_mass);
     std::cout << std::endl;
   }
 }
@@ -984,7 +907,7 @@ void TChem_setAllStateVectorHost(real_type * state) {
 
 void TChem_getSingleStateVectorHost(const int i, real_type * view) {
   if (g_tchem != nullptr) {
-    TChem::Driver::real_type_1d_const_view_host const_view;
+    TChem::real_type_1d_const_view_host const_view;
     g_tchem->getStateVectorHost(i, const_view);
     memcpy(view, const_view.data(), sizeof(real_type)*const_view.span());
   }
@@ -992,7 +915,7 @@ void TChem_getSingleStateVectorHost(const int i, real_type * view) {
 
 void TChem_getAllStateVectorHost(real_type * view) {
   if (g_tchem != nullptr) {
-    TChem::Driver::real_type_2d_const_view_host const_view;
+    TChem::real_type_2d_const_view_host const_view;
     g_tchem->getStateVectorHost(const_view);
     memcpy(view, const_view.data(), sizeof(real_type)*const_view.span());
   }
@@ -1016,7 +939,7 @@ void TChem_freeNetProductionRatePerMass() {
 
 void TChem_getSingleNetProductionRatePerMassHost(const int i, real_type * view) {
   if (g_tchem != nullptr) {
-    TChem::Driver::real_type_1d_const_view_host const_view;
+    TChem::real_type_1d_const_view_host const_view;
     g_tchem->getNetProductionRatePerMassHost(i, const_view);
     memcpy(view, const_view.data(), sizeof(real_type)*const_view.span());
   }
@@ -1024,7 +947,7 @@ void TChem_getSingleNetProductionRatePerMassHost(const int i, real_type * view) 
 
 void TChem_getAllNetProductionRatePerMassHost(real_type * view) {
   if (g_tchem != nullptr) {
-    TChem::Driver::real_type_2d_const_view_host const_view;
+    TChem::real_type_2d_const_view_host const_view;
     g_tchem->getNetProductionRatePerMassHost(const_view);
     memcpy(view, const_view.data(), sizeof(real_type)*const_view.span());
   }
@@ -1046,6 +969,7 @@ void TChem_setTimeAdvanceHomogeneousGasReactor(const real_type tbeg,
 					       const real_type tend,
 					       const real_type dtmin,
 					       const real_type dtmax,
+                                               const int jacobian_interval,
 					       const int max_num_newton_iterations,
 					       const int num_time_iterations_per_interval,
 					       const real_type atol_newton, const real_type rtol_newton,
@@ -1053,6 +977,7 @@ void TChem_setTimeAdvanceHomogeneousGasReactor(const real_type tbeg,
   if (g_tchem != nullptr) {
     g_tchem->setTimeAdvanceHomogeneousGasReactor(tbeg, tend,
 						 dtmin, dtmax,
+                                                 jacobian_interval,
 						 max_num_newton_iterations,
 						 num_time_iterations_per_interval,
 						 atol_newton, rtol_newton,
@@ -1066,7 +991,7 @@ real_type TChem_computeTimeAdvanceHomogeneousGasReactorDevice() {
 
 void TChem_getTimeStepHost(real_type * view) {
   if (g_tchem != nullptr) {
-    TChem::Driver::real_type_1d_const_view_host const_view;
+    TChem::real_type_1d_const_view_host const_view;
     g_tchem->getTimeStepHost(const_view);
     memcpy(view, const_view.data(), sizeof(real_type)*const_view.span());
   }
@@ -1074,7 +999,7 @@ void TChem_getTimeStepHost(real_type * view) {
 
 void TChem_getTimeStepSizeHost(real_type * view) {
   if (g_tchem != nullptr) {
-    TChem::Driver::real_type_1d_const_view_host const_view;
+    TChem::real_type_1d_const_view_host const_view;
     g_tchem->getTimeStepSizeHost(const_view);
     memcpy(view, const_view.data(), sizeof(real_type)*const_view.span());
   }

@@ -39,25 +39,12 @@ namespace Internal {
 template<typename ControlType, typename ExecSpaceType>
 struct Functor
 {
-  using func_real_type_1d_view =
-    typename std::conditional<std::is_same<ExecSpaceType, exec_space>::value,
-                              real_type_1d_view,
-                              real_type_1d_view_host>::type;
+  using device_type      = typename Tines::UseThisDevice<ExecSpaceType>::type;
 
-  using func_real_type_2d_view =
-    typename std::conditional<std::is_same<ExecSpaceType, exec_space>::value,
-                              real_type_2d_view,
-                              real_type_2d_view_host>::type;
-
-  using func_real_type_3d_view =
-    typename std::conditional<std::is_same<ExecSpaceType, exec_space>::value,
-                              real_type_3d_view,
-                              real_type_3d_view_host>::type;
-
-  using func_kinetic_model_const_data =
-    typename std::conditional<std::is_same<ExecSpaceType, exec_space>::value,
-                              KineticModelConstDataDevice,
-                              KineticModelConstDataHost>::type;
+  using func_real_type_1d_view = Tines::value_type_1d_view<real_type, device_type>;
+  using func_real_type_2d_view = Tines::value_type_2d_view<real_type, device_type>;
+  using func_real_type_3d_view = Tines::value_type_3d_view<real_type, device_type>;
+  using func_kinetic_model_const_data = KineticModelConstData<device_type>;
 
   const ordinal_type level, per_team_extent;
   const func_real_type_2d_view state;
@@ -161,11 +148,11 @@ RateOfProgressDerivativeEnableArbitraryOrderTerms(
 void
 Jacobian::runHostBatch( /// input
   const ordinal_type nBatch,
-  const real_type_2d_view_host& state,
+  const real_type_2d_view_host_type& state,
   /// output
-  const real_type_3d_view_host& jac,
+  const real_type_3d_view_host_type& jac,
   /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
+  const kinetic_model_host_type& kmcd)
 {
   Kokkos::Profiling::pushRegion("TChem::Jacobian::runHostBatch");
   TCHEM_CHECK_ERROR(
@@ -175,7 +162,7 @@ Jacobian::runHostBatch( /// input
   const ordinal_type level = 1;
   const ordinal_type per_team_extent = getWorkSpaceSize(kmcd);
   const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view_host>::shmem_size(per_team_extent);
+    Scratch<real_type_1d_view_host_type>::shmem_size(per_team_extent);
 
   using policy_type = Kokkos::TeamPolicy<host_exec_space>;
   policy_type policy(nBatch, Kokkos::AUTO()); // fine
@@ -219,11 +206,11 @@ Jacobian::runHostBatch( /// input
 void
 Jacobian::runDeviceBatch( /// input
   const ordinal_type nBatch,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_3d_view& jac,
+  const real_type_3d_view_type& jac,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
   Kokkos::Profiling::pushRegion("TChem::Jacobian::runDeviceBatch");
   TCHEM_CHECK_ERROR(
@@ -233,7 +220,7 @@ Jacobian::runDeviceBatch( /// input
   const ordinal_type level = 1;
   const ordinal_type per_team_extent = getWorkSpaceSize(kmcd);
   const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
 
   using policy_type = Kokkos::TeamPolicy<exec_space>;
   policy_type policy(nBatch, Kokkos::AUTO()); // fine

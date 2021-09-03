@@ -26,9 +26,10 @@ Sandia National Laboratories, Livermore, CA, USA
 
 
 TEST( Thermo, hostBatch ) {
+  using host_device_type = typename Tines::UseThisDevice<TChem::host_exec_space>::type;
   /// const data from kmd
-  const auto kmcd     = kmd.createConstData<TChem::host_exec_space>();
-  const auto kmcdSurf = kmd.createConstSurfData<TChem::host_exec_space>();
+  const auto kmcd     = kmd.createConstData<host_device_type>();
+  const auto kmcdSurf = kmd.createConstSurfData<host_device_type>();
 
   /// input: state vectors: temperature, pressure and concentration
   const ordinal_type nBatch(1);
@@ -98,9 +99,10 @@ TEST( Thermo, hostBatch ) {
 }
 
 TEST( Thermo, deviceBatch ) {
+  using device_type = typename Tines::UseThisDevice<TChem::exec_space>::type;
   /// const data from kmd
-  const auto kmcd     = kmd.createConstData<TChem::exec_space>();
-  const auto kmcdSurf = kmd.createConstSurfData<TChem::exec_space>();
+  const auto kmcd     = kmd.createConstData<device_type>();
+  const auto kmcdSurf = kmd.createConstSurfData<device_type>();
 
   /// input: state vectors: temperature, pressure and concentration
   const ordinal_type nBatch(1);

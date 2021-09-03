@@ -23,24 +23,28 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 
 namespace Impl {
-template<typename PolicyType,
-         typename RealType0DViewType,
-         typename RealType1DViewType,
-         typename RealType2DViewType,
-         typename KineticModelConstType>
+  template<typename PolicyType,
+           typename DeviceType>
 void
 SpecificHeatCapacityConsVolumePerMass_TemplateRun( /// required template arguments
   const std::string& profile_name,
-  const RealType0DViewType& dummy_0d,
   /// team size setting
   const PolicyType& policy,
-  const RealType2DViewType& state,
+  const Tines::value_type_2d_view<real_type, DeviceType>& state,
   // outputFile
-  const RealType1DViewType& CvMixMass,
-  const KineticModelConstType& kmcd)
+  const Tines::value_type_1d_view<real_type, DeviceType>& CvMixMass,
+  const KineticModelConstData<DeviceType >& kmcd)
 {
   Kokkos::Profiling::pushRegion(profile_name);
   using policy_type = PolicyType;
+  using device_type = DeviceType;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type, device_type>;
+
+  using MolarWeights = Impl::MolarWeights<real_type,device_type>;
+  using CpMixMs = Impl::CpMixMs<real_type,device_type>;
+
   const ordinal_type level = 1; ///
   const ordinal_type per_team_extent =
     SpecificHeatCapacityConsVolumePerMass::getWorkSpaceSize(kmcd);
@@ -50,30 +54,30 @@ SpecificHeatCapacityConsVolumePerMass_TemplateRun( /// required template argumen
     policy,
     KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
       const ordinal_type i = member.league_rank();
-      const RealType1DViewType state_at_i =
+      const real_type_1d_view_type state_at_i =
         Kokkos::subview(state, i, Kokkos::ALL());
-      Scratch<RealType1DViewType> work(member.team_scratch(level),
+      Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                          per_team_extent);
       auto w = (real_type*)work.data();
-      auto cpks = RealType1DViewType(w, kmcd.nSpec);
+      auto cpks = real_type_1d_view_type(w, kmcd.nSpec);
       w += kmcd.nSpec;
-      const RealType0DViewType CvMixMass_at_i = Kokkos::subview(CvMixMass, i);
+      const real_type_0d_view_type CvMixMass_at_i = Kokkos::subview(CvMixMass, i);
 
-      const Impl::StateVector<RealType1DViewType> sv_at_i(kmcd.nSpec,
+      const Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec,
                                                           state_at_i);
       TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                         "Error: input state vector is not valid");
       {
         const real_type t = sv_at_i.Temperature();
         const real_type p = sv_at_i.Pressure();
-        const RealType1DViewType Ys = sv_at_i.MassFractions();
+        const real_type_1d_view_type Ys = sv_at_i.MassFractions();
 
-        real_type wmix = Impl::MolarWeights::team_invoke(member, Ys, kmcd );
+        real_type wmix = MolarWeights::team_invoke(member, Ys, kmcd );
 
         member.team_barrier();
 
         CvMixMass_at_i() =
-          Impl::CpMixMs
+          CpMixMs
           ::team_invoke(member, t, Ys, cpks, kmcd) - kmcd.Runiv/wmix;
 
       }
@@ -86,15 +90,15 @@ SpecificHeatCapacityConsVolumePerMass_TemplateRun( /// required template argumen
 void
 SpecificHeatCapacityConsVolumePerMass::runDeviceBatch( /// thread block size
   const exec_space& exec_space_instance,
-  const ordinal_type team_size,
-  const ordinal_type vector_size,
+  const ordinal_type& team_size,
+  const ordinal_type& vector_size,
   /// input
-  const ordinal_type nBatch,
-  const real_type_2d_view& state,
+  const ordinal_type& nBatch,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_1d_view& CvMixMass,
+  const real_type_1d_view_type& CvMixMass,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
 
   using policy_type =
@@ -104,7 +108,7 @@ SpecificHeatCapacityConsVolumePerMass::runDeviceBatch( /// thread block size
   const ordinal_type per_team_extent =
     TChem::SpecificHeatCapacityConsVolumePerMass::getWorkSpaceSize(kmcd);
   const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
 
   policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
   if (team_size > 0 && vector_size > 0) {
@@ -115,7 +119,6 @@ SpecificHeatCapacityConsVolumePerMass::runDeviceBatch( /// thread block size
 
   Impl::SpecificHeatCapacityConsVolumePerMass_TemplateRun(
     "TChem::SpecificHeatCapacityConsVolumePerMass::runDeviceBatch",
-    real_type_0d_view(),
     /// team policy
     policy,
     state,
@@ -127,16 +130,15 @@ SpecificHeatCapacityConsVolumePerMass::runDeviceBatch( /// thread block size
 void
 SpecificHeatCapacityConsVolumePerMass::runDeviceBatch( /// thread block size
   typename UseThisTeamPolicy<exec_space>::type& policy,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_1d_view& CvMixMass,
+  const real_type_1d_view_type& CvMixMass,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
 
   Impl::SpecificHeatCapacityConsVolumePerMass_TemplateRun(
     "TChem::SpecificHeatCapacityConsVolumePerMass::runDeviceBatch",
-    real_type_0d_view(),
     /// team policy
     policy,
     state,
@@ -147,16 +149,15 @@ SpecificHeatCapacityConsVolumePerMass::runDeviceBatch( /// thread block size
 void
 SpecificHeatCapacityConsVolumePerMass::runHostBatch( /// thread block size
   typename UseThisTeamPolicy<host_exec_space>::type& policy,
-  const real_type_2d_view_host& state,
+  const real_type_2d_view_host_type& state,
   /// output
-  const real_type_1d_view_host& CvMixMass,
+  const real_type_1d_view_host_type& CvMixMass,
   /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
+  const kinetic_model_host_type& kmcd)
 {
 
   Impl::SpecificHeatCapacityConsVolumePerMass_TemplateRun(
     "TChem::SpecificHeatCapacityConsVolumePerMass::runHostBatch",
-    real_type_0d_view_host(),
     /// team policy
     policy,
     state,

@@ -51,51 +51,54 @@ main(int argc, char* argv[])
   /// default inputs
   std::string prefixPath("data/plug-flow-reactor/X/");
 
-  ///const real_type zero(0); /// not used warning
-  real_type tbeg(0), tend(0.025);
-  real_type dtmin(1e-10), dtmax(1e-6);
-  real_type tol_time(1e-8), atol_newton(1e-12), rtol_newton(1e-6);
-  int num_time_iterations_per_interval(1e1), max_num_time_iterations(4e3),
-    max_num_newton_iterations(100);
+  real_type atol_newton(1e-12), rtol_newton(1e-6);
+  int max_num_newton_iterations(1000);
 
   int nBatch(1), team_size(-1), vector_size(-1);
   bool verbose(true);
-  int output_frequency(100);
+
+  std::string chemFile("chem.inp");
+  std::string thermFile("therm.dat");
+  std::string chemSurfFile("chemSurf.inp");
+  std::string thermSurfFile("thermSurf.dat");
+  std::string inputFile("sample.dat");
+  std::string inputFileSurf( "inputSurf.dat");
+  bool use_prefixPath(true);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
     "This example computes reaction rates with a given state vector");
-  opts.set_option<std::string>(
-    "prefixPath", "prefixPath e.g.,inputs/", &prefixPath);
-  // opts.set_option<std::string>("chemfile", "Chem file name e.g., chem.inp",
-  // &chemFile); opts.set_option<std::string>("thermfile", "Therm file name
-  // e.g., therm.dat", &thermFile); opts.set_option<std::string>("chemSurffile",
-  // "Chem file name e.g., chem.inp", &chemSurfFile);
-  // opts.set_option<std::string>("thermSurffile", "Therm file name e.g.,
-  // therm.dat", &thermSurfFile);
-  // opts.set_option<std::string>("inputfile", "Input state file name e.g.,
-  // input.dat", &inputFile); opts.set_option<std::string>("inputfile", "Input
-  // state file name e.g., inputSurfGas.dat", &inputFileSurf);
-  // opts.set_option<std::string>("inputfile", "Input state file name e.g.,
-  // inputVelocity.dat", &inputFilevelocity);
-  // opts.set_option<std::string>("outputfile", "Output rhs file name e.g.,
-  // SurfaceRHS.dat", &outputFile);
-  opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
-  opts.set_option<real_type>("tend", "Time end", &tend);
-  opts.set_option<real_type>("dtmin", "Minimum time step size", &dtmin);
-  opts.set_option<real_type>("dtmax", "Maximum time step size", &dtmax);
+    opts.set_option<bool>(
+        "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
+
+    opts.set_option<std::string>(
+      "prefixPath", "prefixPath e.g.,inputs/", &prefixPath);
+
+    opts.set_option<std::string>
+    ("chemfile", "Chem file name e.g., chem.inp",
+    &chemFile);
+
+    opts.set_option<std::string>
+    ("thermfile", "Therm file name e.g., therm.dat", &thermFile);
+
+    opts.set_option<std::string>
+    ("chemSurffile","Chem file name e.g., chemSurf.inp",
+     &chemSurfFile);
+
+    opts.set_option<std::string>
+    ("thermSurffile", "Therm file name e.g.,thermSurf.dat",
+    &thermSurfFile);
+
+
+    opts.set_option<std::string>
+    ("samplefile", "Input state file name e.g., input.dat", &inputFile);
+  opts.set_option<std::string>
+    ("inputSurffile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
+
   opts.set_option<real_type>(
     "atol-newton", "Absolute tolerence used in newton solver", &atol_newton);
   opts.set_option<real_type>(
     "rtol-newton", "Relative tolerence used in newton solver", &rtol_newton);
-  opts.set_option<real_type>(
-    "tol-time", "Tolerence used for adaptive time stepping", &tol_time);
-  opts.set_option<int>("time-iterations-per-interval",
-                       "Number of time iterations per interval to store qoi",
-                       &num_time_iterations_per_interval);
-  opts.set_option<int>("max-time-iterations",
-                       "Maximum number of time iterations",
-                       &max_num_time_iterations);
   opts.set_option<int>("max-newton-iterations",
                        "Maximum number of newton iterations",
                        &max_num_newton_iterations);
@@ -103,10 +106,6 @@ main(int argc, char* argv[])
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
-  opts.set_option<bool>(
-    "verbose", "If true, printout the first Jacobian values", &verbose);
-  opts.set_option<int>(
-    "output_frequency", "save data at this iterations", &output_frequency);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
 
@@ -114,12 +113,17 @@ main(int argc, char* argv[])
   if (r_parse)
     return 0; // print help return
 
-  std::string chemFile(prefixPath + "chem.inp");
-  std::string thermFile(prefixPath + "therm.dat");
-  std::string chemSurfFile(prefixPath + "chemSurf.inp");
-  std::string thermSurfFile(prefixPath + "thermSurf.dat");
-  std::string inputFile(prefixPath + "sample.dat");
-  std::string inputFileSurf(prefixPath + "inputSurf.dat");
+    // if one wants to all the input files in one directory,
+    //and do not want give all names
+    if ( use_prefixPath ){
+      chemFile      = prefixPath + "chem.inp";
+      thermFile     = prefixPath + "therm.dat";
+      chemSurfFile  = prefixPath + "chemSurf.inp";
+      thermSurfFile = prefixPath + "thermSurf.dat";
+      inputFile     = prefixPath + "sample.dat";
+      inputFileSurf = prefixPath + "inputSurf.dat";
+      printf("Using a prefix path %s \n",prefixPath.c_str() );
+    }
 
   Kokkos::initialize(argc, argv);
   {
@@ -128,15 +132,17 @@ main(int argc, char* argv[])
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
     /// construct kmd and use the view for testing
 
     TChem::KineticModelData kmdSurf(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
     const auto kmcd =
       kmdSurf
-        .createConstData<TChem::exec_space>(); // data struc with gas phase info
+        .createConstData<device_type>(); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<TChem::exec_space>(); // data struc with
+      kmdSurf.createConstSurfData<device_type>(); // data struc with
                                                         // surface phase info
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
@@ -183,7 +189,7 @@ main(int argc, char* argv[])
     real_type_2d_view siteFraction("SiteFraction", nBatch, kmcdSurf.nSpec);
     real_type_2d_view state("StateVector ", nBatch, stateVecDim);
 
-    real_type_2d_view fac("fac", nBatch,kmcdSurf.nSpec);
+    real_type_2d_view fac("fac", nBatch, kmcdSurf.nSpec);
 
     Kokkos::Impl::Timer timer;
     timer.reset();
@@ -193,6 +199,13 @@ main(int argc, char* argv[])
     const real_type t_deepcopy = timer.seconds();
 
     {
+      real_type_1d_view tol_newton("tol newton initial conditions", 2);
+      auto tol_newton_host = Kokkos::create_mirror_view(tol_newton);
+
+      tol_newton_host(0) = atol_newton;
+      tol_newton_host(1) = rtol_newton;
+      Kokkos::deep_copy(tol_newton, tol_newton_host);
+
       const auto exec_space_instance = TChem::exec_space();
       using policy_type =
         typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
@@ -209,6 +222,8 @@ main(int argc, char* argv[])
 
       // solve initial condition for PFR solution
       TChem::InitialCondSurface::runDeviceBatch(policy,
+                                                tol_newton,
+                                                max_num_newton_iterations,
                                                 state,
                                                 siteFraction, // input
                                                 siteFraction, // output

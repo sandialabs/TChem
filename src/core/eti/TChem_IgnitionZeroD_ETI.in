@@ -1,0 +1,82 @@
+/* =====================================================================================
+TChem version 2.0
+Copyright (2020) NTESS
+https://github.com/sandialabs/TChem
+
+Copyright 2020 National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+Under the terms of Contract DE-NA0003525 with NTESS, the U.S. Government retains
+certain rights in this software.
+
+This file is part of TChem. TChem is open source software: you can redistribute it
+and/or modify it under the terms of BSD 2-Clause License
+(https://opensource.org/licenses/BSD-2-Clause). A copy of the licese is also
+provided under the main directory
+
+Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
+           Kyungjoo Kim at <kyukim@sandia.gov>, or
+           Oscar Diaz-Ibarra at <odiazib@sandia.gov>
+
+Sandia National Laboratories, Livermore, CA, USA
+===================================================================================== */
+#include "TChem_IgnitionZeroD_Internal.hpp"
+
+/// tadv - an input structure for time marching
+/// state (nSpec+3) - initial condition of the state vector
+/// qidx (lt nSpec+1) - QoI indices to store in qoi output
+/// work - work space sized by getWorkSpaceSize
+/// tcnt - time counter
+/// qoi (time + qidx.extent(0)) - QoI output
+/// kmcd - const data for kinetic model
+
+namespace TChem {
+  constexpr bool is_scalar = @SLFAD_SIZE@ == 0;
+  using value_type = typename std::conditional<is_scalar,
+					       real_type, 
+                                               Sacado::Fad::SLFad<real_type,@SLFAD_SIZE@> >::type;
+
+  using policy_type = typename UseThisTeamPolicy<@EXEC_SPACE@>::type;
+  using device_type = typename Tines::UseThisDevice<@EXEC_SPACE@>::type;
+  template
+  void
+  IgnitionZeroD_TemplateRunModelVariation<policy_type,value_type,device_type>
+  ( /// required template arguments
+   const std::string& profile_name,
+   const value_type& dummyValueType,
+   /// team size setting
+   const policy_type& policy,
+   
+   /// input
+   const Tines::value_type_1d_view<real_type, device_type>& tol_newton,
+   const Tines::value_type_2d_view<real_type, device_type>& tol_time,
+   const Tines::value_type_2d_view<real_type, device_type>& fac,
+   const Tines::value_type_1d_view<time_advance_type, device_type>& tadv,
+   const Tines::value_type_2d_view<real_type, device_type>& state,
+   /// output
+   const Tines::value_type_1d_view<real_type, device_type>& t_out,
+   const Tines::value_type_1d_view<real_type, device_type>& dt_out,
+   const Tines::value_type_2d_view<real_type, device_type>& state_out,
+   /// const data from kinetic model
+   const Kokkos::View<KineticModelConstData<device_type >*,device_type>& kmcds);
+
+  template
+  void
+  IgnitionZeroD_TemplateRun( /// required template arguments
+                            const std::string& profile_name,
+                            const value_type& dummyValueType,
+                            /// team size setting
+                            const policy_type& policy,
+
+                            /// input
+                            const Tines::value_type_1d_view<real_type, device_type>& tol_newton,
+                            const Tines::value_type_2d_view<real_type, device_type>& tol_time,
+                            const Tines::value_type_2d_view<real_type, device_type>& fac,
+                            const Tines::value_type_1d_view<time_advance_type, device_type>& tadv,
+                            const Tines::value_type_2d_view<real_type, device_type>& state,
+                            /// output
+                            const Tines::value_type_1d_view<real_type, device_type>& t_out,
+                            const Tines::value_type_1d_view<real_type, device_type>& dt_out,
+                            const Tines::value_type_2d_view<real_type, device_type>& state_out,
+                            /// const data from kinetic model
+                            const KineticModelConstData<device_type>& kmcd);
+
+} // namespace TChem

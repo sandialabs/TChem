@@ -23,204 +23,197 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 
   template<typename PolicyType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename RealType3DViewType,
-           typename KineticModelConstType>
+           typename DeviceType>
   void
   IgnitionZeroDNumJacobian_TemplateRun( /// required template arguments
-    const std::string& profile_name,
-    const RealType1DViewType& dummy_1d,
-    /// team size setting
-    const PolicyType& policy,
+                                       const std::string& profile_name,
+                                       /// team size setting
+                                       const PolicyType& policy,
 
-    // inputs
-    const RealType2DViewType& state,
-    /// output
-    /// const data from kinetic model
-    const RealType3DViewType& jac,
-    const RealType2DViewType& fac,
-    const KineticModelConstType& kmcd)
+                                       // inputs
+                                       const Tines::value_type_2d_view<real_type, DeviceType>& state,
+                                       /// output
+                                       /// const data from kinetic model
+                                       const Tines::value_type_3d_view<real_type, DeviceType>& jacobian,
+                                       const Tines::value_type_2d_view<real_type, DeviceType>& fac,
+                                       const Tines::value_type_2d_view<real_type, DeviceType>& workspace,
+                                       const KineticModelConstData<DeviceType >& kmcd)
   {
     Kokkos::Profiling::pushRegion(profile_name);
     using policy_type = PolicyType;
+    using device_type = DeviceType;
 
-    const ordinal_type m = Impl::IgnitionZeroD_Problem<
-      KineticModelConstType>::getNumberOfEquations(kmcd);
+    using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
+    using real_type_2d_view_type = Tines::value_type_2d_view<real_type, device_type>;
 
     const ordinal_type level = 1;
+    const ordinal_type per_team_extent = TChem::IgnitionZeroDNumJacobian::getWorkSpaceSize(kmcd);
+    const ordinal_type n = state.extent(0);
 
-    const ordinal_type per_team_extent =
-     TChem::IgnitionZeroDNumJacobian
-          ::getWorkSpaceSize(kmcd); ///
+    if (workspace.span()) {
+      TCHEM_CHECK_ERROR(workspace.extent(0) < policy.league_size(), "Workspace is allocated smaller than the league size");
+      TCHEM_CHECK_ERROR(workspace.extent(1) < per_team_extent, "Workspace is allocated smaller than the required");
+    }
 
-    Kokkos::parallel_for(
-      profile_name,
-      policy,
-      KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
-        const ordinal_type i = member.league_rank();
-        const RealType1DViewType state_at_i =
-          Kokkos::subview(state, i, Kokkos::ALL());
-
-        const RealType2DViewType jac_at_i =
-        Kokkos::subview(jac, i, Kokkos::ALL(), Kokkos::ALL());
-
-        const RealType1DViewType fac_at_i =
-          Kokkos::subview(fac, i, Kokkos::ALL());
-
-        Scratch<RealType1DViewType> work(member.team_scratch(level),
-                                         per_team_extent);
-
-        Impl::StateVector<RealType1DViewType> sv_at_i(kmcd.nSpec, state_at_i);
-        TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
-                          "Error: input state vector is not valid");
-        {
-
-          const real_type temperature = sv_at_i.Temperature();
-          const real_type pressure = sv_at_i.Pressure();
-          const real_type density = sv_at_i.Density();
-          const RealType1DViewType Ys = sv_at_i.MassFractions();
-
-
-          auto wptr = work.data();
-          const RealType1DViewType vals(wptr, m);
-          wptr += m;
-          const RealType1DViewType ww(wptr,
-                                      work.extent(0) - (wptr - work.data()));
-
-
-          //
-          /// m is nSpec + 1
-          Kokkos::parallel_for(Kokkos::TeamVectorRange(member, m),
-                               [&](const ordinal_type& i) {
-                                 vals(i) = i == 0 ? temperature : Ys(i - 1);
-                               });
-          member.team_barrier();
-
-          Impl::IgnitionZeroDNumJacobian::team_invoke(member,
-                                                  vals,
-                                                  jac_at_i,
-                                                  fac_at_i, // output
-                                                  pressure,
-                                                  ww,
-                                                  kmcd);
-
-
-
+    Kokkos::parallel_for
+      (profile_name,
+       policy,
+       KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
+        real_type_1d_view_type work;
+        Scratch<real_type_1d_view_type> swork; 
+        if (workspace.span()) {
+          work = Kokkos::subview(workspace, member.league_rank(), Kokkos::ALL());
+        } else {
+          /// assume that the workspace is given from scratch space
+          swork = Scratch<real_type_1d_view_type>(member.team_scratch(level), per_team_extent);
+          work = real_type_1d_view_type(swork.data(), swork.span());
         }
+
+        auto wptr = work.data();
+        const ordinal_type m = kmcd.nSpec + 1;
+        const real_type_1d_view_type vals(wptr, m);    wptr += m;
+        const real_type_1d_view_type w(wptr, work.extent(0) - (wptr - work.data()));
+        
+	ordinal_type ibeg(0), iend(0), iinc(0);
+	Impl::getLeagueRange(member, n, ibeg, iend, iinc);
+	for (ordinal_type i=ibeg;i<iend;i+=iinc) { 
+	  const real_type_1d_view_type state_at_i = Kokkos::subview(state, i, Kokkos::ALL());
+	  const real_type_2d_view_type jacobian_at_i = Kokkos::subview(jacobian, i, Kokkos::ALL(), Kokkos::ALL());
+	  const real_type_1d_view_type fac_at_i = Kokkos::subview(fac, i, Kokkos::ALL());
+	  
+	  Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec, state_at_i);
+	  TCHEM_CHECK_ERROR(!sv_at_i.isValid(), "Error: input state vector is not valid");
+	  {
+	    const real_type temperature = sv_at_i.Temperature();
+	    const real_type pressure = sv_at_i.Pressure();
+	    const real_type density = sv_at_i.Density();
+	    const real_type_1d_view_type Ys = sv_at_i.MassFractions();
+            
+	    /// m is nSpec + 1
+	    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, m),
+				 [&](const ordinal_type& i) {
+				   vals(i) = i == 0 ? temperature : Ys(i - 1);
+				 });
+	    member.team_barrier();
+	    
+	    Impl::IgnitionZeroDNumJacobian<real_type, device_type>::team_invoke(member,
+										vals,
+										jacobian_at_i,
+										fac_at_i, // output
+										pressure,
+										w,
+										kmcd);
+	  }
+	}
       });
     Kokkos::Profiling::popRegion();
   }
 
-  void
-  IgnitionZeroDNumJacobian::runDeviceBatch( /// thread block size
-    const ordinal_type nBatch,
-    const real_type_2d_view& state,
-    /// output
-    const real_type_3d_view& jac,
-    const real_type_2d_view& fac,
-    /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd)
-  {
-    using policy_type = Kokkos::TeamPolicy<exec_space>;
-    const ordinal_type per_team_extent =
-     TChem::IgnitionZeroDNumJacobian
-          ::getWorkSpaceSize(kmcd); ///
-
-    const ordinal_type per_team_scratch =
-        Scratch<real_type_1d_view>::shmem_size(per_team_extent);
-
-    const ordinal_type level = 1;
-    policy_type policy(nBatch, Kokkos::AUTO()); // fine
-    policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
-
-    IgnitionZeroDNumJacobian_TemplateRun( /// template arguments deduction
-      "TChem::IgnitionZeroDNumJacobian::runDeviceBatch",
-      real_type_1d_view(),
-      policy,
-      state,
-      jac,
-      fac,
-      /// const data of kinetic model
-      kmcd);
-  }
 
   void
   IgnitionZeroDNumJacobian::runDeviceBatch( /// thread block size
-    typename UseThisTeamPolicy<exec_space>::type& policy,
-    const real_type_2d_view& state,
-    /// output
-    const real_type_3d_view& jac,
-    const real_type_2d_view& fac,
-    /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd)
+                                           typename UseThisTeamPolicy<exec_space>::type& policy,
+                                           const real_type_2d_view_type& state,
+                                           /// output
+                                           const real_type_3d_view_type& jac,
+                                           const real_type_2d_view_type& fac,
+                                           const real_type_2d_view_type& workspace,
+                                           /// const data from kinetic model
+                                           const kinetic_model_type& kmcd)
   {
-
     IgnitionZeroDNumJacobian_TemplateRun( /// template arguments deduction
-      "TChem::IgnitionZeroDNumJacobian::runDeviceBatch",
-      real_type_1d_view(),
-      policy,
-      state,
-      jac,
-      fac,
-      /// const data of kinetic model
-      kmcd);
+                                         "TChem::IgnitionZeroDNumJacobian::runDeviceBatch",
+                                         policy,
+                                         state,
+                                         jac,
+                                         fac,
+                                         workspace,
+                                         /// const data of kinetic model
+                                         kmcd);
   }
 
   void
   IgnitionZeroDNumJacobian::runHostBatch( /// thread block size
-    const ordinal_type nBatch,
-    const real_type_2d_view_host& state,
-    /// output
-    const real_type_3d_view_host& jac,
-    const real_type_2d_view_host& fac,
-    /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd)
+                                         typename UseThisTeamPolicy<host_exec_space>::type& policy,
+                                         const real_type_2d_view_host_type& state,
+                                         /// output
+                                         const real_type_3d_view_host_type& jac,
+                                         const real_type_2d_view_host_type& fac,
+                                         const real_type_2d_view_host_type& workspace,
+                                         /// const data from kinetic model
+                                         const kinetic_model_host_type& kmcd)
   {
-    using policy_type = Kokkos::TeamPolicy<host_exec_space>;
-    const ordinal_type per_team_extent =
-     TChem::IgnitionZeroDNumJacobian
-          ::getWorkSpaceSize(kmcd); ///
-
-    const ordinal_type per_team_scratch =
-        Scratch<real_type_1d_view_host>::shmem_size(per_team_extent);
-
-    const ordinal_type level = 1;
-    policy_type policy(nBatch, Kokkos::AUTO()); // fine
-    policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
     IgnitionZeroDNumJacobian_TemplateRun( /// template arguments deduction
-      "TChem::IgnitionZeroDNumJacobian::runHostBatch",
-      real_type_1d_view_host(),
-      policy,
-      state,
-      jac,
-      fac,
-      /// const data of kinetic model
-      kmcd);
+                                         "TChem::IgnitionZeroDNumJacobian::runHostBatch",
+                                         policy,
+                                         state,
+                                         jac,
+                                         fac,
+                                         workspace,
+                                         kmcd);
   }
 
+  void
+  IgnitionZeroDNumJacobian::runDeviceBatch( /// thread block size
+                                           const real_type_2d_view_type& state,
+                                           /// output
+                                           const real_type_3d_view_type& jac,
+                                           const real_type_2d_view_type& fac,
+                                           /// const data from kinetic model
+                                           const real_type_2d_view_type& workspace,
+                                           const kinetic_model_type& kmcd)
+  {
+    const auto exec_space_instance = TChem::exec_space();
+    using policy_type = typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
+    const ordinal_type level = 1;
+    const ordinal_type per_team_extent = TChem::IgnitionZeroDNumJacobian::getWorkSpaceSize(kmcd); 
+    const ordinal_type per_team_scratch = Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
+
+    policy_type policy(exec_space_instance, state.extent(0), Kokkos::AUTO()); 
+    if (!workspace.span())
+      policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+
+    IgnitionZeroDNumJacobian_TemplateRun( /// template arguments deduction
+                                         "TChem::IgnitionZeroDNumJacobian::runDeviceBatch",
+                                         policy,
+                                         state,
+                                         jac,
+                                         fac,
+                                         workspace,
+                                         /// const data of kinetic model
+                                         kmcd);
+  }
 
   void
   IgnitionZeroDNumJacobian::runHostBatch( /// thread block size
-    typename UseThisTeamPolicy<host_exec_space>::type& policy,
-    const real_type_2d_view_host& state,
-    /// output
-    const real_type_3d_view_host& jac,
-    const real_type_2d_view_host& fac,
-    /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd)
-    {
+                                         const real_type_2d_view_host_type& state,
+                                         /// output
+                                         const real_type_3d_view_host_type& jac,
+                                         const real_type_2d_view_host_type& fac,
+                                         const real_type_2d_view_host_type& workspace,
+                                         /// const data from kinetic model
+                                         const kinetic_model_host_type& kmcd)
+  {
+    const auto host_space_instance = TChem::host_exec_space();
+    using policy_type = typename TChem::UseThisTeamPolicy<TChem::host_exec_space>::type;
+    const ordinal_type level = 1;
+    const ordinal_type per_team_extent = TChem::IgnitionZeroDNumJacobian::getWorkSpaceSize(kmcd); 
+    const ordinal_type per_team_scratch = Scratch<real_type_1d_view_host_type>::shmem_size(per_team_extent);
+
+    policy_type policy(host_space_instance, state.extent(0), Kokkos::AUTO()); 
+    if (!workspace.span())
+      policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
     IgnitionZeroDNumJacobian_TemplateRun( /// template arguments deduction
-        "TChem::IgnitionZeroDNumJacobian::runHostBatch",
-        real_type_1d_view_host(),
-        policy,
-        state,
-        jac,
-        fac,
-        kmcd);
-    }
-
+                                         "TChem::IgnitionZeroDNumJacobian::runHostBatch",
+                                         policy,
+                                         state,
+                                         jac,
+                                         fac,
+                                         workspace,
+                                         /// const data of kinetic model
+                                         kmcd);
+  }
 
 } // namespace TChem

@@ -41,6 +41,7 @@ main(int argc, char* argv[])
   int nBatch(1);
   bool verbose(true);
   bool useYaml(true);
+  bool use_sample_format(false);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
@@ -51,7 +52,6 @@ main(int argc, char* argv[])
     "inputfile", "Input state file name e.g., input.dat", &inputFile);
   opts.set_option<std::string>(
     "outputfile", "Output omega file name e.g., omega.dat", &outputFile);
-  //
   opts.set_option<std::string>(
     "thermfile", "Therm file name e.g., therm.dat", &thermFile);
   opts.set_option<int>(
@@ -60,9 +60,10 @@ main(int argc, char* argv[])
     &nBatch);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
-  //
   opts.set_option<bool>(
     "useYaml", "If true, use yaml to parse input file", &useYaml);
+  opts.set_option<bool>(
+    "use_sample_format", "If true, input file does not header or format", &use_sample_format);
 
   const bool r_parse = opts.parse(argc, argv);
   if (r_parse)
@@ -85,7 +86,9 @@ main(int argc, char* argv[])
     }
 
 
-    const auto kmcd = kmd.createConstData<TChem::exec_space>();
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+    const auto kmcd = kmd.createConstData<device_type>();
 
     /// input: state vectors: temperature, pressure and mass fraction
     real_type_2d_view state(
@@ -108,9 +111,12 @@ main(int argc, char* argv[])
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
 
     real_type_2d_view_host state_host;
-    const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
-    Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
-    {
+
+    if (use_sample_format){
+      // read gas
+      const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
+      Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
+
       // get species molecular weigths
       const auto SpeciesMolecularWeights =
         Kokkos::create_mirror_view(kmcd.sMass);
@@ -123,7 +129,15 @@ main(int argc, char* argv[])
                               stateVecDim,
                               state_host,
                               nBatch);
+
+    } else{
+      state_host = real_type_2d_view_host("state vector host", nBatch, stateVecDim);
+      auto state_host_at_0 = Kokkos::subview(state_host, 0, Kokkos::ALL());
+      TChem::Test::readStateVector(inputFile, kmcd.nSpec, state_host_at_0);
+      TChem::Test::cloneView(state_host);
+
     }
+
 
     Kokkos::Impl::Timer timer;
 
@@ -168,7 +182,7 @@ main(int argc, char* argv[])
   Kokkos::finalize();
 
   #else
- printf("This example requires Yaml ...\n" );
+   printf("This example requires Yaml ...\n" );
   #endif
 
   return 0;

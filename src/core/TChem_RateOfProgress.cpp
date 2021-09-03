@@ -23,25 +23,24 @@ Sandia National Laboratories, Livermore, CA, USA
 
 namespace TChem {
   template<typename PolicyType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstType>
-
-  //
+           typename DeviceType>
   void
   RateOfProgress_TemplateRun( /// input
     const std::string& profile_name,
-    const RealType1DViewType& dummy_1d,
     /// team size setting
     const PolicyType& policy,
-    const RealType2DViewType& state,
-    const RealType2DViewType& RoPFor,
-    const RealType2DViewType& RoPRev,
-    const KineticModelConstType& kmcd
+    const Tines::value_type_2d_view<real_type, DeviceType>& state,
+    const Tines::value_type_2d_view<real_type, DeviceType>& RoPFor,
+    const Tines::value_type_2d_view<real_type, DeviceType>& RoPRev,
+    const KineticModelConstData<DeviceType >& kmcd
   )
   {
+
     Kokkos::Profiling::pushRegion(profile_name);
     using policy_type = PolicyType;
+    using device_type = DeviceType;
+
+    using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
 
     const ordinal_type level = 1;
     const ordinal_type per_team_extent = RateOfProgress::getWorkSpaceSize(kmcd);
@@ -51,27 +50,32 @@ namespace TChem {
       policy,
       KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
         const ordinal_type i = member.league_rank();
-        const RealType1DViewType state_at_i =
+        const real_type_1d_view_type state_at_i =
           Kokkos::subview(state, i, Kokkos::ALL());
-        const RealType1DViewType RoPFor_at_i =
+        const real_type_1d_view_type RoPFor_at_i =
           Kokkos::subview(RoPFor, i, Kokkos::ALL());
-        const RealType1DViewType RoPRev_at_i =
+        const real_type_1d_view_type RoPRev_at_i =
           Kokkos::subview(RoPRev, i, Kokkos::ALL());
 
-        Scratch<RealType1DViewType> work(member.team_scratch(level),
+        Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                         per_team_extent);
 
-        const Impl::StateVector<RealType1DViewType> sv_at_i(kmcd.nSpec,
+        const Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec,
                                                            state_at_i);
         TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                           "Error: input state vector is not valid");
         {
           const real_type t = sv_at_i.Temperature();
           const real_type p = sv_at_i.Pressure();
-          const RealType1DViewType Ys = sv_at_i.MassFractions();
+          const real_type_1d_view_type Ys = sv_at_i.MassFractions();
 
-          Impl::RateOfProgressInd ::team_invoke(
-            member, t, p, Ys, RoPFor_at_i, RoPRev_at_i, work, kmcd);
+          const real_type density = sv_at_i.Density() <= 0 ?
+          Impl::RhoMixMs<real_type,DeviceType>
+               ::team_invoke(member, t, p, Ys, kmcd) : sv_at_i.Density();
+          member.team_barrier();
+
+          Impl::RateOfProgressInd<real_type, device_type> ::team_invoke(
+            member, t, p, density, Ys, RoPFor_at_i, RoPRev_at_i, work, kmcd);
         }
       });
     Kokkos::Profiling::popRegion();
@@ -81,19 +85,19 @@ namespace TChem {
 void
 RateOfProgress::runDeviceBatch( /// input
   const ordinal_type nBatch,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_2d_view& RoPFor,
-  const real_type_2d_view& RoPRev,
+  const real_type_2d_view_type& RoPFor,
+  const real_type_2d_view_type& RoPRev,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
 
   using policy_type = Kokkos::TeamPolicy<exec_space>;
   const ordinal_type level = 1;
   const ordinal_type per_team_extent = RateOfProgress::getWorkSpaceSize(kmcd);
   const ordinal_type per_team_scratch =
-    Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
 
   // policy_type policy(nBatch); // error
   policy_type policy(nBatch, Kokkos::AUTO()); // fine
@@ -102,7 +106,6 @@ RateOfProgress::runDeviceBatch( /// input
 
   RateOfProgress_TemplateRun( /// input
     "TChem::RateOfProgress::runDeviceBatch",
-    real_type_1d_view(),
     /// team size setting
     policy,
     state,
@@ -115,17 +118,16 @@ RateOfProgress::runDeviceBatch( /// input
 void
 RateOfProgress::runDeviceBatch( /// input
   typename UseThisTeamPolicy<exec_space>::type& policy,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_2d_view& RoPFor,
-  const real_type_2d_view& RoPRev,
+  const real_type_2d_view_type& RoPFor,
+  const real_type_2d_view_type& RoPRev,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
 
   RateOfProgress_TemplateRun( /// input
     "TChem::RateOfProgress::runDeviceBatch",
-    real_type_1d_view(),
     /// team size setting
     policy,
     state,
@@ -137,17 +139,16 @@ RateOfProgress::runDeviceBatch( /// input
 void
 RateOfProgress::runHostBatch( /// input
   typename UseThisTeamPolicy<host_exec_space>::type& policy,
-  const real_type_2d_view_host& state,
+  const real_type_2d_view_host_type& state,
   /// output
-  const real_type_2d_view_host& RoPFor,
-  const real_type_2d_view_host& RoPRev,
+  const real_type_2d_view_host_type& RoPFor,
+  const real_type_2d_view_host_type& RoPRev,
   /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
+  const kinetic_model_host_type& kmcd)
   {
 
     RateOfProgress_TemplateRun( /// input
       "TChem::RateOfProgress::runHostBatch",
-      real_type_1d_view_host(),
       /// team size setting
       policy,
       state,
@@ -159,19 +160,19 @@ RateOfProgress::runHostBatch( /// input
   void
   RateOfProgress::runHostBatch( /// input
     const ordinal_type nBatch,
-    const real_type_2d_view_host& state,
+    const real_type_2d_view_host_type& state,
     /// output
-    const real_type_2d_view_host& RoPFor,
-    const real_type_2d_view_host& RoPRev,
+    const real_type_2d_view_host_type& RoPFor,
+    const real_type_2d_view_host_type& RoPRev,
     /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd)
+    const kinetic_model_host_type& kmcd)
   {
 
     using policy_type = Kokkos::TeamPolicy<host_exec_space>;
     const ordinal_type level = 1;
     const ordinal_type per_team_extent = RateOfProgress::getWorkSpaceSize(kmcd);
     const ordinal_type per_team_scratch =
-      Scratch<real_type_1d_view_host>::shmem_size(per_team_extent);
+      Scratch<real_type_1d_view_host_type>::shmem_size(per_team_extent);
 
     // policy_type policy(nBatch); // error
     policy_type policy(nBatch, Kokkos::AUTO()); // fine
@@ -180,7 +181,6 @@ RateOfProgress::runHostBatch( /// input
 
     RateOfProgress_TemplateRun( /// input
       "TChem::RateOfProgress::runHostBatch",
-      real_type_1d_view_host(),
       /// team size setting
       policy,
       state,

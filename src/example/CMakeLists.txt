@@ -11,32 +11,36 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_InitialCondSurface.cpp
   TChem_TransientContStirredTankReactor.cpp
   TChem_Jacobian.cpp
-  TChem_NewtonSolver.cpp
-  TChem_TrBDF2.cpp
-  TChem_IgnitionZeroD.cpp
   TChem_IgnitionZeroD_ModelVariation.cpp
-  TChem_DenseUTV.cpp
   TChem_IgnitionZeroDSA.cpp
   TChem_PlugFlowReactor.cpp
   TChem_PlugFlowReactorSmat.cpp
   TChem_SimpleSurface.cpp
   TChem_SurfaceRHS.cpp
   TChem_ThermalProperties.cpp
+  TChem_JacobianSacado.cpp
+  TChem_PlugFlowReactorJacobianSacado.cpp
+  TChem_TransientContStirredTankReactorJacobianSacado.cpp
+  TChem_JacobianVerification.cpp
   TChem_SourceTermToyProblem.cpp
+  TChem_TransientContStirredTankReactorRHS.cpp
   TChem_Driver.cpp
   TChem_Driver_C.cpp
-  TChem_IgnitionZeroD_SourceTermJacobian.cpp
-  TChem_NetProductionRatePerMass_Yaml.cpp
-)
-
-IF (TCHEM_ENABLE_TPL_YAML_CPP)
-LIST(APPEND TCHEM_EXAMPLE_SOURCES
-  TChem_ThermalProperties_Yaml.cpp
-  TChem_NetProductionRateSurfacePerMass_Yaml.cpp
   TChem_PlugFlowReactorModelVariation.cpp
   TChem_TransientContStirredTankReactorModelVariation.cpp
+  TChem_ConstantVolumeIgnitionReactorSmatrixSensitivityAnalysis.cpp
+  TChem_IgnitionZeroD_SourceTermJacobian.cpp
+  TChem_KForwardReverse.cpp
+  TChem_KForwardReverseSurfaceModelVarition.cpp
+  TChem_NetProductionRatePerMass_Yaml.cpp
+  TChem_NetProductionRatePerMassNCAR.cpp
+  TChem_ThermalProperties_Yaml.cpp
+  TChem_NetProductionRateSurfacePerMass_Yaml.cpp
+  TChem_RateOfProgressJacobian.cpp
+  TChem_IgnitionZeroDJacobians.cpp
+  TChem_AtmosphericChemistry.cpp
 )
-ENDIF()
+
 
 #
 # Create examples for the above sources

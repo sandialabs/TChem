@@ -30,63 +30,100 @@ Sandia National Laboratories, Livermore, CA, USA
 
 namespace TChem {
 
-template<typename SpT>
+
+template<typename DeviceType>
+struct KineticModelNCAR_ConstData
+{
+public:
+
+  using device_type = DeviceType;
+  using exec_space_type = typename device_type::execution_space;
+
+  /// non const
+  using real_type_0d_dual_view = Tines::value_type_0d_dual_view<real_type,device_type>;
+  using real_type_1d_dual_view = Tines::value_type_1d_dual_view<real_type,device_type>;
+  using real_type_2d_dual_view = Tines::value_type_2d_dual_view<real_type,device_type>;
+  using real_type_3d_dual_view = Tines::value_type_3d_dual_view<real_type,device_type>;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type,device_type>;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+  using real_type_3d_view_type = Tines::value_type_3d_view<real_type,device_type>;
+
+  using ordinal_type_1d_dual_view = Tines::value_type_1d_dual_view<ordinal_type,device_type>;
+  using ordinal_type_2d_dual_view = Tines::value_type_2d_dual_view<ordinal_type,device_type>;
+
+  using ordinal_type_1d_view = Tines::value_type_1d_view<ordinal_type,device_type>;
+  using ordinal_type_2d_view = Tines::value_type_2d_view<ordinal_type,device_type>;
+
+  using string_type_1d_dual_view_type = Tines::value_type_1d_dual_view<char [LENGTHOFSPECNAME + 1],device_type>;
+  using string_type_1d_view_type = Tines::value_type_1d_view<char [LENGTHOFSPECNAME + 1],device_type>;
+
+  using arrhenius_reaction_type_1d_view_type =  Tines::value_type_1d_view<ArrheniusReactionType,device_type>;
+
+  //// const views
+  using kmcd_ordinal_type_1d_view = ConstUnmanaged<ordinal_type_1d_view>;
+  using kmcd_ordinal_type_2d_view = ConstUnmanaged<ordinal_type_2d_view>;
+
+  using kmcd_real_type_1d_view = ConstUnmanaged<real_type_1d_view_type>;
+  using kmcd_real_type_2d_view = ConstUnmanaged<real_type_2d_view_type>;
+  using kmcd_real_type_3d_view = ConstUnmanaged<real_type_3d_view_type>;
+
+  using kmcd_string_type_1d_view =ConstUnmanaged<string_type_1d_view_type>;
+
+  using kmcd_arrhenius_reaction_type_1d_view_1d_view = ConstUnmanaged<arrhenius_reaction_type_1d_view_type>;
+
+  kmcd_string_type_1d_view speciesNames;
+  kmcd_ordinal_type_1d_view reacNreac;
+  kmcd_ordinal_type_1d_view reacNprod;
+  kmcd_real_type_2d_view reacArhenFor;
+  kmcd_real_type_2d_view reacNuki;
+  kmcd_ordinal_type_2d_view reacSidx;
+  kmcd_arrhenius_reaction_type_1d_view_1d_view ArrheniusCoef;
+  ordinal_type nSpec;
+  ordinal_type nReac;
+  kmcd_ordinal_type_1d_view reacPfal;
+  kmcd_real_type_2d_view reacPpar;
+  ordinal_type nConstSpec;
+
+
+};
+
+template<typename DeviceType>
 struct KineticModelConstData
 {
 public:
-  enum
-  {
-    is_device = std::is_same<SpT, exec_space>::value,
-    is_host = std::is_same<SpT, host_exec_space>::value
-  };
-  // static_assert(!is_device && !is_host, "SpT is wrong" );
 
-  using exec_space_type = SpT;
+  using device_type = DeviceType;
+  using exec_space_type = typename device_type::execution_space;
+
   /// non const
-  using ordinal_type_1d_view_type =
-    typename std::conditional<is_device,
-                              ordinal_type_1d_view,
-                              ordinal_type_1d_view_host>::type;
-  using ordinal_type_2d_view_type =
-    typename std::conditional<is_device,
-                              ordinal_type_2d_view,
-                              ordinal_type_2d_view_host>::type;
+  using real_type_0d_dual_view = Tines::value_type_0d_dual_view<real_type,device_type>;
+  using real_type_1d_dual_view = Tines::value_type_1d_dual_view<real_type,device_type>;
+  using real_type_2d_dual_view = Tines::value_type_2d_dual_view<real_type,device_type>;
+  using real_type_3d_dual_view = Tines::value_type_3d_dual_view<real_type,device_type>;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type,device_type>;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+  using real_type_3d_view_type = Tines::value_type_3d_view<real_type,device_type>;
 
-  using real_type_1d_view_type = typename std::
-    conditional<is_device, real_type_1d_view, real_type_1d_view_host>::type;
-  using real_type_2d_view_type = typename std::
-    conditional<is_device, real_type_2d_view, real_type_2d_view_host>::type;
-  using real_type_3d_view_type = typename std::
-    conditional<is_device, real_type_3d_view, real_type_3d_view_host>::type;
+  using ordinal_type_1d_dual_view = Tines::value_type_1d_dual_view<ordinal_type,device_type>;
+  using ordinal_type_2d_dual_view = Tines::value_type_2d_dual_view<ordinal_type,device_type>;
+
+  using ordinal_type_1d_view = Tines::value_type_1d_view<ordinal_type,device_type>;
+  using ordinal_type_2d_view = Tines::value_type_2d_view<ordinal_type,device_type>;
+
+  using string_type_1d_dual_view_type = Tines::value_type_1d_dual_view<char [LENGTHOFSPECNAME + 1],device_type>;
+  using string_type_1d_view_type = Tines::value_type_1d_view<char [LENGTHOFSPECNAME + 1],device_type>;
 
   //// const views
-  using kmcd_ordinal_type_1d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             ordinal_type_1d_view,
-                                             ordinal_type_1d_view_host>::type>;
-  using kmcd_ordinal_type_2d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             ordinal_type_2d_view,
-                                             ordinal_type_2d_view_host>::type>;
+  using kmcd_ordinal_type_1d_view = ConstUnmanaged<ordinal_type_1d_view>;
+  using kmcd_ordinal_type_2d_view = ConstUnmanaged<ordinal_type_2d_view>;
 
-  using kmcd_real_type_1d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             real_type_1d_view,
-                                             real_type_1d_view_host>::type>;
-  using kmcd_real_type_2d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             real_type_2d_view,
-                                             real_type_2d_view_host>::type>;
-  using kmcd_real_type_3d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             real_type_3d_view,
-                                             real_type_3d_view_host>::type>;
+  using kmcd_real_type_1d_view = ConstUnmanaged<real_type_1d_view_type>;
+  using kmcd_real_type_2d_view = ConstUnmanaged<real_type_2d_view_type>;
+  using kmcd_real_type_3d_view = ConstUnmanaged<real_type_3d_view_type>;
 
-  using kmcd_string_type_1d_view = ConstUnmanaged<typename std::conditional<
-    is_device,
-    string_type_1d_view<LENGTHOFSPECNAME + 1>,
-    string_type_1d_view_host<LENGTHOFSPECNAME + 1>>::type>;
-
+  using kmcd_string_type_1d_view =ConstUnmanaged<string_type_1d_view_type>;
 
   real_type rho;
   kmcd_string_type_1d_view speciesNames;
@@ -181,55 +218,45 @@ public:
   kmcd_real_type_2d_view reacPlogPars;
 
   kmcd_real_type_3d_view cppol;
+  kmcd_real_type_2d_view stoiCoefMatrix;
 
   // kmcd_real_type_3d_view spec9trng;
   // kmcd_real_type_3d_view spec9coefs;
 };
-using KineticModelConstDataHost = KineticModelConstData<host_exec_space>;
-using KineticModelConstDataDevice = KineticModelConstData<exec_space>;
 
-template<typename SpT>
+template<typename DeviceType>
 struct KineticSurfModelConstData
 {
 public:
-  enum
-  {
-    is_device = std::is_same<SpT, exec_space>::value,
-    is_host = std::is_same<SpT, host_exec_space>::value
-  };
-  // static_assert(!is_device && !is_host, "SpT is wrong" );
-  using kmcd_ordinal_type_1d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             ordinal_type_1d_view,
-                                             ordinal_type_1d_view_host>::type>;
-  using kmcd_ordinal_type_2d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             ordinal_type_2d_view,
-                                             ordinal_type_2d_view_host>::type>;
 
-  using kmcd_real_type_1d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             real_type_1d_view,
-                                             real_type_1d_view_host>::type>;
-  using kmcd_real_type_2d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             real_type_2d_view,
-                                             real_type_2d_view_host>::type>;
-  using kmcd_real_type_3d_view =
-    ConstUnmanaged<typename std::conditional<is_device,
-                                             real_type_3d_view,
-                                             real_type_3d_view_host>::type>;
-  //
-  using kmcd_string_type_1d_view = ConstUnmanaged<typename std::conditional<
-    is_device,
-    string_type_1d_view<LENGTHOFSPECNAME + 1>,
-    string_type_1d_view_host<LENGTHOFSPECNAME + 1>>::type>;
+  using device_type = DeviceType;
+  using exec_space_type = typename device_type::execution_space;
 
-  //
-  using kmcd_coverage_modification_type_1d_view =
-     ConstUnmanaged<typename std::conditional<is_device,
-                                           coverage_modification_type_1d_view,
-                                           coverage_modification_type_1d_view_host>::type>;
+  /// non const
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type,device_type>;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+  using real_type_3d_view_type = Tines::value_type_3d_view<real_type,device_type>;
+
+  using ordinal_type_1d_view = Tines::value_type_1d_view<ordinal_type,device_type>;
+  using ordinal_type_2d_view = Tines::value_type_2d_view<ordinal_type,device_type>;
+
+  using string_type_1d_view_type = Tines::value_type_1d_view<char [LENGTHOFSPECNAME + 1],device_type>;
+
+  using kmcd_coverage_modification_type = Tines::value_type_1d_view<CoverageModification, device_type>;
+
+  //// const views
+  using kmcd_ordinal_type_1d_view = ConstUnmanaged<ordinal_type_1d_view>;
+  using kmcd_ordinal_type_2d_view = ConstUnmanaged<ordinal_type_2d_view>;
+
+  using kmcd_real_type_1d_view = ConstUnmanaged<real_type_1d_view_type>;
+  using kmcd_real_type_2d_view = ConstUnmanaged<real_type_2d_view_type>;
+  using kmcd_real_type_3d_view = ConstUnmanaged<real_type_3d_view_type>;
+
+  using kmcd_string_type_1d_view = ConstUnmanaged<string_type_1d_view_type>;
+
+  using kmcd_coverage_modification_type_1d_view = ConstUnmanaged<kmcd_coverage_modification_type>;
+
 
   kmcd_coverage_modification_type_1d_view coverageFactor;
 
@@ -266,9 +293,6 @@ public:
   real_type TChem_reltol;
   real_type TChem_abstol;
 };
-using KineticSurfModelConstDataHost =
-  KineticSurfModelConstData<host_exec_space>;
-using KineticSurfModelConstDataDevice = KineticSurfModelConstData<exec_space>;
 
 struct KineticModelData
 {
@@ -333,6 +357,8 @@ public:
   /* stoichiometric coeffs and reactants and product indices */
   ordinal_type_2d_dual_view reacSidx_;
   real_type_2d_dual_view reacNuki_;
+
+  real_type_2d_dual_view stoiCoefMatrix_;
 
   /* real stoichiometric coeffs */
   ordinal_type nRealNuReac_;
@@ -471,6 +497,12 @@ public:
 
   coverage_modification_type_1d_dual_view coverageFactor_;
 
+  // aerosol chemistry
+  arrhenius_reaction_type_1d_dual_view ArrheniusCoef_;
+  ordinal_type  nConstSpec_;
+
+
+
   void syncSurfToDevice();
   void allocateViewsSurf(FILE* errfile);
 
@@ -496,6 +528,7 @@ public:
 #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
   ordinal_type initChemYaml(YAML::Node& doc, const int& gasPhaseIndex);
   ordinal_type initChemSurfYaml(YAML::Node& doc, const int& surfacePhaseIndex);
+  ordinal_type initChemNCAR(YAML::Node& doc);
 #endif
 /// this modify begin allocate a view to replace the existing reacArhenFor_
 void modifyArrheniusForwardParametersBegin();
@@ -514,12 +547,22 @@ void modifyArrheniusForwardSurfaceParameter(const int i, const int j, const real
 
 void modifyArrheniusForwardSurfaceParametersEnd();
 
+// to modify plog reaction's paramters
+void modifyArrheniusForwardParametersPLOG_Begin();
+real_type getArrheniusForwardParameterPLOG(const int i, const int j);
+void modifyArrheniusForwardParameterPLOG(const int i, const int j, const real_type value);
+void modifyArrheniusForwardParametersPLOG_End();
+
+
+
   /// copy only things needed; we need to review what is actually needed for
   /// computations
+  // gas combustion
   template<typename SpT>
   KineticModelConstData<SpT> createConstData()
   {
     KineticModelConstData<SpT> data;
+    // using SpT = typename DeviceType::execution_space;
 
     /// given from non-const kinetic model data
     data.rho =
@@ -624,10 +667,11 @@ void modifyArrheniusForwardSurfaceParametersEnd();
     // data.spec9trng = spec9trng_.template view<SpT>();
     // data.spec9coefs = spec9coefs_.template view<SpT>();
     // data.sNames = sNames_.template view<SpT>();
+    data.stoiCoefMatrix = stoiCoefMatrix_.template view<SpT>();
 
     return data;
   }
-
+   // surface combustion
   template<typename SpT>
   KineticSurfModelConstData<SpT> createConstSurfData()
   {
@@ -677,6 +721,31 @@ void modifyArrheniusForwardSurfaceParametersEnd();
 
     return data;
   }
+  // aerosol chemistry
+  template<typename SpT>
+  KineticModelNCAR_ConstData<SpT> createNCAR_ConstData()
+  {
+    KineticModelNCAR_ConstData<SpT> data;
+    // forward arrhenius coefficients
+    data.speciesNames = sNames_.template view<SpT>();
+    data.reacNuki = reacNuki_.template view<SpT>();
+    data.reacSidx = reacSidx_.template view<SpT>();
+    data.reacArhenFor = reacArhenFor_.template view<SpT>();
+    data.reacNreac = reacNreac_.template view<SpT>();
+    data.reacNprod = reacNprod_.template view<SpT>();
+    data.nSpec = nSpec_;
+    data.nReac = nReac_;
+    // troe type
+    data.reacPpar = reacPpar_.template view<SpT>();
+    data.reacPfal = reacPfal_.template view<SpT>();
+    // arrhenius pressure parameters
+    data.ArrheniusCoef = ArrheniusCoef_.template view<SpT>();
+    // species that are assumed constant like tracers
+    data.nConstSpec = nConstSpec_;
+
+    return data;
+  }
+
 };
 
 /// make an array of kinetic mode to vary kinetic models
@@ -752,27 +821,65 @@ KineticModelsModifyWithArrheniusForwardParameters(Kokkos::View<KineticModelData*
     reacIndx(ireac) = valuesFiles[ireac];
   }
 
+  auto& kmd_at_p = kmds(0);
+  ordinal_type_1d_view_host iplogs("iplogs", kmd_at_p.nReac_);
+
+  /// compute iterators
+  ordinal_type iplog(0);
+  auto reacPlogIdxHost = kmd_at_p.reacPlogIdx_.view_host();
+  auto reacPlogPnoHost = kmd_at_p.reacPlogPno_.view_host();
+
+  for (ordinal_type i = 0; i < kmd_at_p.nReac_; ++i) {
+    iplogs(i) = iplog;
+    iplog += (iplog < kmd_at_p.nPlogReac_) && (i == reacPlogIdxHost(iplog));
+  }
+
+
   for (int p=0;p<nBatch;++p) {
     /// use reference so that we modify an object in the view
     auto& kmd_at_p = kmds(p);
     kmd_at_p.modifyArrheniusForwardParametersBegin();
+    kmd_at_p.modifyArrheniusForwardParametersPLOG_Begin();
 
     /// this should be some range value that a user want to modify
     {
       for (ordinal_type ireac = 0; ireac < NreacWModification; ireac++) {
+        const ordinal_type reac_index = reacIndx[ireac];
+
         for (ordinal_type i = 0; i < 3; i++) {
-          const real_type reference_value = kmd_at_p.getArrheniusForwardParameter(reacIndx[ireac], i);
+          const real_type reference_value = kmd_at_p.getArrheniusForwardParameter(reac_index, i);
           /// do actual modification of the value and set it
           /// for this test, we just set the same value again
-          const real_type value = reference_value* valuesFiles[NreacWModification*(p*3+i+1) + ireac];
+          const real_type value = reference_value * valuesFiles[NreacWModification*(p*3+i+1) + ireac];
           kmd_at_p.modifyArrheniusForwardParameter(reacIndx[ireac], i, value);
 
         }
 
+        //check if reaction is Plog type
+        const ordinal_type iplog = iplogs(reac_index);
+        const bool plogtest =
+          (iplog < kmd_at_p.nPlogReac_) && (reac_index == reacPlogIdxHost(iplog));
 
-      }
+        if (plogtest) {
+          //loop over plog intervals
+          for (ordinal_type j = reacPlogPnoHost(iplog); j < reacPlogPnoHost(iplog + 1);
+               ++j) {
+              //loop over parameters A, B, E/R
+              for (ordinal_type i = 0; i < 3; i++) {
+                 const real_type reference_value = kmd_at_p.getArrheniusForwardParameterPLOG(j,i+1); // A
+                 const real_type value = reference_value* valuesFiles[NreacWModification*(p*3+i+1) + ireac]; // use same perturbation for all plog intervals
+                 kmd_at_p.modifyArrheniusForwardParameterPLOG(j, i+1, value);
+               } // end parameter's loop
+           }// end plog-intervale's loop
+        }//end plog
+
+      } // reactions loop
+
+
     }
+
     kmd_at_p.modifyArrheniusForwardParametersEnd();
+    kmd_at_p.modifyArrheniusForwardParametersPLOG_End();
 
 
   }
@@ -795,8 +902,8 @@ KineticModelsModifyWithArrheniusForwardParameters(Kokkos::View<KineticModelData*
     auto& kmd_at_p = kmds(p);
     kmd_at_p.modifyArrheniusForwardParametersBegin();
 
-    auto pre_exporencial_factor =
-    parameters["modifier_pre_exporencial_No_"+std::to_string(p)];
+    auto pre_exponential_factor =
+    parameters["modifier_pre_exponential_No_"+std::to_string(p)];
     auto temperature_coefficient_factor =
     parameters["modifier_temperature_coefficient_No_"+std::to_string(p)];
     auto activation_energy_factor =
@@ -806,12 +913,12 @@ KineticModelsModifyWithArrheniusForwardParameters(Kokkos::View<KineticModelData*
     for (ordinal_type ireac = 0; ireac < NreacWModification; ireac++) {
 
       const ordinal_type reacIndx_ireac = reacIndx[ireac].as<ordinal_type>();
-      const real_type pre_exporencial = kmd_at_p.getArrheniusForwardParameter(reacIndx_ireac, 0);
+      const real_type pre_exponential = kmd_at_p.getArrheniusForwardParameter(reacIndx_ireac, 0);
       const real_type temperature_coefficient = kmd_at_p.getArrheniusForwardParameter(reacIndx_ireac, 1);
       const real_type activation_energy = kmd_at_p.getArrheniusForwardParameter(reacIndx_ireac, 2);
 
       kmd_at_p.modifyArrheniusForwardParameter(reacIndx_ireac, 0,
-        pre_exporencial_factor[ireac].as<real_type>() * pre_exporencial);
+        pre_exponential_factor[ireac].as<real_type>() * pre_exponential);
       kmd_at_p.modifyArrheniusForwardParameter(reacIndx_ireac, 1,
         temperature_coefficient_factor[ireac].as<real_type>() * temperature_coefficient);
       kmd_at_p.modifyArrheniusForwardParameter(reacIndx_ireac, 2,
@@ -843,8 +950,8 @@ KineticModelsModifyWithArrheniusForwardSurfaceParameters(Kokkos::View<KineticMod
     auto& kmd_at_p = kmds(p);
     kmd_at_p.modifyArrheniusForwardSurfaceParametersBegin();
 
-    auto pre_exporencial_factor =
-    parameters["modifier_pre_exporencial_No_"+std::to_string(p)];
+    auto pre_exponential_factor =
+    parameters["modifier_pre_exponential_No_"+std::to_string(p)];
     auto temperature_coefficient_factor =
     parameters["modifier_temperature_coefficient_No_"+std::to_string(p)];
     auto activation_energy_factor =
@@ -853,12 +960,12 @@ KineticModelsModifyWithArrheniusForwardSurfaceParameters(Kokkos::View<KineticMod
     /// this should be some range value that a user want to modify
     for (ordinal_type ireac = 0; ireac < NreacWModification; ireac++) {
       const ordinal_type reacIndx_ireac = reacIndx[ireac].as<ordinal_type>();
-      const real_type pre_exporencial = kmd_at_p.getArrheniusForwardSurfaceParameter(reacIndx_ireac, 0);
+      const real_type pre_exponential = kmd_at_p.getArrheniusForwardSurfaceParameter(reacIndx_ireac, 0);
       const real_type temperature_coefficient = kmd_at_p.getArrheniusForwardSurfaceParameter(reacIndx_ireac, 1);
       const real_type activation_energy = kmd_at_p.getArrheniusForwardSurfaceParameter(reacIndx_ireac, 2);
 
       kmd_at_p.modifyArrheniusForwardSurfaceParameter(reacIndx_ireac, 0,
-        pre_exporencial_factor[ireac].as<real_type>() * pre_exporencial);
+        pre_exponential_factor[ireac].as<real_type>() * pre_exponential);
       kmd_at_p.modifyArrheniusForwardSurfaceParameter(reacIndx_ireac, 1,
         temperature_coefficient_factor[ireac].as<real_type>() * temperature_coefficient);
       kmd_at_p.modifyArrheniusForwardSurfaceParameter(reacIndx_ireac, 2,

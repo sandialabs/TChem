@@ -23,25 +23,27 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 
 namespace Impl {
-template<typename PolicyType,
-         typename RealType0DViewType,
-         typename RealType1DViewType,
-         typename RealType2DViewType,
-         typename KineticModelConstType>
+  template<typename PolicyType,
+           typename DeviceType>
 void
 EnthalpyMass_TemplateRun( /// required template arguments
   const std::string& profile_name,
-  const RealType0DViewType& dummy_0d,
   /// team size setting
   const PolicyType& policy,
-  const RealType2DViewType& state,
+  const Tines::value_type_2d_view<real_type, DeviceType>& state,
   // outputFile
-  const RealType2DViewType& EnthalpyMass,
-  const RealType1DViewType& EnthalpyMixMass,
-  const KineticModelConstType& kmcd)
+  const Tines::value_type_2d_view<real_type, DeviceType>& EnthalpyMass,
+  const Tines::value_type_1d_view<real_type, DeviceType>& EnthalpyMixMass,
+  const KineticModelConstData<DeviceType >& kmcd)
 {
   Kokkos::Profiling::pushRegion(profile_name);
   using policy_type = PolicyType;
+  using device_type = DeviceType;
+
+  using EnthalpySpecMs = Impl::EnthalpySpecMsFcn<real_type,device_type>;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type, device_type>;
+
   const ordinal_type level = 1; ///
   const ordinal_type per_team_extent = EnthalpyMass::getWorkSpaceSize(kmcd);
 
@@ -50,28 +52,28 @@ EnthalpyMass_TemplateRun( /// required template arguments
     policy,
     KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
       const ordinal_type i = member.league_rank();
-      const RealType1DViewType state_at_i =
+      const real_type_1d_view_type state_at_i =
         Kokkos::subview(state, i, Kokkos::ALL());
-      const RealType1DViewType EnthalpyMass_at_i =
+      const real_type_1d_view_type EnthalpyMass_at_i =
         Kokkos::subview(EnthalpyMass, i, Kokkos::ALL());
-      const RealType0DViewType EnthalpyMixMass_at_i =
+      const real_type_0d_view_type EnthalpyMixMass_at_i =
         Kokkos::subview(EnthalpyMixMass, i);
-      Scratch<RealType1DViewType> work(member.team_scratch(level),
+      Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                        per_team_extent);
       auto w = (real_type*)work.data();
-      auto cpks = RealType1DViewType(w, kmcd.nSpec);
+      auto cpks = real_type_1d_view_type(w, kmcd.nSpec);
       w += kmcd.nSpec;
 
-      const Impl::StateVector<RealType1DViewType> sv_at_i(kmcd.nSpec,
+      const Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd.nSpec,
                                                           state_at_i);
       TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                         "Error: input state vector is not valid");
       {
         const real_type t = sv_at_i.Temperature();
         const real_type p = sv_at_i.Pressure();
-        const RealType1DViewType Ys = sv_at_i.MassFractions();
+        const real_type_1d_view_type Ys = sv_at_i.MassFractions();
 
-        Impl::EnthalpySpecMs ::team_invoke(
+        EnthalpySpecMs ::team_invoke(
           member, t, EnthalpyMass_at_i, cpks, kmcd);
 
         member.team_barrier();
@@ -96,15 +98,14 @@ EnthalpyMass_TemplateRun( /// required template arguments
 void
 EnthalpyMass::runDeviceBatch( /// thread block size
   typename UseThisTeamPolicy<exec_space>::type& policy,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_2d_view& EnthalpyMass,
-  const real_type_1d_view& EnthalpyMixMass,
+  const real_type_2d_view_type& EnthalpyMass,
+  const real_type_1d_view_type& EnthalpyMixMass,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
   Impl::EnthalpyMass_TemplateRun("TChem::EnthalpyMass::runDeviceBatch",
-                                 real_type_0d_view(),
                                  /// team policy
                                  policy,
                                  /// input
@@ -120,12 +121,12 @@ EnthalpyMass::runDeviceBatch( /// thread block size
   const ordinal_type& team_size,
   const ordinal_type& vector_size,
   const ordinal_type nBatch,
-  const real_type_2d_view& state,
+  const real_type_2d_view_type& state,
   /// output
-  const real_type_2d_view& EnthalpyMass,
-  const real_type_1d_view& EnthalpyMixMass,
+  const real_type_2d_view_type& EnthalpyMass,
+  const real_type_1d_view_type& EnthalpyMixMass,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd)
+  const kinetic_model_type& kmcd)
 {
   // setting policy
   using policy_type =
@@ -135,7 +136,7 @@ EnthalpyMass::runDeviceBatch( /// thread block size
 
   TChem::EnthalpyMass::getWorkSpaceSize(kmcd); ///
   const ordinal_type per_team_scratch =
-      Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+      Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
   policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
 
   if (team_size > 0 && vector_size > 0) {
@@ -146,7 +147,6 @@ EnthalpyMass::runDeviceBatch( /// thread block size
 
 
   Impl::EnthalpyMass_TemplateRun("TChem::EnthalpyMass::runDeviceBatch",
-                                 real_type_0d_view(),
                                  /// team policy
                                  policy,
                                  /// input
@@ -159,15 +159,54 @@ EnthalpyMass::runDeviceBatch( /// thread block size
 void
 EnthalpyMass::runHostBatch( /// thread block size
   typename UseThisTeamPolicy<host_exec_space>::type& policy,
-  const real_type_2d_view_host& state,
+  const real_type_2d_view_host_type& state,
   /// output
-  const real_type_2d_view_host& EnthalpyMass,
-  const real_type_1d_view_host& EnthalpyMixMass,
+  const real_type_2d_view_host_type& EnthalpyMass,
+  const real_type_1d_view_host_type& EnthalpyMixMass,
   /// const data from kinetic model
-  const KineticModelConstDataHost& kmcd)
+  const kinetic_model_host_type& kmcd)
 {
   Impl::EnthalpyMass_TemplateRun("TChem::EnthalpyMass::runHostBatch",
-                                 real_type_0d_view_host(),
+                                 /// team policy
+                                 policy,
+                                 /// input
+                                 state,
+                                 EnthalpyMass,
+                                 EnthalpyMixMass,
+                                 kmcd);
+}
+
+void
+EnthalpyMass::runHostBatch( /// thread block size
+  const host_exec_space& host_exec_space_instance,
+  const ordinal_type& team_size,
+  const ordinal_type& vector_size,
+  const ordinal_type nBatch,
+  const real_type_2d_view_host_type& state,
+  /// output
+  const real_type_2d_view_host_type& EnthalpyMass,
+  const real_type_1d_view_host_type& EnthalpyMixMass,
+  /// const data from kinetic model
+  const KineticModelConstData<host_device_type>& kmcd)
+{
+  // setting policy
+  using policy_type =
+    typename TChem::UseThisTeamPolicy<TChem::host_exec_space>::type;
+  const ordinal_type level = 1;
+  const ordinal_type per_team_extent =
+
+  TChem::EnthalpyMass::getWorkSpaceSize(kmcd); ///
+  const ordinal_type per_team_scratch =
+      Scratch<real_type_1d_view_host_type>::shmem_size(per_team_extent);
+  policy_type policy(host_exec_space_instance, nBatch, Kokkos::AUTO());
+
+  if (team_size > 0 && vector_size > 0) {
+    policy = policy_type(host_exec_space_instance, nBatch, team_size, vector_size);
+  }
+
+  policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+
+  Impl::EnthalpyMass_TemplateRun("TChem::EnthalpyMass::runHostBatch",
                                  /// team policy
                                  policy,
                                  /// input

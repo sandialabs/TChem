@@ -78,10 +78,11 @@ main(int argc, char* argv[])
 
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
+    using host_device_type      = typename Tines::UseThisDevice<TChem::host_exec_space>::type;
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
-    const auto kmcd = kmd.createConstData<TChem::host_exec_space>();
+    const auto kmcd = kmd.createConstData<host_device_type>();
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);

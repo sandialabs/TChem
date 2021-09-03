@@ -29,41 +29,54 @@ namespace TChem {
 
 struct GkSurfGas
 {
-  template<typename KineticModelConstDataType,
-           typename KineticModelConstSurfDataType>
+  using host_device_type = typename Tines::UseThisDevice<host_exec_space>::type;
+  using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
+  using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_model_host_type = KineticModelConstData<host_device_type>;
+
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+  using kinetic_surf_model_host_type = KineticSurfModelConstData<host_device_type>;
+
+  template<typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticModelConstSurfDataType& kmcdSurf)
+    const KineticModelConstData<DeviceType>& kmcd,
+    const KineticSurfModelConstData<DeviceType>& kmcdSurf)
   {
-    return (1 * kmcd.nSpec + 0 * kmcd.nReac + 1 * kmcdSurf.nSpec +
-            0 * kmcdSurf.nReac);
+    return ( kmcd.nSpec +  kmcdSurf.nSpec );
   }
 
   static void runHostBatch( /// input
     const ordinal_type nBatch,
-    const real_type_2d_view_host& state,
+    const real_type_2d_view_host_type& state,
     /// output
-    const real_type_2d_view_host& gk,
-    const real_type_2d_view_host& gkSurf,
-    const real_type_2d_view_host& hks,
-    const real_type_2d_view_host& hksSurf,
+    const real_type_2d_view_host_type& gk,
+    const real_type_2d_view_host_type& gkSurf,
+    const real_type_2d_view_host_type& hks,
+    const real_type_2d_view_host_type& hksSurf,
     /// const data from kinetic model
-    const KineticModelConstDataHost& kmcd,
+    const kinetic_model_host_type& kmcd,
     /// const data from kinetic model surface
-    const KineticSurfModelConstDataHost& kmcdSurf);
+    const kinetic_surf_model_host_type& kmcdSurf);
 
   static void runDeviceBatch( /// input
     const ordinal_type nBatch,
-    const real_type_2d_view& state,
+    const real_type_2d_view_type& state,
     /// output
-    const real_type_2d_view& gk,
-    const real_type_2d_view& gkSurf,
-    const real_type_2d_view& hks,
-    const real_type_2d_view& hksSurf,
+    const real_type_2d_view_type& gk,
+    const real_type_2d_view_type& gkSurf,
+    const real_type_2d_view_type& hks,
+    const real_type_2d_view_type& hksSurf,
     /// const data from kinetic model
-    const KineticModelConstDataDevice& kmcd,
+    const kinetic_model_type& kmcd,
     /// const data from kinetic model surface
-    const KineticSurfModelConstDataDevice& kmcdSurf);
+    const kinetic_surf_model_type& kmcdSurf);
 };
 
 } // namespace TChem

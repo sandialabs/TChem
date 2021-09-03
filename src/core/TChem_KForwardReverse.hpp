@@ -40,12 +40,12 @@ struct KForwardReverse
   using real_type_1d_view_host_type = Tines::value_type_1d_view<real_type,host_device_type>;
   using real_type_2d_view_host_type = Tines::value_type_2d_view<real_type,host_device_type>;
 
-  using kinetic_model_type = KineticModelConstData<exec_space>;
-  using kinetic_model_host_type = KineticModelConstData<host_exec_space>;
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_model_host_type = KineticModelConstData<host_device_type>;
 
-  template<typename SpT>
+  template<typename DeviceType>
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstData<SpT>& kmcd)
+    const KineticModelConstData<DeviceType>& kmcd)
   {
     return 3 * kmcd.nSpec + kmcd.nReac * 2;
   }

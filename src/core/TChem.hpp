@@ -26,12 +26,13 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TC_kmodint.hpp"
 #include "TC_kmodint_surface.hpp"
 
-#include "TChem_CpSpecMs.hpp"
 #include "TChem_EnthalpyMass.hpp"
 #include "TChem_EntropyMass.hpp"
 #include "TChem_GkSurfGas.hpp"
 #include "TChem_IgnitionZeroD.hpp"
 #include "TChem_IgnitionZeroDNumJacobian.hpp"
+#include "TChem_IgnitionZeroDNumJacobianFwd.hpp"
+#include "TChem_IgnitionZeroD_SacadoJacobian.hpp"
 #include "TChem_InitialCondSurface.hpp"
 #include "TChem_InternalEnergyMass.hpp"
 #include "TChem_Jacobian.hpp"
@@ -45,8 +46,8 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_NetProductionRateSurfacePerMole.hpp"
 #include "TChem_PlugFlowReactor.hpp"
 #include "TChem_PlugFlowReactorNumJacobian.hpp"
+#include "TChem_PlugFlowReactorSacadoJacobian.hpp"
 #include "TChem_PlugFlowReactorRHS.hpp"
-#include "TChem_PlugFlowReactorReducedNumJacobian.hpp"
 #include "TChem_PlugFlowReactorSmat.hpp"
 #include "TChem_RateOfProgress.hpp"
 #include "TChem_RateOfProgressSurface.hpp"
@@ -55,11 +56,12 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_SourceTerm.hpp"
 #include "TChem_SpecificHeatCapacityConsVolumePerMass.hpp"
 #include "TChem_SpecificHeatCapacityPerMass.hpp"
-#include "TChem_SurfaceNumJacobian.hpp"
 #include "TChem_SurfaceRHS.hpp"
 #include "TChem_TransientContStirredTankReactor.hpp"
 #include "TChem_TransientContStirredTankReactorNumJacobian.hpp"
 #include "TChem_TransientContStirredTankReactorRHS.hpp"
+#include "TChem_TransientContStirredTankReactorSacadoJacobian.hpp"
 #include "TChem_TransientContStirredTankReactorSmatrix.hpp"
+
 
 #endif

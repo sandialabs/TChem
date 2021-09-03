@@ -18,79 +18,84 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
 #ifndef __TCHEM_IMPL_SURFACE_HPP__
 #define __TCHEM_IMPL_SURFACE_HPP__
 
 #include "TChem_Impl_ReactionRatesSurface.hpp"
+#include "TChem_Impl_RhoMixMs.hpp"
 #include "TChem_Util.hpp"
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct SurfaceRHS
 {
 
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+
+  using ordinal_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type      = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf)
   {
+    using ReactionRatesSurface = Impl::ReactionRatesSurface<real_type,device_type>;
+
     const ordinal_type per_team_extent =
       ReactionRatesSurface::getWorkSpaceSize(kmcd, kmcdSurf);
 
     return (per_team_extent + kmcd.nSpec + kmcdSurf.nSpec);
   }
 
-  template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
     /// input
     const real_type& t,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec) mass fraction
-    const RealType1DViewType& Zs, // (kmcdSurf.nSpec) site fraction
+    const real_type_1d_view_type& Ys, /// (kmcd.nSpec) mass fraction
+    const real_type_1d_view_type& Zs, // (kmcdSurf.nSpec) site fraction
     const real_type& p,           // pressure
 
     /// output
-    const RealType1DViewType& dZs, /// (kmcdSurf.nSpec) // surface species
-    const RealType1DViewType& omegaSurfGas,
-    const RealType1DViewType& omegaSurf,
-    const WorkViewType& work,
+    const real_type_1d_view_type& dZs, /// (kmcdSurf.nSpec) // surface species
+    const real_type_1d_view_type& omegaSurfGas,
+    const real_type_1d_view_type& omegaSurf,
+    const real_type_1d_view_type& work,
     /// workspace
 
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf)
   {
+
+    using ReactionRatesSurface = Impl::ReactionRatesSurface<real_type,device_type>;
+    using RhoMixMs = RhoMixMs<real_type,device_type>;
+    const real_type rhomix = RhoMixMs::team_invoke(member, t, p, Ys, kmcd);
+    member.team_barrier();
+
     const real_type ten(10.0);
-    /// compute catalysis production rates
+    /// compute surface production rates
     ReactionRatesSurface ::team_invoke(
-      member, t, p, Ys, Zs, omegaSurfGas, omegaSurf, work, kmcd, kmcdSurf);
+      member, t, p, rhomix, Ys, Zs, omegaSurfGas, omegaSurf, work, kmcd, kmcdSurf);
 
     member.team_barrier();
 
-    // Kokkos::parallel_for
-    //   (Kokkos::TeamVectorRange(member, kmcdSurf.nSpec),
-    //   [&](const ordinal_type &k) {
-    //   dZs(k) = omegaSurf(k)/kmcdSurf.sitedensity; // surface species equation
-    // });
-    const real_type one(1);
-
-    real_type Zsum(0);
-    Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcdSurf.nSpec),
-      [&](const ordinal_type& k, real_type& update) {
-        dZs(k) =
-          omegaSurf(k) / kmcdSurf.sitedensity / ten; // surface species equation
-        update += Zs(k);                       // Units of omega (kg/m3/s).
-      },
-      Zsum);
-
-    member.team_barrier();
-    dZs(kmcdSurf.nSpec - 1) = one - Zsum;
+    Kokkos::parallel_for
+      (Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.nSpec),
+      [&](const ordinal_type &k) {
+      dZs(k) = omegaSurf(k)/kmcdSurf.sitedensity / ten; // surface species equation
+    });
 
     member.team_barrier();
 
@@ -124,34 +129,31 @@ struct SurfaceRHS
   }
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
+           typename WorkViewType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
     const real_type& t,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec)
-    const RealType1DViewType& Zs, // (kmcdSurf.nSpec) site fraction
+    const real_type_1d_view_type& Ys, /// (kmcd.nSpec)
+    const real_type_1d_view_type& Zs, // (kmcdSurf.nSpec) site fraction
     const real_type& p,           // pressure
     /// output
-    const RealType1DViewType& rhs, /// (kmcdSurf.nSpec )
+    const real_type_1d_view_type& rhs, /// (kmcdSurf.nSpec )
     /// workspace
     const WorkViewType& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf)
   {
 
     auto w = (real_type*)work.data();
 
-    auto omegaSurfGas = RealType1DViewType(w, kmcd.nSpec);
+    auto omegaSurfGas = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto omegaSurf = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto omegaSurf = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
 
-    auto work_surf = WorkViewType(w, work.extent(0) - (w - work.data()));
+    auto work_surf = real_type_1d_view_type(w, work.extent(0) - (w - work.data()));
     team_invoke_detail(member,
                        t,
                        Ys,
@@ -168,96 +170,6 @@ struct SurfaceRHS
   }
 };
 
-// Jac only for surface phase
-struct SurfaceNumJacobian
-{
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
-  KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
-  {
-    const ordinal_type per_team_extent =
-      SurfaceRHS::getWorkSpaceSize(kmcd, kmcdSurf);
-
-    return (per_team_extent + 3 * kmcdSurf.nSpec);
-  }
-
-  template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
-  KOKKOS_INLINE_FUNCTION static void team_invoke(
-    const MemberType& member,
-    /// input
-    const real_type& t,
-    const RealType1DViewType& Ys, /// (kmcd.nSpec) mass fraction
-    const RealType1DViewType& Zs, // (kmcdSurf.nSpec) site fraction
-    const real_type& p,           // pressure
-    /// output
-    const RealType2DViewType& Jac,
-    /// workspace
-    const WorkViewType& work,
-    /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
-  {
-    using kmcd_type = KineticModelConstDataType;
-    using real_type_1d_view_type = typename kmcd_type::real_type_1d_view_type;
-
-    const real_type small(1e-23);
-    const real_type reltol(kmcdSurf.TChem_reltol);
-    const real_type abstol(kmcdSurf.TChem_abstol);
-
-    auto wptr = work.data();
-    const ordinal_type Nspec = kmcdSurf.nSpec;
-
-    /// trbdf workspace
-    auto f = real_type_1d_view_type(wptr, Nspec);
-    wptr += Nspec;
-    auto fp = real_type_1d_view_type(wptr, Nspec);
-    wptr += Nspec;
-    auto Zp = real_type_1d_view_type(wptr, Nspec);
-    wptr += Nspec;
-
-    const ordinal_type workspace_used(wptr - work.data()),
-      workspace_extent(work.extent(0));
-    auto work_rhs = WorkViewType(wptr, workspace_extent - workspace_used);
-
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, Nspec),
-                         [&](const ordinal_type& i) { Zp(i) = Zs(i); });
-
-    Impl::SurfaceRHS::team_invoke(
-      member, t, Ys, Zs, p, f, work_rhs, kmcd, kmcdSurf);
-
-    member.team_barrier();
-
-    // site fraction
-    for (size_t j = 0; j < Nspec; j++) {
-
-      const real_type perturb = (ats<real_type>::abs(reltol * Zs(j)) == 0
-                                   ? abstol
-                                   : ats<real_type>::abs(reltol * Zs(j)));
-
-      Zp(j) = Zs(j) + perturb; // add perturb
-
-      SurfaceRHS::team_invoke(
-        member, t, Ys, Zp, p, fp, work_rhs, kmcd, kmcdSurf);
-
-      member.team_barrier();
-
-      Kokkos::parallel_for(Kokkos::TeamVectorRange(member, Nspec),
-                           [&](const ordinal_type& i) {
-                             Jac(i, j) = (fp(i) - f(i)) / perturb + small;
-                           });
-
-      Zp(j) = Zs(j); // remove perturb
-      member.team_barrier();
-    }
-  }
-};
 
 } // namespace Impl
 } // namespace TChem

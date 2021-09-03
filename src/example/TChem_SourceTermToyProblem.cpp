@@ -28,8 +28,6 @@ using real_type = TChem::real_type;
 using real_type_1d_view = TChem::real_type_1d_view;
 using real_type_2d_view = TChem::real_type_2d_view;
 
-
-
 int
 main(int argc, char* argv[])
 {
@@ -61,7 +59,6 @@ main(int argc, char* argv[])
     &nBatch);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
-  //
   opts.set_option<bool>(
     "useYaml", "If true, use yaml to parse input file", &useYaml);
 
@@ -90,9 +87,8 @@ main(int argc, char* argv[])
     TChem::KineticModelData kmd(chemFile, thermFile);
     #endif
 
-    const auto kmcd = kmd.createConstData<TChem::exec_space>();
-
-
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+    const auto kmcd = kmd.createConstData<device_type>();
 
     /// input: state vectors: temperature, pressure and mass fraction
     real_type_2d_view state(

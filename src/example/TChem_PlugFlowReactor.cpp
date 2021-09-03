@@ -43,10 +43,6 @@ using real_type_2d_view_host = TChem::real_type_2d_view_host;
 using time_advance_type_0d_view_host = TChem::time_advance_type_0d_view_host;
 using time_advance_type_1d_view_host = TChem::time_advance_type_1d_view_host;
 
-using pfr_data_type = TChem::pfr_data_type;
-using pfr_data_type_0d_view = TChem::pfr_data_type_0d_view;
-// using pfr_data_type_1d_view = TChem::pfr_data_type_1d_view ;
-
 #define TCHEM_EXAMPLE_PFR_QOI_PRINT
 
 int
@@ -62,13 +58,12 @@ main(int argc, char* argv[])
   const real_type zero(0);
   real_type tbeg(0), tend(0.025);
   real_type dtmin(1e-10), dtmax(1e-6);
-  real_type rtol_time(1e-4), atol_newton(1e-12), rtol_newton(1e-6);
+  real_type atol_time(1e-12), rtol_time(1e-4), atol_newton(1e-12), rtol_newton(1e-6);
   int num_time_iterations_per_interval(1e1), max_num_time_iterations(4e3),
-    max_num_newton_iterations(100);
+    max_num_newton_iterations(20), jacobian_interval(1);
 
   int nBatch(1), team_size(-1), vector_size(-1);
   bool verbose(true);
-  int output_frequency(-1);
 
   bool transient_initial_condition(false);
   bool initial_condition(true);
@@ -82,7 +77,7 @@ main(int argc, char* argv[])
   std::string inputFilevelocity( "inputVelocity.dat");
   std::string outputFile("PFRSolution.dat");
 
-  bool use_prefixPath(true); 
+  bool use_prefixPath(true);
   /// parse command line arguments
   TChem::CommandLineParser opts(
     "This example computes Temperature, density, mass fraction and site "
@@ -133,6 +128,9 @@ main(int argc, char* argv[])
     "rtol-newton", "Relative tolerance used in newton solver", &rtol_newton);
   opts.set_option<real_type>(
     "tol-z", "Tolerance used for adaptive z stepping", &rtol_time);
+  //
+  opts.set_option<real_type>(
+    "atol-z", "Absolute tolerence used for adaptive time stepping", &atol_time);
   opts.set_option<int>("time-iterations-per-interval",
                        "Number of time iterations per interval to store qoi",
                        &num_time_iterations_per_interval);
@@ -142,6 +140,9 @@ main(int argc, char* argv[])
   opts.set_option<int>("max-newton-iterations",
                        "Maximum number of newton iterations",
                        &max_num_newton_iterations);
+  opts.set_option<int>("jacobian-interval",
+                       "Jacobians evaluated once in this interval",
+                       &jacobian_interval);
   opts.set_option<int>(
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
@@ -149,8 +150,6 @@ main(int argc, char* argv[])
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
 
-  opts.set_option<int>(
-    "output_frequency", "save data at this iterations", &output_frequency);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
   opts.set_option<bool>(
@@ -163,7 +162,7 @@ main(int argc, char* argv[])
   if (r_parse)
     return 0; // print help return
 
-    // if ones wants to all the input files in one directory,
+    // if one wants to all the input files in one directory,
     //and do not want give all names
     if ( use_prefixPath ){
       chemFile      = prefixPath + "chem.inp";
@@ -184,15 +183,17 @@ main(int argc, char* argv[])
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
     /// construct kmd and use the view for testing
 
     TChem::KineticModelData kmdSurf(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
     const auto kmcd =
       kmdSurf
-        .createConstData<TChem::exec_space>(); // data struc with gas phase info
+        .createConstData<device_type>(); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<TChem::exec_space>(); // data struc with
+      kmdSurf.createConstSurfData<device_type>(); // data struc with
                                                         // surface phase info
 
     const ordinal_type stateVecDim =
@@ -318,8 +319,8 @@ main(int argc, char* argv[])
       policy_type policy_surf(exec_space_instance, nBatch, Kokkos::AUTO());
 
       using problem_type_surf =
-        Impl::SimpleSurface_Problem<KineticModelConstDataDevice,
-                                    KineticSurfModelConstDataDevice>;
+        Impl::SimpleSurface_Problem<real_type,
+                                    device_type>;
 
       const ordinal_type level = 1;
       const ordinal_type per_team_extent =
@@ -328,29 +329,29 @@ main(int argc, char* argv[])
         TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
       policy_surf.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
-        real_type_2d_view fac_surf("fac simple", nBatch, kmcdSurf.nSpec);
+        real_type_2d_view fac_surf("fac simple", nBatch, problem_type_surf::getNumberOfTimeODEs(kmcdSurf));
 
       { /// time integration
         real_type_1d_view t_surf("time", nBatch);
         Kokkos::deep_copy(t_surf, 0);
         real_type_1d_view dt_surf("delta time", nBatch);
-        Kokkos::deep_copy(dt_surf, 1e-20);
+        Kokkos::deep_copy(dt_surf, dtmin);
 
         time_advance_type tadv_default_surf;
         tadv_default_surf._tbeg = 0;
         tadv_default_surf._tend = 1;
-        tadv_default_surf._dt = 1e-20;
-        tadv_default_surf._dtmin = 1e-20;
-        tadv_default_surf._dtmax = 1e-3;
-        tadv_default_surf._max_num_newton_iterations = 20;
-        tadv_default_surf._num_time_iterations_per_interval = 10;
+        tadv_default_surf._dt = dtmin;
+        tadv_default_surf._dtmin = dtmin;
+        tadv_default_surf._dtmax = dtmax;
+        tadv_default_surf._max_num_newton_iterations = max_num_newton_iterations;
+        tadv_default_surf._num_time_iterations_per_interval = 1000;
+        tadv_default_surf._jacobian_interval = jacobian_interval;
 
         time_advance_type_1d_view tadv_surf("tadv simple surface", nBatch);
         Kokkos::deep_copy(tadv_surf, tadv_default_surf);
 
         real_type_2d_view tol_time_surf(
-          "tol time simple surface", problem_type_surf::
-          getNumberOfTimeODEs(kmcdSurf), 2);
+          "tol time simple surface", problem_type_surf::getNumberOfTimeODEs(kmcdSurf), 2);
         real_type_1d_view tol_newton_surf("tol newton simple surface", 2);
 
         /// tune tolerence
@@ -358,28 +359,22 @@ main(int argc, char* argv[])
           auto tol_time_host_surf = Kokkos::create_mirror_view(tol_time_surf);
           auto tol_newton_host_surf = Kokkos::create_mirror_view(tol_newton_surf);
 
-          const real_type atol_time_surf = 1e-12;
-          const real_type rtol_time_surf = 1e-8;
-
-          const real_type atol_newton_surf = 1e-6;
-          const real_type rtol_newton_surf = 1e-14;
-
           for (ordinal_type i = 0, iend = tol_time_surf.extent(0); i < iend; ++i) {
-            tol_time_host_surf(i, 0) = atol_time_surf;
-            tol_time_host_surf(i, 1) = rtol_time_surf;
+            tol_time_host_surf(i, 0) = atol_time;
+            tol_time_host_surf(i, 1) = rtol_time;
           }
-          tol_newton_host_surf(0) = atol_newton_surf;
-          tol_newton_host_surf(1) = rtol_newton_surf;
+          tol_newton_host_surf(0) = atol_newton;
+          tol_newton_host_surf(1) = rtol_newton;
 
           Kokkos::deep_copy(tol_time_surf, tol_time_host_surf);
           Kokkos::deep_copy(tol_newton_surf, tol_newton_host_surf);
         }
 
         ordinal_type iter = 0;
-        const ordinal_type  max_num_time_iterations_surface(1000);
+        const ordinal_type  max_num_time_iterations_surface(1);
 
         real_type tsum(0);
-        for (; iter < max_num_time_iterations_surface && tsum <= tend; ++iter) {
+        for (; iter < max_num_time_iterations_surface && tsum <= tend*0.999; ++iter) {
           TChem::SimpleSurface::runDeviceBatch(policy_surf,
                                                tol_newton_surf,
                                                tol_time_surf,
@@ -412,10 +407,18 @@ main(int argc, char* argv[])
     printf("Done with transient initial Condition for DAE system\n");
 
     }
-    //Run a newton solver to check that constraint is satified.
+    // //Run a newton solver to check constraints.
 
     if (initial_condition){
       real_type_2d_view facSurf("facSurf", nBatch, kmcdSurf.nSpec);
+
+      real_type_1d_view tol_newton_initial_condition("tol newton initial conditions", 2);
+      auto tol_newton_host_initial_condition = Kokkos::create_mirror_view(tol_newton_initial_condition);
+
+      tol_newton_host_initial_condition(0) = atol_newton;
+      tol_newton_host_initial_condition(1) = rtol_newton;
+      Kokkos::deep_copy(tol_newton_initial_condition, tol_newton_host_initial_condition);
+      const real_type max_num_newton_iterations_initial_condition(1000);
 
       /// team policy
       policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
@@ -429,6 +432,8 @@ main(int argc, char* argv[])
 
       // solve initial condition for PFR solution
       TChem::InitialCondSurface::runDeviceBatch(policy,
+                                                tol_newton_initial_condition,
+                                                max_num_newton_iterations_initial_condition,
                                                 state,
                                                 siteFraction, // input
                                                 siteFraction, // output
@@ -443,7 +448,7 @@ main(int argc, char* argv[])
     {
 
       {
-        pfr_data_type pfrd;
+        PlugFlowReactorData pfrd;
         pfrd.Area = Area; // m2
         pfrd.Pcat = Pcat; //
 
@@ -455,15 +460,12 @@ main(int argc, char* argv[])
         real_type_1d_view_host t_host;
         real_type_1d_view_host dt_host;
 
-        if (output_frequency > 0) {
-          t_host = real_type_1d_view_host("position host", nBatch);
-          dt_host = real_type_1d_view_host("dz host", nBatch);
-        }
+        t_host = real_type_1d_view_host("position host", nBatch);
+        dt_host = real_type_1d_view_host("dz host", nBatch);
 
         using problem_type =
-          TChem::Impl::PlugFlowReactor_Problem<decltype(kmcd),
-                                               decltype(kmcdSurf),
-                                               pfr_data_type>;
+          TChem::Impl::PlugFlowReactor_Problem<real_type,device_type>;
+
         real_type_2d_view tol_time(
           "tol z", problem_type::getNumberOfTimeODEs(kmcd), 2);
         real_type_1d_view tol_newton("tol z", 2);
@@ -475,8 +477,6 @@ main(int argc, char* argv[])
         {
           auto tol_time_host = Kokkos::create_mirror_view(tol_time);
           auto tol_newton_host = Kokkos::create_mirror_view(tol_newton);
-
-          const real_type atol_time = 1e-12;
           for (ordinal_type i = 0, iend = tol_time.extent(0); i < iend; ++i) {
             tol_time_host(i, 0) = atol_time;
             tol_time_host(i, 1) = rtol_time;
@@ -497,6 +497,7 @@ main(int argc, char* argv[])
         tadv_default._max_num_newton_iterations = max_num_newton_iterations;
         tadv_default._num_time_iterations_per_interval =
           num_time_iterations_per_interval;
+        tadv_default._jacobian_interval = jacobian_interval;
 
         time_advance_type_1d_view tadv("tadv", nBatch);
         Kokkos::deep_copy(tadv, tadv_default);
@@ -532,58 +533,54 @@ main(int argc, char* argv[])
         }
 #endif
 
-        if (output_frequency > 0) {
-
-          const ordinal_type indx = iter / output_frequency;
-          printf("save at iteration %d indx %d\n", iter, indx);
           // time, sample, state
           // save time and dt
 
-          Kokkos::deep_copy(dt_host, dt);
-          Kokkos::deep_copy(t_host, t);
+        Kokkos::deep_copy(dt_host, dt);
+        Kokkos::deep_copy(t_host, t);
 
-          fprintf(fout, "%s \t %s \t %s \t ", "iter", "t", "dt");
-          fprintf(fout,
+        fprintf(fout, "%s \t %s \t %s \t ", "iter", "t", "dt");
+        fprintf(fout,
                   "%s \t %s \t %s \t",
                   "Density[kg/m3]",
                   "Pressure[Pascal]",
                   "Temperature[K]");
 
-          for (ordinal_type k = 0; k < kmcd.nSpec; k++)
-            fprintf(fout, "%s \t", &speciesNamesHost(k, 0));
+        for (ordinal_type k = 0; k < kmcd.nSpec; k++)
+          fprintf(fout, "%s \t", &speciesNamesHost(k, 0));
           //
-          for (ordinal_type k = 0; k < kmcdSurf.nSpec; k++)
-            fprintf(fout, "%s \t", &SurfSpeciesNamesHost(k, 0));
+        for (ordinal_type k = 0; k < kmcdSurf.nSpec; k++)
+          fprintf(fout, "%s \t", &SurfSpeciesNamesHost(k, 0));
 
-          fprintf(fout, "%s \t", "velocity[m/s]");
+        fprintf(fout, "%s \t", "velocity[m/s]");
 
-          fprintf(fout, "\n");
+        fprintf(fout, "\n");
           // save initial condition
-          Kokkos::deep_copy(siteFraction_host, siteFraction);
+        Kokkos::deep_copy(siteFraction_host, siteFraction);
 
-          writeState(-1,
-                     t_host,
-                     dt_host,
-                     state_host,
-                     siteFraction_host,
-                     velocity_host,
-                     fout);
-        }
+        writeState(-1,
+                   t_host,
+                   dt_host,
+                   state_host,
+                   siteFraction_host,
+                   velocity_host,
+                  fout);
 
+        using PFRSolver = TChem::PlugFlowReactor;
         /// team policy
         policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
 
         const ordinal_type level = 1;
         const ordinal_type per_team_extent =
-          TChem::PlugFlowReactor::getWorkSpaceSize(kmcd, kmcdSurf, pfrd);
+          TChem::PlugFlowReactor::getWorkSpaceSize(kmcd, kmcdSurf);
         const ordinal_type per_team_scratch =
           TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
         policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
         real_type tsum(0);
-        for (; iter < max_num_time_iterations && tsum <= tend; ++iter) {
+        for (; iter < max_num_time_iterations && tsum <= tend*0.9999; ++iter) {
 
-          TChem::PlugFlowReactor::runDeviceBatch(policy,
+          PFRSolver::runDeviceBatch(policy,
                                                  tol_newton,
                                                  tol_time,
                                                  fac,
@@ -602,8 +599,7 @@ main(int argc, char* argv[])
                                                  kmcd,
                                                  kmcdSurf,
                                                  // pfrd_info,
-                                                 Area,
-                                                 Pcat);
+                                                 pfrd);
           //
 
           /// print of store QOI for the first sample
@@ -619,16 +615,9 @@ main(int argc, char* argv[])
                        t_at_i_host(),
                        state_at_i_host,
                        siteFraction_at_i_host);
-            // saveSolution(iter, t_at_i_host(), state_at_i_host,
-            //              siteFraction_at_i_host, velocity_at_i_host,
-            //              output_frequency, fout);
           }
 #endif
 
-          //
-          if (iter % output_frequency == 0 && output_frequency > 0) {
-            const ordinal_type indx = iter / output_frequency;
-            printf("save at iteration %d indx %d\n", iter, indx);
             // time, sample, state
             // save time and dt
 
@@ -645,7 +634,6 @@ main(int argc, char* argv[])
                        siteFraction_host,
                        velocity_host,
                        fout);
-          }
 
           /// carry over time and dt computed in this step
           tsum = zero;

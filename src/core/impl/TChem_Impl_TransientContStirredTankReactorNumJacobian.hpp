@@ -27,21 +27,30 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct TransientContStirredTankReactorNumJacobian
 {
 
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename TransientContStirredTankReactorConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  using kinetic_model_type      = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+  using cstr_data_type = TransientContStirredTankReactorData<device_type>;
+
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
-    const TransientContStirredTankReactorConstDataType& cstr)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf)
   {
     using problem_type =
-      TChem::Impl::TransientContStirredTankReactor_Problem<KineticModelConstDataType,
-                                           KineticSurfModelConstDataType,
-                                           TransientContStirredTankReactorConstDataType>;
+      TChem::Impl::TransientContStirredTankReactor_Problem<real_type,device_type>;
     problem_type problem;
     /// problem workspace
     const ordinal_type problem_workspace_size =
@@ -51,34 +60,26 @@ struct TransientContStirredTankReactorNumJacobian
   }
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename TransientContStirredTankReactorConstDataType>
+           typename WorkViewType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
-    const RealType1DViewType& x, ///
+    const real_type_1d_view_type& x, ///
     /// output
-    const RealType2DViewType& Jac,
-    const RealType1DViewType& fac, /// numerica jacobian percentage
+    const real_type_2d_view_type& Jac,
+    const real_type_1d_view_type& fac, /// numerica jacobian percentage
     // work
     const WorkViewType& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
     // const input for plug flow reactor
-    const TransientContStirredTankReactorConstDataType& cstr)
+    const cstr_data_type& cstr)
   {
 
     using problem_type =
-      TChem::Impl::TransientContStirredTankReactor_Problem<KineticModelConstDataType,
-                                           KineticSurfModelConstDataType,
-                                           TransientContStirredTankReactorConstDataType>;
+      TChem::Impl::TransientContStirredTankReactor_Problem<real_type,device_type>;
 
-    //
     problem_type problem;
 
     /// problem workspace
@@ -86,7 +87,7 @@ struct TransientContStirredTankReactorNumJacobian
       problem_type ::getWorkSpaceSize(kmcd, kmcdSurf);
 
     auto wptr = work.data();
-    auto pw = RealType1DViewType(wptr, problem_workspace_size);
+    auto pw = real_type_1d_view_type(wptr, problem_workspace_size);
     wptr += problem_workspace_size;
 
     /// constant values of the problem
@@ -96,28 +97,7 @@ struct TransientContStirredTankReactorNumJacobian
     problem._work = pw; // problem workspace array
     problem._fac = fac;    // fac for numerical jacobian
 
-
-    {
-      const ordinal_type m = problem.getNumberOfEquations();
-      /// _work is used for evaluating a function
-      /// f_0 and f_h should be gained from the tail
-      real_type* wptr = problem._work.data() + (problem._work.span() - 2 * m);
-      RealType1DViewType f_0(wptr, m);
-      wptr += f_0.span();
-      RealType1DViewType f_h(wptr, m);
-      wptr += f_h.span();
-
-      /// use the default values
-      const real_type fac_min(-1), fac_max(-1);
-      // NumericalJacobianForwardDifference::team_invoke_detail
-      //  (member, problem, fac_min, fac_max, problem._fac, x, f_0, f_h, Jac);
-      // NumericalJacobianCentralDifference::team_invoke_detail(
-      //   member, problem, fac_min, fac_max, problem._fac, x, f_0, f_h, Jac);
-      NumericalJacobianRichardsonExtrapolation::team_invoke_detail
-       (member, problem, fac_min, fac_max, problem._fac, x, f_0, f_h, Jac);
-
-
-    }
+    problem.computeNumericalJacobianRichardsonExtrapolation(member, x, Jac);
 
     member.team_barrier();
 

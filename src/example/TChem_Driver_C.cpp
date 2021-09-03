@@ -42,7 +42,7 @@ main(int argc, char* argv[])
   std::string thermFile(prefixPath + "therm.dat");
   std::string inputFile(prefixPath + "input.dat");
   std::string outputFile(prefixPath + "omega.dat");
-  int nBatch(1);
+  int nBatch(1), jacobian_interval(1);
   bool verbose(true);
 
   /// parse command line arguments
@@ -60,6 +60,7 @@ main(int argc, char* argv[])
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
+  opts.set_option<int>("jacobian-interval", "Jacobians are evaluated in this interval during newton solve", &jacobian_interval);                       
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
 
@@ -107,7 +108,7 @@ main(int argc, char* argv[])
     const int nspec = TChem_getNumberOfSpecies();
     const int lensv = TChem_getLengthOfStateVector();
     std::vector<real_type> state_std_vector(lensv);
-    typename TChem::Driver::real_type_1d_view_host state(state_std_vector.data(), lensv);
+    typename TChem::real_type_1d_view_host state(state_std_vector.data(), lensv);
     TChem::Test::readStateVector(inputFile, nspec, state);
     for (int i=0;i<nBatch;++i)
       TChem_setSingleStateVectorHost(i, state.data());
@@ -116,7 +117,9 @@ main(int argc, char* argv[])
     const int max_num_newton_iterations(20), num_time_iterations_per_interval(10);
     const real_type atol_newton(1e-8), rtol_newton(1e-5), atol_time(1e-12), rtol_time(1e-8);
     TChem_setTimeAdvanceHomogeneousGasReactor(tbeg, tend, dtmin, dtmax,
-					      max_num_newton_iterations, num_time_iterations_per_interval,
+                                              jacobian_interval,
+					      max_num_newton_iterations,
+                                              num_time_iterations_per_interval,
 					      atol_newton, rtol_newton,
 					      atol_time, rtol_time);
     real_type tsum(0);

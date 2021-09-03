@@ -1,0 +1,68 @@
+NCAR-version: v1.0
+environmental_conditions:
+  pressure:
+    evolving: false
+    initial_value: [101253.3, 92834.4, 90328.4, 100495.4, 96943.4]
+    units: Pa
+  temperature:
+    evolving: false
+    initial_value: [272.5, 248.3, 301.3, 276.0, 245.1]
+    units: K
+initial_state:
+  D: [1.2, 17.0, 13.0, 9.0, 4.0]
+  A: [1.0, 2.0, 3.0, 4.0, 5.0]
+  B: [0.0, 0.0, 0.0, 0.0, 0.0]
+model_info:
+  chemistry_time_step:
+    units: sec
+    value: 1.0
+  evolving_conditions:
+    exist: false
+  output_time_step:
+    units: sec
+    value: 1.0
+  simulation_length:
+    units: sec
+    value: 100.0
+  cells: 5
+reactions:
+- coefficients:
+  products:
+    B: 1.0
+  reactants:
+    A: 1.0
+    D: 1.0
+  type: ARRHENIUS
+- coefficients:
+    A: 1476.0
+    Ea: 5.5e-21
+    B: 150.0
+    E: 0.15
+  products:
+    B: 1.0
+  reactants:
+    A: 1.0
+  type: ARRHENIUS
+  time_unit: min
+- coefficients:
+    A: 21.0
+    C: -4000.0
+    B: 11.0
+    D: 315.0
+    E: 0.05
+  products:
+    C: 1.0
+    D: 1.0
+  reactants:
+    B: 1.0
+  type: ARRHENIUS
+species:
+  A:
+    units: mol m-3
+  D:
+    units: molecules m-3
+    type : tracer-CONSTANT  
+  B:
+    units: mol m-3
+  C:
+    units: mol m-3

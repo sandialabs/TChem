@@ -22,100 +22,94 @@ Sandia National Laboratories, Livermore, CA, USA
 #define __TCHEM_IMPL_PLUGFLOWREACTOR_HPP__
 
 #include "TChem_Util.hpp"
-
 #include "TChem_Impl_PlugFlowReactor_Problem.hpp"
-#include "TChem_Impl_TimeIntegrator.hpp"
 
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct PlugFlowReactor
 {
 
-  template<typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename PlugFlowReactorConstDataType>
-  static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
-    const PlugFlowReactorConstDataType& pfrd)
-  {
-    //
-    using problem_type =
-      TChem::Impl::PlugFlowReactor_Problem<KineticModelConstDataType,
-                                           KineticSurfModelConstDataType,
-                                           PlugFlowReactorConstDataType>;
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
 
+  using real_type = scalar_type;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type,device_type>;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+
+  using kinetic_model_type = KineticModelConstData<device_type>;
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+  using pdf_model_type = PlugFlowReactorData;
+
+  using TimeIntegrator = Tines::TimeIntegratorTrBDF2<value_type, device_type>;
+
+  static inline ordinal_type getWorkSpaceSize(
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf)
+  {
+
+    using problem_type = TChem::Impl::PlugFlowReactor_Problem<value_type, device_type>;
     problem_type problem;
     problem._kmcd = kmcd;
     problem._kmcdSurf = kmcdSurf;
-    return TimeIntegrator::getWorkSpaceSize(problem);
+    ordinal_type problem_workspace_size = problem.getWorkSpaceSize();
+    ordinal_type m = problem.getNumberOfEquations();
+    ordinal_type worksizeTimeIntegration(0);
+    TimeIntegrator::workspace(m, worksizeTimeIntegration);
+
+    return worksizeTimeIntegration + problem_workspace_size;
   }
 
-  template<typename MemberType,
-           typename WorkViewType,
-           typename RealType0DViewType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType,
-           typename PlugFlowReactorConstDataType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input iteration and qoi index to store
+    const ordinal_type& jacobian_interval,
     const ordinal_type& max_num_newton_iterations,
     const ordinal_type& max_num_time_iterations,
     /// input time step and time range
-    const RealType1DViewType& tol_newton,
-    const RealType2DViewType& tol_time,
-    const RealType1DViewType& fac, /// numerica jacobian percentage
+    const real_type_1d_view_type& tol_newton,
+    const real_type_2d_view_type& tol_time,
+    const real_type_1d_view_type& fac, /// numerica jacobian percentage
     const real_type& dt_in,
     const real_type& dt_min,
     const real_type& dt_max,
     const real_type& t_beg,
     const real_type& t_end,
     /// input (initial condition)
-    const RealType1DViewType& vals,
+    const real_type_1d_view_type& vals,
     /// output (final output conditions)
-    const RealType0DViewType& t_out,
-    const RealType0DViewType& dt_out,
-    const RealType1DViewType& vals_out,
+    const real_type_0d_view_type& t_out,
+    const real_type_0d_view_type& dt_out,
+    const real_type_1d_view_type& vals_out,
     /// workspace
-    const WorkViewType& work,
+    const real_type_1d_view_type& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf,
-    const PlugFlowReactorConstDataType& pfrd)
+    const kinetic_model_type& kmcd,
+    const kinetic_surf_model_type& kmcdSurf,
+    const pdf_model_type& pfrd)
   {
-    // printf("at Impl::PlugFlowReactor\n");
-    // for (ordinal_type k = 0; k < vals.extent(0); k++) {
-    //     printf(" k %d, vals %e  \n",k, vals(k) );
-    // }
 
-    // const real_type atol_newton = 1e-6, rtol_newton = 1e-5, tol_time = 1e-4;
-
-    using problem_type =
-      TChem::Impl::PlugFlowReactor_Problem<KineticModelConstDataType,
-                                           KineticSurfModelConstDataType,
-                                           PlugFlowReactorConstDataType>;
+    using problem_type = Impl::PlugFlowReactor_Problem<value_type, device_type>;
     problem_type problem;
 
-    /// problem workspace
-    const ordinal_type problem_workspace_size =
-      problem_type ::getWorkSpaceSize(kmcd, kmcdSurf);
+    const ordinal_type problem_workspace_size = problem_type::getWorkSpaceSize(kmcd, kmcdSurf);
 
     auto wptr = work.data();
-    auto pw = real_type_1d_view(wptr, problem_workspace_size);
+    auto pw = real_type_1d_view_type(wptr, problem_workspace_size);
     wptr += problem_workspace_size;
 
     /// error check
     const ordinal_type workspace_used(wptr - work.data()),
       workspace_extent(work.extent(0));
     if (workspace_used > workspace_extent) {
-      Kokkos::abort("Error: workspace used is larger than it is provided\n");
+      Kokkos::abort("Error Plug flow reactor problem: workspace used is larger than it is provided\n");
     }
     /// time integrator workspace
-    auto tw = WorkViewType(wptr, workspace_extent - workspace_used);
+    auto tw = real_type_1d_view_type(wptr, workspace_extent - workspace_used);
 
     /// constant values of the problem
     problem._kmcd = kmcd;         // kinetic model
@@ -124,22 +118,23 @@ struct PlugFlowReactor
     problem._work = pw; // problem workspace array
     problem._fac = fac;    // fac for numerical jacobian
 
-    TimeIntegrator::team_invoke_detail(member,
-                                       problem,
-                                       max_num_newton_iterations,
-                                       max_num_time_iterations,
-                                       tol_newton,
-                                       tol_time,
-                                       dt_in,
-                                       dt_min,
-                                       dt_max,
-                                       t_beg,
-                                       t_end,
-                                       vals,
-                                       t_out,
-                                       dt_out,
-                                       vals_out,
-                                       tw);
+    TimeIntegrator::invoke(member,
+                           problem,
+                           jacobian_interval,
+                           max_num_newton_iterations,
+                           max_num_time_iterations,
+                           tol_newton,
+                           tol_time,
+                           dt_in,
+                           dt_min,
+                           dt_max,
+                           t_beg,
+                           t_end,
+                           vals,
+                           t_out,
+                           dt_out,
+                           vals_out,
+                           tw);
   }
 };
 

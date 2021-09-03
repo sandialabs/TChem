@@ -37,15 +37,18 @@ TEST( KineticModelData, constructor ) {
   EXPECT_TRUE(TChem::Test::compareFiles("kmodSurf.list",_prefixPath+"kmodSurf.ref.list"));
   EXPECT_TRUE(TChem::Test::compareFiles("kmodSurf.reactions",_prefixPath+"kmodSurf.ref.reactions"));
 
+  using device_type = typename Tines::UseThisDevice<TChem::exec_space>::type;
+  using host_device_type = typename Tines::UseThisDevice<TChem::host_exec_space>::type;
+
   /// check const data operations on gas phase
-  const auto kmcd_device = kmd.createConstData<TChem::     exec_space>();
-  const auto kmcd_host   = kmd.createConstData<TChem::host_exec_space>();
+  const auto kmcd_device = kmd.createConstData<device_type>();
+  const auto kmcd_host   = kmd.createConstData<host_device_type>();
 
   EXPECT_EQ(kmcd_device.nSpec, kmcd_host.nSpec);
 
   /// check const data operations on surface phase
-  const auto kmcdSurf_device = kmd.createConstSurfData<TChem::     exec_space>();
-  const auto kmcdSurf_host   = kmd.createConstSurfData<TChem::host_exec_space>();
+  const auto kmcdSurf_device = kmd.createConstSurfData<device_type>();
+  const auto kmcdSurf_host   = kmd.createConstSurfData<host_device_type>();
 
   EXPECT_EQ(kmcdSurf_device.nSpec, kmcdSurf_host.nSpec);
 

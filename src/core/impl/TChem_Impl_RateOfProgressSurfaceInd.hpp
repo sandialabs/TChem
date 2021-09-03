@@ -31,59 +31,66 @@ Sandia National Laboratories, Livermore, CA, USA
 
 namespace TChem {
 namespace Impl {
-
+template<typename ValueType, typename DeviceType>
 struct RateOfProgressSurfaceInd
 {
 
-  // template<typename KineticModelConstDataType,
-  //         typename KineticModelConstSurfDataType>
-  // KOKKOS_INLINE_FUNCTION
-  // static
-  // ordinal_type getWorkSpaceSize(const KineticModelConstDataType &kmcd,
-  // const KineticModelConstSurfDataType &kmcdSurf) {
-  // return (4*kmcd.nSpec + 4*kmcdSurf.nSpec+ 4*kmcdSurf.nReac );
-  // }
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename OrdinalType1DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using real_type = scalar_type;
+
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+  /// sacado is value type
+  using ordinary_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
+
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+  using kinetic_model_type= KineticModelConstData<device_type>;
+
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
     /// input
-    const real_type& t,
-    const real_type& p,
-    const RealType1DViewType& Yk, /// (kmcd.nSpec)
-    const RealType1DViewType& zSurf,
+    const value_type& t,
+    const value_type& p,
+    const value_type& density,
+    const value_type_1d_view_type& Yk, /// (kmcd.nSpec)
+    const value_type_1d_view_type& zSurf,
     /// output
-    const RealType1DViewType& ropFor,
-    const RealType1DViewType& ropRev,
+    const value_type_1d_view_type& ropFor,
+    const value_type_1d_view_type& ropRev,
     /// workspace
     // gas species
-    const RealType1DViewType& gk,
-    const RealType1DViewType& hks,
-    const RealType1DViewType& cpks,
+    const value_type_1d_view_type& gk,
+    const value_type_1d_view_type& hks,
+    const value_type_1d_view_type& cpks,
     // surface species
-    const RealType1DViewType& Surf_gk,
-    const RealType1DViewType& Surf_hks,
-    const RealType1DViewType& Surf_cpks,
+    const value_type_1d_view_type& Surf_gk,
+    const value_type_1d_view_type& Surf_hks,
+    const value_type_1d_view_type& Surf_cpks,
 
-    const RealType1DViewType& concX,
-    const RealType1DViewType& concXSurf,
-    // const RealType1DViewType &concM,
-    const RealType1DViewType& kfor,
-    const RealType1DViewType& krev,
+    const value_type_1d_view_type& concX,
+    const value_type_1d_view_type& concXSurf,
+    // const value_type_1d_view_type &concM,
+    const value_type_1d_view_type& kfor,
+    const value_type_1d_view_type& krev,
 
-    // const RealType1DViewType &Crnd,
-    const OrdinalType1DViewType& iter,
+    // const real_type_1d_view_type &Crnd,
+    const ordinary_type_1d_view_type& iter,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
+    const kinetic_model_type& kmcd,
     /// const input from surface kinetic model
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_surf_model_type& kmcdSurf)
   {
     ///const real_type zero(0); ///not used
     const real_type one(1);
     const real_type ten(10);
+
+    using MolarConcentrations = MolarConcentrations<value_type,device_type>;
+    using GkSurfGas = GkFcnSurfGas<value_type,device_type>;
+    using KForwardReverseSurface = KForwardReverseSurface<value_type,device_type>;
+    using RateOfProgressSurface = RateOfProgressSurface<value_type,device_type>;
 
     // is Xc  mass fraction or concetration ?
 
@@ -91,6 +98,7 @@ struct RateOfProgressSurfaceInd
     MolarConcentrations::team_invoke(member,
                                      t,
                                      p,
+                                     density,
                                      Yk, // need to be mass fraction
                                      concX,
                                      kmcd);
@@ -101,14 +109,14 @@ struct RateOfProgressSurfaceInd
     {
       const real_type one_e_minus_three(1e-3);
       Kokkos::parallel_for(
-        Kokkos::TeamVectorRange(member, kmcd.nSpec),
+        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
         [&](const ordinal_type& i) { concX(i) *= one_e_minus_three; });
     }
 
     /* 2. surface molar concentrations (moles/cm2) */
     /* FR: note there is one type of site, and site occupancy \sigma_k =1.0 */
     {
-      Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcdSurf.nSpec),
+      Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.nSpec),
                            [&](const ordinal_type& i) {
                              concXSurf(i) =
                                zSurf(i) * kmcdSurf.sitedensity / one;
@@ -145,7 +153,6 @@ struct RateOfProgressSurfaceInd
                                          Surf_gk, /// input
                                          kfor,
                                          krev, /// output
-                                         iter,
                                          kmcd,    // gas info
                                          kmcdSurf // surface info
     );
@@ -168,7 +175,7 @@ struct RateOfProgressSurfaceInd
     /* transform from mole/(cm2.s) to kmol/(m2.s) */
     /* check this unit convection*/
 
-    Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcdSurf.nReac),
+    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.nReac),
                          [&](const ordinal_type& i) {
                            ropFor(i) *= ten;
                            ropRev(i) *= ten;
@@ -176,27 +183,26 @@ struct RateOfProgressSurfaceInd
   }
 
   template<typename MemberType,
-           typename WorkViewType,
-           typename RealType1DViewType,
-           typename KineticModelConstDataType,
-           typename KineticSurfModelConstDataType>
+           typename WorkViewType>
 
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
     const real_type& t,
     const real_type& p,
-    const RealType1DViewType& Yk,    /// (kmcd.nSpec)
-    const RealType1DViewType& zSurf, //(kmcdSurf.nSpec)
+    const real_type& density,
+    const real_type_1d_view_type& Yk,    /// (kmcd.nSpec)
+    const real_type_1d_view_type& zSurf, //(kmcdSurf.nSpec)
 
     /// output
-    const RealType1DViewType& ropFor, /// (kmcd.nSpec)
-    const RealType1DViewType& ropRev,
+    const real_type_1d_view_type& ropFor, /// (kmcd.nSpec)
+    const real_type_1d_view_type& ropRev,
     /// workspace
     const WorkViewType& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd,
-    const KineticSurfModelConstDataType& kmcdSurf)
+    const kinetic_model_type& kmcd,
+    /// const input from surface kinetic model
+    const kinetic_surf_model_type& kmcdSurf)
   {
     ///const real_type zero(0); /// not used
 
@@ -207,39 +213,39 @@ struct RateOfProgressSurfaceInd
 
     // gas species thermal properties // uses a different model for that gas
     // phase
-    auto gk = RealType1DViewType(w, kmcd.nSpec);
+    auto gk = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto hks = RealType1DViewType(w, kmcd.nSpec);
+    auto hks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto cpks = RealType1DViewType(w, kmcd.nSpec);
+    auto cpks = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
-    auto concX = RealType1DViewType(w, kmcd.nSpec);
+    auto concX = real_type_1d_view_type(w, kmcd.nSpec);
     w += kmcd.nSpec;
 
-    auto kfor = RealType1DViewType(w, kmcdSurf.nReac);
+    auto kfor = real_type_1d_view_type(w, kmcdSurf.nReac);
     w += kmcdSurf.nReac;
-    auto krev = RealType1DViewType(w, kmcdSurf.nReac);
+    auto krev = real_type_1d_view_type(w, kmcdSurf.nReac);
     w += kmcdSurf.nReac;
 
     // surface species thermal properties
-    auto Surf_gk = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto Surf_gk = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
-    auto Surf_hks = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto Surf_hks = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
-    auto Surf_cpks = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto Surf_cpks = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
-    auto concXSurf = RealType1DViewType(w, kmcdSurf.nSpec);
+    auto concXSurf = real_type_1d_view_type(w, kmcdSurf.nSpec);
     w += kmcdSurf.nSpec;
 
-    auto iter = Kokkos::View<ordinal_type*,
-                             Kokkos::LayoutRight,
-                             typename WorkViewType::memory_space>(
-      (ordinal_type*)w, kmcdSurf.nReac * 2);
+
+    auto iter = ordinary_type_1d_view_type((ordinal_type*)w, kmcdSurf.nReac * 2);
+
     w += kmcdSurf.nReac * 2;
 
     team_invoke_detail(member,
                        t,
                        p,
+                       density,
                        Yk,
                        zSurf,
                        ropFor,

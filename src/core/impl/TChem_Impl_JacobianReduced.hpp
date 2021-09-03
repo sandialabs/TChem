@@ -88,6 +88,10 @@ struct JacobianReduced
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
+    using kmcd_type = KineticModelConstDataType;
+    using device_type = typename kmcd_type::device_type;
+    using MolarWeights = MolarWeights<real_type,device_type>;
+    using RhoMixMs = RhoMixMs<real_type,device_type>;
     // const real_type zero(0); //, one(1);
     // const real_type t_1 = one/t;
     const real_type tln = ats<real_type>::log(t);

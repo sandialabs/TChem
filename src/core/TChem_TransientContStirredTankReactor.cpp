@@ -22,183 +22,52 @@ Sandia National Laboratories, Livermore, CA, USA
 
 #include "TChem_TransientContStirredTankReactor.hpp"
 #include "TChem_Impl_TransientContStirredTankReactorRHS.hpp"
+#include "TChem_Impl_RhoMixMs.hpp"
 
 namespace TChem {
 
 template<typename PolicyType,
-         typename TimeAdvance1DViewType,
-         typename RealType0DViewType,
-         typename RealType1DViewType,
-         typename RealType2DViewType,
-         typename KineticModelConstType,
-         typename KineticSurfModelConstData,
-         typename TransientContStirredTankReactorConstDataType>
-void
-TransientContStirredTankReactor_TemplateRun( /// required template arguments
-  const std::string& profile_name,
-  const RealType0DViewType& dummy_0d,
-  /// team size setting
-  const PolicyType& policy,
-  // inputs
-  const RealType1DViewType& tol_newton,
-  const RealType2DViewType& tol_time,
-  const RealType2DViewType& fac,
-  const TimeAdvance1DViewType& tadv,
-  const RealType2DViewType& state,
-  const RealType2DViewType& zSurf,
-  /// output
-  const RealType1DViewType& t_out,
-  const RealType1DViewType& dt_out,
-  const RealType2DViewType& state_out,
-  const RealType2DViewType& Z_out,
-  /// const data from kinetic model
-  const KineticModelConstType& kmcd,
-  const KineticSurfModelConstData& kmcdSurf,
-  const TransientContStirredTankReactorConstDataType& cstr)
-{
-  Kokkos::Profiling::pushRegion(profile_name);
-  using policy_type = PolicyType;
-
-  const ordinal_type level = 1;
-
-  const ordinal_type m = Impl::TransientContStirredTankReactor_Problem<
-    KineticModelConstType,
-    KineticSurfModelConstData,
-    TransientContStirredTankReactorConstDataType>
-    ::getNumberOfEquations(kmcd, kmcdSurf);
-
-  const ordinal_type per_team_extent = TChem::TransientContStirredTankReactor::getWorkSpaceSize(
-    kmcd,
-    kmcdSurf,
-    cstr); /// this +m seems to be included in the workspace size calculation
-
-  Kokkos::parallel_for(
-    profile_name,
-    policy,
-    KOKKOS_LAMBDA(const typename policy_type::member_type& member) {
-      const ordinal_type i = member.league_rank();
-      const RealType1DViewType fac_at_i =
-        Kokkos::subview(fac, i, Kokkos::ALL());
-      const auto tadv_at_i = tadv(i);
-      const RealType1DViewType state_at_i =
-        Kokkos::subview(state, i, Kokkos::ALL());
-      const RealType0DViewType t_out_at_i = Kokkos::subview(t_out, i);
-      const RealType0DViewType dt_out_at_i = Kokkos::subview(dt_out, i);
-      // site fraction
-      const RealType1DViewType Zs_at_i =
-        Kokkos::subview(zSurf, i, Kokkos::ALL());
-
-      Scratch<RealType1DViewType> work(member.team_scratch(level),
-                                       per_team_extent);
-
-      Impl::StateVector<RealType1DViewType> sv_at_i(kmcd.nSpec, state_at_i);
-      TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
-                        "Error: input state vector is not valid");
-      {
-        const ordinal_type max_num_newton_iterations =
-          tadv_at_i._max_num_newton_iterations;
-        const ordinal_type max_num_time_iterations =
-          tadv_at_i._num_time_iterations_per_interval;
-
-        const real_type dt_in = tadv_at_i._dt, dt_min = tadv_at_i._dtmin,
-                        dt_max = tadv_at_i._dtmax;
-        const real_type t_beg = tadv_at_i._tbeg, t_end = tadv_at_i._tend;
-
-        const real_type temperature = sv_at_i.Temperature();
-        const real_type pressure = sv_at_i.Pressure();
-        const real_type density = sv_at_i.Density();
-        const RealType1DViewType Ys = sv_at_i.MassFractions();
-
-        const RealType0DViewType temperature_out(sv_at_i.TemperaturePtr());
-        const RealType0DViewType pressure_out(sv_at_i.PressurePtr());
-        const RealType0DViewType density_out(sv_at_i.DensityPtr());
-        const RealType1DViewType Ys_out = Ys;
-
-        const RealType1DViewType Zs_out_at_i = Zs_at_i;
-
-        auto wptr = work.data();
-        const RealType1DViewType vals(wptr, m);
-        wptr += m;
-        const RealType1DViewType ww(wptr,
-                                    work.extent(0) - (wptr - work.data()));
-
-        TChem::TransientContStirredTankReactor::packToValues(
-          member, temperature, Ys, Zs_at_i, vals);
-
-        member.team_barrier();
-        TChem::Impl::TransientContStirredTankReactor ::team_invoke(member,
-                                                   max_num_newton_iterations,
-                                                   max_num_time_iterations,
-                                                   tol_newton,
-                                                   tol_time,
-                                                   fac_at_i,
-                                                   dt_in,
-                                                   dt_min,
-                                                   dt_max,
-                                                   t_beg,
-                                                   t_end,
-                                                   vals,
-                                                   t_out_at_i,
-                                                   dt_out_at_i,
-                                                   vals,
-                                                   ww, // work
-                                                   kmcd,
-                                                   kmcdSurf,
-                                                   cstr);
-
-        member.team_barrier();
-        TChem::TransientContStirredTankReactor::unpackFromValues(member,
-                                                 vals,
-                                                 temperature_out,
-                                                 Ys_out,
-                                                 Zs_out_at_i);
-      }
-    });
-  Kokkos::Profiling::popRegion();
-}
-
-template<typename PolicyType,
-         typename TimeAdvance1DViewType,
-         typename RealType0DViewType,
-         typename RealType1DViewType,
-         typename RealType2DViewType,
-         typename KineticModelConstViewType,
-         typename KineticSurfModelConstViewType,
-         typename TransientContStirredTankReactorConstDataType>
+         typename ValueType,
+         typename DeviceType,
+         typename TimeAdvance1DViewType>
 void
 TransientContStirredTankReactor_TemplateRunModelVariation( /// required template arguments
   const std::string& profile_name,
-  const RealType0DViewType& dummy_0d,
+  const ValueType& dummyValueType,
   /// team size setting
   const PolicyType& policy,
   // inputs
-  const RealType1DViewType& tol_newton,
-  const RealType2DViewType& tol_time,
-  const RealType2DViewType& fac,
+  const Tines::value_type_1d_view<real_type, DeviceType> & tol_newton,
+  const Tines::value_type_2d_view<real_type, DeviceType> & tol_time,
+  const Tines::value_type_2d_view<real_type, DeviceType> & fac,
   const TimeAdvance1DViewType& tadv,
-  const RealType2DViewType& state,
-  const RealType2DViewType& zSurf,
+  const Tines::value_type_2d_view<real_type, DeviceType>& state,
+  const Tines::value_type_2d_view<real_type, DeviceType>& site_fraction,
   /// output
-  const RealType1DViewType& t_out,
-  const RealType1DViewType& dt_out,
-  const RealType2DViewType& state_out,
-  const RealType2DViewType& Z_out,
+  const Tines::value_type_1d_view<real_type, DeviceType>& t_out,
+  const Tines::value_type_1d_view<real_type, DeviceType>& dt_out,
+  const Tines::value_type_2d_view<real_type, DeviceType>& state_out,
+  const Tines::value_type_2d_view<real_type, DeviceType>& site_fraction_out,
   /// const data from kinetic model
-  const KineticModelConstViewType& kmcds,
-  const KineticSurfModelConstViewType& kmcdSurfs,
-  const TransientContStirredTankReactorConstDataType& cstr)
+  const Kokkos::View<KineticModelConstData<DeviceType >*,DeviceType>& kmcds,
+  const Kokkos::View<KineticSurfModelConstData<DeviceType>*,DeviceType>& kmcdSurfs,
+  const TransientContStirredTankReactorData<DeviceType>& cstr)
 {
   Kokkos::Profiling::pushRegion(profile_name);
   using policy_type = PolicyType;
+  using device_type = DeviceType;
+  using value_type = ValueType;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type, device_type>;
 
   const ordinal_type level = 1;
 
-  const ordinal_type m = kmcds(0).nSpec +  kmcdSurfs(0).nSpec + 1;
+  const ordinal_type m = Impl::TransientContStirredTankReactor_Problem<real_type,device_type>
+    ::getNumberOfEquations(kmcds(0), kmcdSurfs(0));
 
   const ordinal_type per_team_extent = TChem::TransientContStirredTankReactor::getWorkSpaceSize(
     kmcds(0),
-    kmcdSurfs(0),
-    cstr); /// this +m seems to be included in the workspace size calculation
+    kmcdSurfs(0)); /// this +m seems to be included in the workspace size calculation
 
   Kokkos::parallel_for(
     profile_name,
@@ -207,56 +76,63 @@ TransientContStirredTankReactor_TemplateRunModelVariation( /// required template
       const ordinal_type i = member.league_rank();
       const auto kmcd_at_i = (kmcds.extent(0) == 1 ? kmcds(0) : kmcds(i));
       const auto kmcd_surf_at_i = (kmcdSurfs.extent(0) == 1 ? kmcdSurfs(0) : kmcdSurfs(i));
-      const RealType1DViewType fac_at_i =
+
+      const real_type_1d_view_type fac_at_i =
         Kokkos::subview(fac, i, Kokkos::ALL());
       const auto tadv_at_i = tadv(i);
-      const RealType1DViewType state_at_i =
+      const real_type_1d_view_type state_at_i =
         Kokkos::subview(state, i, Kokkos::ALL());
-      const RealType0DViewType t_out_at_i = Kokkos::subview(t_out, i);
-      const RealType0DViewType dt_out_at_i = Kokkos::subview(dt_out, i);
+      const real_type_0d_view_type t_out_at_i = Kokkos::subview(t_out, i);
+      const real_type_0d_view_type dt_out_at_i = Kokkos::subview(dt_out, i);
       // site fraction
-      const RealType1DViewType Zs_at_i =
-        Kokkos::subview(zSurf, i, Kokkos::ALL());
+      const real_type_1d_view_type Zs_at_i =
+        Kokkos::subview(site_fraction, i, Kokkos::ALL());
 
-      Scratch<RealType1DViewType> work(member.team_scratch(level),
+      Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                        per_team_extent);
 
-      Impl::StateVector<RealType1DViewType> sv_at_i(kmcd_at_i.nSpec, state_at_i);
+      Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd_at_i.nSpec, state_at_i);
       TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                         "Error: input state vector is not valid");
       {
+
+        const real_type t_end = tadv_at_i._tend;
+
+      if (t_out_at_i() < t_end) {
+        const ordinal_type jacobian_interval = tadv_at_i._jacobian_interval;
         const ordinal_type max_num_newton_iterations =
-          tadv_at_i._max_num_newton_iterations;
+            tadv_at_i._max_num_newton_iterations;
         const ordinal_type max_num_time_iterations =
-          tadv_at_i._num_time_iterations_per_interval;
+            tadv_at_i._num_time_iterations_per_interval;
 
         const real_type dt_in = tadv_at_i._dt, dt_min = tadv_at_i._dtmin,
-                        dt_max = tadv_at_i._dtmax;
-        const real_type t_beg = tadv_at_i._tbeg, t_end = tadv_at_i._tend;
+                          dt_max = tadv_at_i._dtmax;
+        const real_type t_beg = tadv_at_i._tbeg;
 
         const real_type temperature = sv_at_i.Temperature();
         const real_type pressure = sv_at_i.Pressure();
         const real_type density = sv_at_i.Density();
-        const RealType1DViewType Ys = sv_at_i.MassFractions();
+        const real_type_1d_view_type Ys = sv_at_i.MassFractions();
 
-        const RealType0DViewType temperature_out(sv_at_i.TemperaturePtr());
-        const RealType0DViewType pressure_out(sv_at_i.PressurePtr());
-        const RealType0DViewType density_out(sv_at_i.DensityPtr());
-        const RealType1DViewType Ys_out = Ys;
+        const real_type_0d_view_type temperature_out(sv_at_i.TemperaturePtr());
+        const real_type_0d_view_type pressure_out(sv_at_i.PressurePtr());
+        const real_type_0d_view_type density_out(sv_at_i.DensityPtr());
+        const real_type_1d_view_type Ys_out = Ys;
 
-        const RealType1DViewType Zs_out_at_i = Zs_at_i;
+        const real_type_1d_view_type Zs_out_at_i = Zs_at_i;
 
         auto wptr = work.data();
-        const RealType1DViewType vals(wptr, m);
+        const real_type_1d_view_type vals(wptr, m);
         wptr += m;
-        const RealType1DViewType ww(wptr,
+        const real_type_1d_view_type ww(wptr,
                                     work.extent(0) - (wptr - work.data()));
 
         TChem::TransientContStirredTankReactor::packToValues(
           member, temperature, Ys, Zs_at_i, vals);
 
         member.team_barrier();
-        TChem::Impl::TransientContStirredTankReactor ::team_invoke(member,
+        TChem::Impl::TransientContStirredTankReactor<value_type,device_type> ::team_invoke(member,
+                                                                                           jacobian_interval,
                                                    max_num_newton_iterations,
                                                    max_num_time_iterations,
                                                    tol_newton,
@@ -282,97 +158,146 @@ TransientContStirredTankReactor_TemplateRunModelVariation( /// required template
                                                  temperature_out,
                                                  Ys_out,
                                                  Zs_out_at_i);
+        // update density with out data
+        member.team_barrier();
+        density_out() = Impl::RhoMixMs<real_type, device_type>
+        ::team_invoke(member, temperature_out(), pressure, Ys_out, kmcd_at_i);
+        pressure_out() = pressure; // pressure is constant
+
       }
+    }
     });
   Kokkos::Profiling::popRegion();
 }
 
+
 void
 TransientContStirredTankReactor::runDeviceBatch( /// thread block size
   typename UseThisTeamPolicy<exec_space>::type& policy,
   /// input
-  const real_type_1d_view& tol_newton,
-  const real_type_2d_view& tol_time,
-  const real_type_2d_view& fac,
+  const real_type_1d_view_type& tol_newton,
+  const real_type_2d_view_type& tol_time,
+  const real_type_2d_view_type& fac,
   const time_advance_type_1d_view& tadv,
-  const real_type_2d_view& state,
-  const real_type_2d_view& zSurf,
+  const real_type_2d_view_type& state,
+  const real_type_2d_view_type& site_fraction,
   /// output
-  const real_type_1d_view& t_out,
-  const real_type_1d_view& dt_out,
-  const real_type_2d_view& state_out,
-  const real_type_2d_view& Z_out,
+  const real_type_1d_view_type& t_out,
+  const real_type_1d_view_type& dt_out,
+  const real_type_2d_view_type& state_out,
+  const real_type_2d_view_type& site_fraction_out,
   /// const data from kinetic model
-  const KineticModelConstDataDevice& kmcd,
-  const KineticSurfModelConstDataDevice& kmcdSurf,
-  const cstr_data_type& cstr)
+  const kinetic_model_type& kmcd,
+  const kinetic_surf_model_type& kmcdSurf,
+  const TransientContStirredTankReactorData<device_type>& cstr)
+
 {
 
-  TransientContStirredTankReactor_TemplateRun( /// template arguments deduction
-    "TChem::TransientContStirredTankReactor::runHostBatch",
-    real_type_0d_view(),
-    /// team policy
-    policy,
-    /// input
-    tol_newton,
-    tol_time,
-    fac,
-    tadv,
-    state,
-    zSurf,
-    /// output
-    t_out,
-    dt_out,
-    state_out,
-    Z_out,
-    /// const data of kinetic model
-    kmcd,
-    kmcdSurf,
-    cstr);
+#define TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()           \
+  TransientContStirredTankReactor_TemplateRunModelVariation(                      \
+    profile_name,       \
+    value_type(),                                                   \
+    policy,                                                         \
+    tol_newton,                                                     \
+    tol_time,                                                       \
+    fac,                                                            \
+    tadv,                                                           \
+    state,                                                          \
+    site_fraction,                                                          \
+    t_out,                                                          \
+    dt_out,                                                         \
+    state_out,                                                      \
+    site_fraction_out,                                                          \
+    kmcds,                                                           \
+    kmcdSurfs,                                                       \
+    cstr);                                                          \
+
+//
+Kokkos::View<kinetic_model_type*,device_type>
+     kmcds(do_not_init_tag("PlugFlowReactor::kmcds"), 1);
+ Kokkos::deep_copy(kmcds, kmcd);
+
+//
+Kokkos::View<kinetic_surf_model_type*,device_type>
+    kmcdSurfs(do_not_init_tag("PlugFlowReactor::kmcdSurfs"), 1);
+Kokkos::deep_copy(kmcdSurfs, kmcdSurf);
+
+const std::string profile_name ="TChem::TransientContStirredTankReactor::runDeviceBatch";
+
+#if defined(TCHEM_ENABLE_SACADO_JACOBIAN_TRANSIENT_CONT_STIRRED_TANK_REACTOR)
+ using problem_type = Impl::TransientContStirredTankReactor_Problem<real_type, device_type>;
+ const ordinal_type m = problem_type::getNumberOfEquations(kmcd, kmcdSurf);
+
+ if (m < 128) {
+   using value_type = Sacado::Fad::SLFad<real_type,128>;
+   TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+ } else if  (m < 256) {
+   using value_type = Sacado::Fad::SLFad<real_type,256>;
+   TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+ } else if  (m < 512) {
+   using value_type = Sacado::Fad::SLFad<real_type,512>;
+   TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+ } else if (m < 1024){
+   using value_type = Sacado::Fad::SLFad<real_type,1024>;
+   TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+ } else{
+   TCHEM_CHECK_ERROR(0,
+                     "Error: Number of equations is bigger than size of sacado fad type");
+ }
+#else
+  using value_type = real_type;
+  TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+#endif
 }
 
 void
 TransientContStirredTankReactor::runDeviceBatch( /// thread block size
   typename UseThisTeamPolicy<exec_space>::type& policy,
   /// input
-  const real_type_1d_view& tol_newton,
-  const real_type_2d_view& tol_time,
-  const real_type_2d_view& fac,
+  const real_type_1d_view_type& tol_newton,
+  const real_type_2d_view_type& tol_time,
+  const real_type_2d_view_type& fac,
   const time_advance_type_1d_view& tadv,
-  const real_type_2d_view& state,
-  const real_type_2d_view& zSurf,
+  const real_type_2d_view_type& state,
+  const real_type_2d_view_type& site_fraction,
   /// output
-  const real_type_1d_view& t_out,
-  const real_type_1d_view& dt_out,
-  const real_type_2d_view& state_out,
-  const real_type_2d_view& Z_out,
+  const real_type_1d_view_type& t_out,
+  const real_type_1d_view_type& dt_out,
+  const real_type_2d_view_type& state_out,
+  const real_type_2d_view_type& site_fraction_out,
   /// const data from kinetic model
-  const Kokkos::View<KineticModelConstDataDevice*,exec_space>& kmcds,
-  const Kokkos::View<KineticSurfModelConstDataDevice*,exec_space>& kmcdSurfs,
-  const cstr_data_type& cstr)
+  const Kokkos::View<kinetic_model_type*,device_type>& kmcds,
+  const Kokkos::View<kinetic_surf_model_type*,device_type>& kmcdSurfs,
+  const TransientContStirredTankReactorData<device_type>& cstr)
 {
 
-  TransientContStirredTankReactor_TemplateRunModelVariation( /// template arguments deduction
-    "TChem::TransientContStirredTankReactor::runHostBatch kmcd array",
-    real_type_0d_view(),
-    /// team policy
-    policy,
-    /// input
-    tol_newton,
-    tol_time,
-    fac,
-    tadv,
-    state,
-    zSurf,
-    /// output
-    t_out,
-    dt_out,
-    state_out,
-    Z_out,
-    /// const data of kinetic model
-    kmcds,
-    kmcdSurfs,
-    cstr);
+  const std::string profile_name ="TChem::TransientContStirredTankReactor::runDeviceBatch Model Variation";
+
+  #if defined(TCHEM_ENABLE_SACADO_JACOBIAN_TRANSIENT_CONT_STIRRED_TANK_REACTOR)
+   using problem_type = Impl::TransientContStirredTankReactor_Problem<real_type, device_type>;
+   const ordinal_type m = problem_type::getNumberOfEquations(kmcds(0), kmcdSurfs(0));
+
+   if (m < 128) {
+     using value_type = Sacado::Fad::SLFad<real_type,128>;
+     TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+   } else if  (m < 256) {
+     using value_type = Sacado::Fad::SLFad<real_type,256>;
+     TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+   } else if  (m < 512) {
+     using value_type = Sacado::Fad::SLFad<real_type,512>;
+     TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+   } else if (m < 1024){
+     using value_type = Sacado::Fad::SLFad<real_type,1024>;
+     TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+   } else{
+     TCHEM_CHECK_ERROR(0,
+                       "Error: Number of equations is bigger than size of sacado fad type");
+   }
+  #else
+    using value_type = real_type;
+    TCHEM_RUN_TRANSIENT_CONT_STIRRED_TANK_REACTOR()
+  #endif
+
 }
 
 } // namespace TChem

@@ -18,6 +18,9 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+
 #include "TC_kmodint.hpp"
 
 /**
@@ -339,3 +342,4 @@ TCKMI_getthermo9(char* singleword,
 
   return 0;
 }
+#pragma GCC diagnostic pop

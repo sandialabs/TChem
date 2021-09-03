@@ -23,8 +23,7 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 
   template<typename PolicyType,
-           typename DeviceType,
-           typename KineticModelConstType>
+           typename DeviceType>
 void
 KForwardReverse_TemplateRun( /// input
   const std::string& profile_name,
@@ -36,11 +35,13 @@ KForwardReverse_TemplateRun( /// input
   const Tines::value_type_2d_view<real_type, DeviceType>& kfor,
   const Tines::value_type_2d_view<real_type, DeviceType>& krev,
   /// const data from kinetic model
-  const KineticModelConstType& kmcd)
+  const KineticModelConstData<DeviceType >& kmcd)
 {
   Kokkos::Profiling::pushRegion(profile_name);
   using policy_type = PolicyType;
   using device_type = DeviceType;
+  using Gk = Impl::GkFcn<real_type, device_type>;
+  using KForwardReverse = Impl::KForwardReverse<real_type, device_type>;
 
   using real_type_1d_view_type = Tines::value_type_1d_view<real_type, device_type>;
   using ordinal_1d_view_type = Tines::value_type_1d_view<ordinal_type, device_type>;
@@ -85,7 +86,7 @@ KForwardReverse_TemplateRun( /// input
         w += kmcd.nReac * 2;
 
         // 1. compute thermo
-        Impl::Gk::team_invoke(member,
+        Gk::team_invoke(member,
                          t, /// input
                          gk,
                          hks,  /// output
@@ -93,8 +94,8 @@ KForwardReverse_TemplateRun( /// input
                          kmcd);
 
         member.team_barrier();
-        //2. compute rate constant 
-        Impl::KForwardReverse::team_invoke(member,
+        //2. compute rate constant
+        KForwardReverse::team_invoke(member,
                                       t,
                                       p,
                                       gk, /// input

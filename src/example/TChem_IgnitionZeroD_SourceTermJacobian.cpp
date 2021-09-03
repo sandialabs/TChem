@@ -59,6 +59,7 @@ main(int argc, char* argv[])
     /// scalar type and ordinal type
     using real_type = double;
     using ordinal_type = int;
+    using value_type = Sacado::Fad::SLFad<real_type,100>;
 
     /// Kokkos environments - host device type and multi dimensional arrays
     /// note that the 2d view use row major layout while most matrix format uses column major layout.
@@ -84,7 +85,7 @@ main(int argc, char* argv[])
 
     /// use problem object for ignition zero D problem providing interface to source term and jacobian
     /// other available problem objects in TChem: PFR, CSTR, and CV ignition
-    using problem_type = TChem::Impl::IgnitionZeroD_Problem<decltype(kmcd)>;
+    using problem_type = TChem::Impl::IgnitionZeroD_Problem<value_type, host_device_type >;
 
     /// state vector - Temperature, Y_0, Y_1, ... Y_{n-1}), n is # of species.
     const ordinal_type number_of_equations = problem_type::getNumberOfEquations(kmcd);
@@ -144,8 +145,8 @@ main(int argc, char* argv[])
 
       /// change the layout from row major to column major
       for (ordinal_type j=0;j<number_of_equations;++j)
-	      for (ordinal_type i=0;i<j;++i)
-	        std::swap(J(i,j), J(j,i));
+	for (ordinal_type i=0;i<j;++i)
+	  std::swap(J(i,j), J(j,i));
     }
 
     ///

@@ -36,6 +36,7 @@ using real_type_2d_view = TChem::real_type_2d_view;
 int
 main(int argc, char* argv[])
 {
+  #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
   /// default inputs
   std::string prefixPath("data/");
   std::string chemFile(prefixPath + "chem.inp");
@@ -76,9 +77,11 @@ main(int argc, char* argv[])
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
+    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile);
-    const auto kmcd = kmd.createConstData<TChem::exec_space>();
+    const auto kmcd = kmd.createConstData<device_type>();
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
 
@@ -282,6 +285,10 @@ main(int argc, char* argv[])
 
   }
   Kokkos::finalize();
+
+  #else
+   printf("This example requires Yaml ...\n" );
+  #endif
 
   return 0;
 }

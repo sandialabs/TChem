@@ -22,41 +22,58 @@ Sandia National Laboratories, Livermore, CA, USA
 #define __TCHEM_IMPL_IGNITION_ZEROD_HPP__
 
 #include "TChem_Util.hpp"
-
 #include "TChem_Impl_IgnitionZeroD_Problem.hpp"
-#include "TChem_Impl_TimeIntegrator.hpp"
+
+#include "Sacado.hpp"
+#include "Tines.hpp"
+#include "Tines_ProblemTestTrBDF2.hpp"
 
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct IgnitionZeroD
 {
-  template<typename KineticModelConstDataType>
+
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+
+  using real_type = scalar_type;
+  using real_type_0d_view_type = Tines::value_type_0d_view<real_type,device_type>;
+  using real_type_1d_view_type = Tines::value_type_1d_view<real_type,device_type>;
+  using real_type_2d_view_type = Tines::value_type_2d_view<real_type,device_type>;
+  using kinetic_model_type= KineticModelConstData<device_type>;
+
+  using time_integrator_type =
+  Tines::TimeIntegratorTrBDF2<value_type, device_type>;
+
+  using problem_type = TChem::Impl::IgnitionZeroD_Problem<value_type, device_type>;
+
   static inline ordinal_type getWorkSpaceSize(
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
-    using problem_type =
-      TChem::Impl::IgnitionZeroD_Problem<KineticModelConstDataType>;
+
     problem_type problem;
     problem._kmcd = kmcd;
+    ordinal_type work_size_problem = problem.getWorkSpaceSize();
+    ordinal_type m = problem.getNumberOfEquations();
+    ordinal_type wlen(0);
+    time_integrator_type::workspace(m, wlen);
 
-    return TimeIntegrator::getWorkSpaceSize(problem);
+    return wlen + work_size_problem;
   }
 
-  template<typename MemberType,
-           typename WorkViewType,
-           typename RealType0DViewType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke_detail(
     const MemberType& member,
     /// input iteration and qoi index to store
+    const ordinal_type& jacobian_interval,
     const ordinal_type& max_num_newton_iterations,
     const ordinal_type& max_num_time_iterations,
-    const RealType1DViewType& tol_newton,
-    const RealType2DViewType& tol_time,
-    const RealType1DViewType& fac, /// numerica jacobian percentage
+    const real_type_1d_view_type& tol_newton,
+    const real_type_2d_view_type& tol_time,
+    const real_type_1d_view_type& fac,
     /// input time step and time range
     const real_type& dt_in,
     const real_type& dt_min,
@@ -65,48 +82,49 @@ struct IgnitionZeroD
     const real_type& t_end,
     /// input (initial condition)
     const real_type& pressure,      /// pressure
-    const RealType1DViewType& vals, /// mass fraction (kmcd.nSpec)
+    const real_type_1d_view_type& vals, /// mass fraction (kmcd.nSpec)
     /// output (final output conditions)
-    const RealType0DViewType& t_out,
-    const RealType0DViewType& dt_out,
-    const RealType0DViewType& pressure_out,
-    const RealType1DViewType& vals_out,
+    const real_type_0d_view_type& t_out,
+    const real_type_0d_view_type& dt_out,
+    const real_type_0d_view_type& pressure_out,
+    const real_type_1d_view_type& vals_out,
     /// workspace
-    const WorkViewType& work,
+    const real_type_1d_view_type& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
-    using problem_type =
-      TChem::Impl::IgnitionZeroD_Problem<KineticModelConstDataType>;
+
+    using problem_type = TChem::Impl::IgnitionZeroD_Problem<value_type, device_type>;
+
+    const ordinal_type problem_workspace_size = problem_type::getWorkSpaceSize(kmcd);
     problem_type problem;
+    problem._kmcd = kmcd;
 
     /// problem workspace
-    const ordinal_type problem_workspace_size =
-      problem_type::getWorkSpaceSize(kmcd);
     auto wptr = work.data();
-    auto pw = typename problem_type::real_type_1d_view_type(
-      wptr, problem_workspace_size);
+    auto pw = real_type_1d_view_type(wptr, problem_workspace_size);
     wptr += problem_workspace_size;
 
     /// error check
     const ordinal_type workspace_used(wptr - work.data()),
       workspace_extent(work.extent(0));
     if (workspace_used > workspace_extent) {
-      Kokkos::abort("Error: workspace used is larger than it is provided\n");
+      Kokkos::abort("Error Ignition ZeroD Sacado : workspace used is larger than it is provided\n");
     }
 
     /// time integrator workspace
-    auto tw = WorkViewType(wptr, workspace_extent - workspace_used);
+    auto tw = real_type_1d_view_type(wptr, workspace_extent - workspace_used);
 
     /// initialize problem
     problem._p = pressure; // pressure
     problem._work = pw;    // problem workspace array
     problem._kmcd = kmcd;  // kinetic model
-    problem._fac = fac;    // fac for numerical jacobian
+    problem._fac = fac;
 
     const ordinal_type r_val =
-      TimeIntegrator::team_invoke_detail(member,
+      time_integrator_type::invoke(member,
                                          problem,
+                                   jacobian_interval,
                                          max_num_newton_iterations,
                                          max_num_time_iterations,
                                          tol_newton,
@@ -133,20 +151,16 @@ struct IgnitionZeroD
     });
   }
 
-  template<typename MemberType,
-           typename WorkViewType,
-           typename RealType0DViewType,
-           typename RealType1DViewType,
-           typename RealType2DViewType,
-           typename KineticModelConstDataType>
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input iteration and qoi index to store
+    const ordinal_type& jacobian_interval,
     const ordinal_type& max_num_newton_iterations,
     const ordinal_type& max_num_time_iterations,
-    const RealType1DViewType& tol_newton,
-    const RealType2DViewType& tol_time,
-    const RealType1DViewType& fac,
+    const real_type_1d_view_type& tol_newton,
+    const real_type_2d_view_type& tol_time,
+    const real_type_1d_view_type& fac,
     /// input time step and time range
     const real_type& dt_in,
     const real_type& dt_min,
@@ -155,19 +169,20 @@ struct IgnitionZeroD
     const real_type& t_end,
     /// input (initial condition)
     const real_type& pressure,      /// pressure
-    const RealType1DViewType& vals, /// temperature, mass fractions
+    const real_type_1d_view_type& vals, /// temperature, mass fractions
     /// output (final output conditions)
-    const RealType0DViewType& t_out,
-    const RealType0DViewType& dt_out,
-    const RealType0DViewType& pressure_out,
-    const RealType1DViewType& vals_out,
+    const real_type_0d_view_type& t_out,
+    const real_type_0d_view_type& dt_out,
+    const real_type_0d_view_type& pressure_out,
+    const real_type_1d_view_type& vals_out,
     /// workspace
-    const WorkViewType& work,
+    const real_type_1d_view_type& work,
     /// const input from kinetic model
-    const KineticModelConstDataType& kmcd)
+    const kinetic_model_type& kmcd)
   {
     // const real_type atol_newton = 1e-10, rtol_newton = 1e-6, tol_time = 1e-4;
     team_invoke_detail(member,
+                       jacobian_interval,
                        max_num_newton_iterations,
                        max_num_time_iterations,
                        tol_newton,
@@ -188,6 +203,7 @@ struct IgnitionZeroD
                        kmcd);
     member.team_barrier();
     /// input is valid and output is not valid then, send warning message
+#if !defined(__CUDA_ARCH__)
     const real_type zero(0);
     if (dt_in > zero && dt_out() < zero) {
       Kokkos::single(Kokkos::PerTeam(member), [&]() {
@@ -195,6 +211,7 @@ struct IgnitionZeroD
                int(member.league_rank()));
       });
     }
+#endif
   }
 };
 

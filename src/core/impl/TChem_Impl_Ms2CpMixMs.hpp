@@ -44,7 +44,7 @@ struct Ms2CpMixMs
     CpSpecMs::team_invoke(member, t, Ys, cpks, kmcd);
     real_type cpmix(0);
     Kokkos::parallel_reduce(
-      Kokkos::TeamVectorRange(member, kmcd.nSpec),
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
       [&](const ordinal_type& i, real_type& update) {
         update += Ys(i) * cpks(i);
       },

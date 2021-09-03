@@ -43,7 +43,7 @@ public:
   ///
   /// copy utils
   ///
-  void copyToNonConstView(py::array_t<real_type> a, typename TChem::Driver::real_type_1d_view_host b) {
+  void copyToNonConstView(py::array_t<real_type> a, TChem::real_type_1d_view_host b) {
     py::buffer_info buf = a.request();
     TCHEM_CHECK_ERROR(buf.ndim != 1, "Error: input state is not rank 1 array");
     const real_type * src = (const real_type*)buf.ptr;
@@ -57,7 +57,7 @@ public:
       tgt(ii) = src[ii*ss];
   }
 
-  void copyFromConstView(typename TChem::Driver::real_type_1d_const_view_host a, py::array_t<real_type> b) {
+  void copyFromConstView(TChem::real_type_1d_const_view_host a, py::array_t<real_type> b) {
     py::buffer_info buf = b.request();
     TCHEM_CHECK_ERROR(buf.ndim != 1, "Error: input state is not rank 1 array");
     auto src = a;
@@ -71,7 +71,7 @@ public:
       tgt[ii*ts] = src(ii);
   }
 
-  void copyToNonConstView(py::array_t<real_type> a, typename TChem::Driver::real_type_2d_view_host b) {
+  void copyToNonConstView(py::array_t<real_type> a, TChem::real_type_2d_view_host b) {
     py::buffer_info buf = a.request();
     TCHEM_CHECK_ERROR(buf.ndim != 2, "Error: input state is not rank 2 array");
 
@@ -90,7 +90,7 @@ public:
     });
   }
 
-  void copyFromConstView(typename TChem::Driver::real_type_2d_const_view_host a, py::array_t<real_type> b) {
+  void copyFromConstView(TChem::real_type_2d_const_view_host a, py::array_t<real_type> b) {
     py::buffer_info buf = b.request();
     TCHEM_CHECK_ERROR(buf.ndim != 2, "Error: input state is not rank 2 array");
 
@@ -164,7 +164,7 @@ public:
   void setStateVectorSingle(const int i, py::array_t<real_type> src) {
     TCHEM_CHECK_ERROR(!_obj->isStateVectorCreated(), "Error: state vector is not created");
 
-    typename TChem::Driver::real_type_1d_view_host tgt;
+    TChem::real_type_1d_view_host tgt;
     _obj->getStateVectorNonConstHost(i, tgt);
 
     copyToNonConstView(src, tgt);
@@ -172,7 +172,7 @@ public:
 
   py::array_t<real_type> getStateVectorSingle(const int i) {
     TCHEM_CHECK_ERROR(!_obj->isStateVectorCreated(), "Error: state vector is not created");
-    typename TChem::Driver::real_type_1d_const_view_host src;
+    TChem::real_type_1d_const_view_host src;
     _obj->getStateVectorHost(i, src);
 
     auto tgt = py::array_t<real_type>(src.extent(0));
@@ -184,7 +184,7 @@ public:
   void setStateVectorAll(py::array_t<real_type> src) {
     TCHEM_CHECK_ERROR(!_obj->isStateVectorCreated(), "Error: state vector is not created");
 
-    typename TChem::Driver::real_type_2d_view_host tgt;
+    TChem::real_type_2d_view_host tgt;
     _obj->getStateVectorNonConstHost(tgt);
 
     copyToNonConstView(src, tgt);
@@ -192,7 +192,7 @@ public:
 
   py::array_t<real_type> getStateVectorAll() {
     TCHEM_CHECK_ERROR(!_obj->isStateVectorCreated(), "Error: state vector is not created");
-    typename TChem::Driver::real_type_2d_const_view_host src;
+    TChem::real_type_2d_const_view_host src;
     _obj->getStateVectorHost(src);
 
     auto tgt = py::array_t<real_type>(src.span());
@@ -210,7 +210,7 @@ public:
 
   py::array_t<real_type> getNetProductionRatePerMassSingle(const int i) {
     TCHEM_CHECK_ERROR(!_obj->isNetProductionRatePerMassCreated(), "Error: net production rate per mass is not created");
-    typename TChem::Driver::real_type_1d_const_view_host src;
+    TChem::real_type_1d_const_view_host src;
     _obj->getNetProductionRatePerMassHost(i, src);
 
     auto tgt = py::array_t<real_type>(src.extent(0));
@@ -221,7 +221,7 @@ public:
 
   py::array_t<real_type> getNetProductionRatePerMassAll() {
     TCHEM_CHECK_ERROR(!_obj->isNetProductionRatePerMassCreated(), "Error: net production rate per mass is not created");
-    typename TChem::Driver::real_type_2d_const_view_host src;
+    TChem::real_type_2d_const_view_host src;
     _obj->getNetProductionRatePerMassHost(src);
 
     auto tgt = py::array_t<real_type>(src.span());
@@ -238,7 +238,7 @@ public:
 
   py::array_t<real_type> getJacobianHomogeneousGasReactor() {
     TCHEM_CHECK_ERROR(!_obj->isJacobianHomogeneousGasReactorCreated(), "Error: net production rate per mass is not created");
-    typename TChem::Driver::real_type_3d_const_view_host src;
+    TChem::real_type_3d_const_view_host src;
     _obj->getJacobianHomogeneousGasReactorHost(src);
 
     auto tgt = py::array_t<real_type>(src.span());
@@ -250,7 +250,7 @@ public:
 
   py::array_t<real_type> getJacobianHomogeneousGasReactorSingle(const int i) {
     TCHEM_CHECK_ERROR(!_obj->isJacobianHomogeneousGasReactorCreated(), "Error: net production rate per mass is not created");
-    typename TChem::Driver::real_type_2d_const_view_host src;
+    TChem::real_type_2d_const_view_host src;
     _obj->getJacobianHomogeneousGasReactorHost(i, src);
 
     auto tgt = py::array_t<real_type>(src.span());
@@ -271,7 +271,7 @@ public:
 
   py::array_t<real_type> getRHS_HomogeneousGasReactor() {
     TCHEM_CHECK_ERROR(!_obj->isRHS_HomogeneousGasReactorCreated(), "Error: rhs of homogeneous gas reactor is not created");
-    typename TChem::Driver::real_type_2d_const_view_host src;
+    TChem::real_type_2d_const_view_host src;
     _obj->getRHS_HomogeneousGasReactorHost(src);
 
     auto tgt = py::array_t<real_type>(src.span());
@@ -283,7 +283,7 @@ public:
 
   py::array_t<real_type> getRHS_HomogeneousGasReactorSingle(const int i) {
     TCHEM_CHECK_ERROR(!_obj->isRHS_HomogeneousGasReactorCreated(), "Error: rhs of homogeneous gas reactor is not created");
-    typename TChem::Driver::real_type_1d_const_view_host src;
+    TChem::real_type_1d_const_view_host src;
     _obj->getRHS_HomogeneousGasReactorHost(i, src);
 
     auto tgt = py::array_t<real_type>(src.span());
@@ -305,8 +305,8 @@ public:
 
   py::array_t<real_type> getForwardReactionRateConstants() {
     TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
-    typename TChem::Driver::real_type_2d_const_view_host kfor;
-    typename TChem::Driver::real_type_2d_const_view_host krev;
+    TChem::real_type_2d_const_view_host kfor;
+    TChem::real_type_2d_const_view_host krev;
     _obj->getReactionRateConstantsHost(kfor, krev);
 
     auto tgt = py::array_t<real_type>(kfor.span());
@@ -318,8 +318,8 @@ public:
 
   py::array_t<real_type> getReverseReactionRateConstants() {
     TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
-    typename TChem::Driver::real_type_2d_const_view_host kfor;
-    typename TChem::Driver::real_type_2d_const_view_host krev;
+    TChem::real_type_2d_const_view_host kfor;
+    TChem::real_type_2d_const_view_host krev;
     _obj->getReactionRateConstantsHost(kfor, krev);
 
     auto tgt = py::array_t<real_type>(krev.span());
@@ -331,8 +331,8 @@ public:
 
   py::array_t<real_type> getForwardReactionRateConstantsSingle(const int i) {
     TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
-    typename TChem::Driver::real_type_1d_const_view_host kfor;
-    typename TChem::Driver::real_type_1d_const_view_host krev;
+    TChem::real_type_1d_const_view_host kfor;
+    TChem::real_type_1d_const_view_host krev;
     _obj->getReactionRateConstantsHost(i, kfor, krev);
 
     auto tgt = py::array_t<real_type>(kfor.span());
@@ -344,8 +344,8 @@ public:
 
   py::array_t<real_type> getReverseReactionRateConstantsSingle(const int i) {
     TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
-    typename TChem::Driver::real_type_1d_const_view_host kfor;
-    typename TChem::Driver::real_type_1d_const_view_host krev;
+    TChem::real_type_1d_const_view_host kfor;
+    TChem::real_type_1d_const_view_host krev;
     _obj->getReactionRateConstantsHost(i, kfor, krev);
 
     auto tgt = py::array_t<real_type>(krev.span());
@@ -367,7 +367,7 @@ public:
 
   py::array_t<real_type> getEnthapyMass() {
     TCHEM_CHECK_ERROR(!_obj->isEnthapyMassCreated(), "Error: enthalpy is not created");
-    typename TChem::Driver::real_type_2d_const_view_host src;
+    TChem::real_type_2d_const_view_host src;
     _obj->getEnthapyMassHost(src);
 
     auto tgt = py::array_t<real_type>(src.span());
@@ -379,7 +379,7 @@ public:
 
   py::array_t<real_type> getEnthapyMixMass() {
     TCHEM_CHECK_ERROR(!_obj->isEnthapyMassCreated(), "Error: enthalpy is not created");
-    typename TChem::Driver::real_type_1d_const_view_host src;
+    TChem::real_type_1d_const_view_host src;
     _obj->getEnthapyMixMassHost(src);
 
     auto tgt = py::array_t<real_type>(src.span());
@@ -403,12 +403,15 @@ public:
 					   const real_type & tend,
 					   const real_type & dtmin,
 					   const real_type & dtmax,
-					   const real_type & max_num_newton_iterations,
-					   const real_type & num_time_iterations_per_interval,
+                                           const int & jacobian_interval,
+					   const int & max_num_newton_iterations,
+					   const int & num_time_iterations_per_interval,
 					   const real_type& atol_newton, const real_type&rtol_newton,
 					   const real_type& atol_time, const real_type& rtol_time) {
     _obj->setTimeAdvanceHomogeneousGasReactor(tbeg, tend, dtmin, dtmax,
-					      max_num_newton_iterations, num_time_iterations_per_interval,
+                                              jacobian_interval,
+					      max_num_newton_iterations,
+                                              num_time_iterations_per_interval,
 					      atol_newton, rtol_newton,
 					      atol_time, rtol_time);
   }
@@ -425,7 +428,7 @@ public:
   }
 
   py::array_t<real_type> getTimeStep() {
-    typename TChem::Driver::real_type_1d_const_view_host src;
+    TChem::real_type_1d_const_view_host src;
     _obj->getTimeStepHost(src);
 
     auto tgt = py::array_t<real_type>(src.extent(0));
@@ -434,7 +437,7 @@ public:
   }
 
   py::array_t<real_type> getTimeStepSize() {
-    typename TChem::Driver::real_type_1d_const_view_host src;
+    TChem::real_type_1d_const_view_host src;
     _obj->getTimeStepSizeHost(src);
 
     auto tgt = py::array_t<real_type>(src.extent(0));
@@ -584,16 +587,18 @@ PYBIND11_MODULE(pytchem, m) {
    .def("computeEnthapyMass",
   (&TChemDriver::computeEnthapyMass), "Compute enthalpy mass and mixture enthalpy")
 
-  /// homogeneous gas reactor
-   .def("setTimeAdvanceHomogeneousGasReactor",(&TChemDriver::setTimeAdvanceHomogeneousGasReactor),
-    py::arg("tbeg"),  py::arg("tend"), py::arg("dtmin"), py::arg("dtmax"),
-    py::arg("max_num_newton_iterations"), py::arg("num_time_iterations_per_interval"),
-    py::arg("atol_newton"), py::arg("rtol_newton"),
-    py::arg("atol_time"), py::arg("rtol_time"),
-     "Set time advance object for homogeneous gas reactor")
-  .def("computeTimeAdvanceHomogeneousGasReactor",
-    (&TChemDriver::computeTimeAdvanceHomogeneousGasReactor),
-    "Compute Time Advance for a Homogeneous-Gas Reactor ")
+      /// homogeneous gas reactor
+      .def("setTimeAdvanceHomogeneousGasReactor",(&TChemDriver::setTimeAdvanceHomogeneousGasReactor),
+           py::arg("tbeg"),  py::arg("tend"), py::arg("dtmin"), py::arg("dtmax"),
+           py::arg("jacobian_interval"),
+           py::arg("max_num_newton_iterations"),
+           py::arg("num_time_iterations_per_interval"),
+           py::arg("atol_newton"), py::arg("rtol_newton"),
+           py::arg("atol_time"), py::arg("rtol_time"),
+           "Set time advance object for homogeneous gas reactor")
+      .def("computeTimeAdvanceHomogeneousGasReactor",
+           (&TChemDriver::computeTimeAdvanceHomogeneousGasReactor),
+           "Compute Time Advance for a Homogeneous-Gas Reactor ")
       /// time step accessors
     .def("getTimeStep",
 	  (&TChemDriver::getTimeStep), py::return_value_policy::take_ownership,

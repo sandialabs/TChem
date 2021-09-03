@@ -1,0 +1,312 @@
+!1/26/15
+!N2 from Stallcop fit, very similar to previous N2 values
+
+!Previous values
+!H              0       145.000 2.050   0.000   0.666   0 ! previous, orig with polarizability
+!HE		0	10.2	2.576	0.000	0.204	0 ! previous, epsilon corrected
+!AR		0	116.719	3.462	0.000	1.609	0 ! previous
+
+! THEORETICAL TRANSPORT
+! Parameters for A+N2 were calculated. The pure gas A+A parameters listed below were 
+! obtained by reversing the combining rules using Stallcop’s values for N2+N2.
+
+! Best fit 12/6 LJ parameters to the “exact classical” diffusion coefficient in 
+! Jasper, Kamarchik, Miller, & Klippenstein, JCP, 141, 124313 (2014)
+H	0	541.672	1.530	0.000	0.666	0
+H2	1	304.690	2.190	0.000	0.775	280
+!
+! Calculated using the MP2/a’dz PES and the “1-D optimizations” method of 
+! Jasper & Miller, C&F 161, 101-110 (2014)
+HE	0	11.442	2.715	0.000	0.204	2
+AR	0	127.697	3.462	0.000	1.609	2
+N2	1	97.839	3.610	0.000	1.756	4
+C	0	1609.601	1.849	0.000	1.748	0
+CH	1	569.314	2.676	1.489	2.271	0
+CH2	2	289.283	3.458	0.593	2.137	0
+CH2(S)	2	663.955	3.225	1.668	2.412	0
+CH3	2	346.192	3.535	0.000	2.354	0
+CH4	2	435.921	3.575	0.000	2.454	13
+C2	1	2198.288	3.097	0.000	5.278	4				
+C2H	1	952.577	3.469	0.771	3.371	2.5					
+C2H2	1	902.442	3.655	0.000	3.397	2.5
+CH2C	2	824.929	3.767	2.370	3.619	2.5
+C2H3	2	862.368	3.801	0.689	3.884	1
+C2H4	2	901.989	3.893	0.000	4.030	1.5
+C2H5	2	850.569	4.048	0.306	4.135	1.5
+C2H6	2	900.937	4.107	0.000	4.203	1.5
+C3H	1	1442.832	3.857	3.447	5.468	1
+CHCCH	1	1586.168	4.003	0.507	5.464	1
+CHCCH(S)	1	1553.210	3.938	2.443	5.946	1
+CH2CC	1	1763.289	3.929	4.197	5.649	1
+c-CHCCH	1	1826.559	3.847	3.424	4.628	1
+CH2CCH	2	1457.899	4.060	0.101	5.606	1
+CH2CCH2	                2	1506.911	4.148	0.000	5.937	1
+CH3CCH	                2	1526.051	4.140	0.763	5.314	1
+c-CHCH2CH	2	1862.492	3.984	0.438	5.081	1
+CH2CHCH2	2	1156.257	4.349	0.049	6.034	0
+CH3CCH2	                2	1421.402	4.247	0.882	5.883	0
+CH3CHCH	                2	1352.454	4.310	0.750	5.779	0
+c-CH2CHCH2	2	1569.421	4.145	0.644	5.309	0
+CH3CHCH2	2	1434.164	4.340	0.362	5.876	0
+c-CH2CH2CH2	2	1625.205	4.193	0.002	5.369	0
+CH3CH2CH2	2	1280.940	4.495	0.334	5.938	1
+CH3CHCH3	2	1279.724	4.502	0.256	5.963	1
+C3H8	                2	1298.571	4.582	0.089	5.987	1
+C4H	                1	2520.936	4.064	0.865	7.180	1
+!C4H;pi	                1	2520.936	4.064	4.542	7.817	1
+CHCCCH	                1	2165.650	4.106	0.000	7.110	1
+CH2CCCH	                2	2263.598	4.260	0.397	7.983	1
+CHCHCCH	                2	2124.236	4.233	0.399	7.101	1
+CH2CHCCH	2	2097.868	4.362	0.406	7.352	1
+CH2CCCH2	2	2322.704	4.295	0.000	8.574	1
+c-C(CH2)CHCH	2	2568.290	4.236	1.982	7.176	1
+CH2CHCCH2	2	2012.212	4.550	0.133	8.202	1
+CH3CHCCH	2	1955.073	4.483	0.602	7.546	1
+CH2CHCHCH	2	1929.785	4.503	0.626	7.901	1
+CH3CCCH2	2	2142.506	4.470	0.907	7.768	1
+c-CH2CHCHCH	2	2200.555	4.432	0.052	6.956	1
+CH2CHCHCH2	2	2085.089	4.514	0.000	8.099	1
+CH2CCHCH3	2	2006.445	4.620	0.407	7.890	1
+CH3CCCH3	2	2196.923	4.491	0.001	7.288	1
+CH3CH2CCH	2	1892.314	4.563	0.772	7.164	1
+CH2CHCHCH3	2	1746.327	4.690	0.000	0.000	1
+CH3C(CH2)2	2	1681.764	4.636	0.000	0.000	1
+CH3CH2CHCH	2	1852.905	4.652	0.703	7.458	1
+CH2CHCH2CH2	2	1836.452	4.687	0.513	7.510	1
+CH3CCHCH3	2	1954.874	4.589	0.650	7.850	1
+(CH3)2CCH	2	1798.258	4.747	1.023	7.600	1
+(CH3)2CCH2	2	1813.702	4.818	0.499	7.697	1
+CH3CHCHCH3	2	1971.548	4.718	0.000	7.752	1
+CH2CHCH2CH3	2	1799.513	4.761	0.366	7.726	1
+(CH3)3C	                2	1693.032	4.878	0.216	7.931	1
+CH3CH2CHCH3	2	1673.769	4.933	0.286	7.801	1
+(CH3)2CHCH2	2	1567.345	4.959	0.338	7.773	1
+CH3CH2CH2CH2	2	1733.386	4.854	0.299	7.738	1
+(CH3)2CHCH3	2	1583.309	5.026	0.142	7.784	1
+CH3CH2CH2CH3	2	1657.880	4.929	0.000	7.792	1
+!
+O	0	235.686	2.485	0.000	0.744	0
+OH	1	514.598	2.582	1.635	1.077	0
+H2O	2	637.056	2.943	1.851	1.407	4
+CO	1	565.618	3.355	0.107	1.957	1.8
+HCO	2	745.695	3.394	1.627	2.561	2
+CH2O	2	934.661	3.408	2.381	2.612	2
+CHOH	2	951.628	3.478	1.548	3.049	2
+CHOH(T)	2	951.628	3.478	1.548	3.049	2
+CH2OH	2	929.368	3.598	1.465	3.128	1
+CH3O	2	775.034	3.635	1.997	2.954	1
+CH3OH	2	1036.168	3.694	1.679	3.117	1
+CCO	1	1269.249	3.583	1.461	4.122	1
+HCCO	2	1409.346	3.675	1.574	4.318	1
+CH2CO	2	1475.676	3.761	1.404	4.320	1
+CHCHO           2       531.467 4.070   1.404   4.320   1 !    added by CFG
+CHCOH	2	1726.941	3.697	1.572	4.191	2
+CHCHOH	2	1331.869	3.972	0.795	4.678	1
+CH2CHO	2	1330.318	3.929	2.919	4.561	2
+CH3CO	2	1181.931	3.980	2.448	4.496	2
+CH2COH	2	1409.653	3.955	1.209	4.797	2
+c-CHOCH2	2	1634.394	3.804	1.710	4.145	2
+CH3CHO	                2	1382.375	4.046	2.770	4.473	2
+CH2CHOH	                2	1413.661	4.070	1.014	4.797	2
+c-CH2CH2O	2	1732.165	3.872	1.926	4.216	2
+CH2CH2OH	2	1382.739	4.169	1.576	4.868	1.5
+CH3CHOH	                2	1318.091	4.196	1.287	4.930	1.5
+CH3CH2O	                2	1253.174	4.223	2.046	4.774	1.5
+CH3OCH2	                2	1215.277	4.210	1.361	5.066	1.5
+CH3CH2OH	2	1409.021	4.226	1.596	4.909	1.5
+CH3OCH3	                2	1345.904	4.293	1.324	4.943	1.5
+CHCCO	                2	1944.705	3.864	1.508	6.450	1
+CCCHO	                2	1762.792	3.995	0.000	0.000	1
+CH2CCO	                2	2293.151	4.010	2.303	6.438	1
+CHCCHO	                2	2001.712	4.120	2.792	5.694	1
+CH2CHCO	                2	1953.280	4.242	1.099	6.531	1
+CH2CCHO	                2	2044.326	4.202	3.271	6.438	1
+CHCHCHO	2	1834.129	4.277	2.995	6.139	1
+CH2CHCHO	2	1990.064	4.279	3.207	6.299	1
+CH3CHCO	                2	1965.261	4.314	1.823	6.094	1
+c-CH2OCHCH	2	2319.078	4.167	1.396	5.734	1
+c-CH2C(O)CH2	2	2080.933	4.223	2.909	5.729	1
+CH3C(O)CH2	2	1783.857	4.495	3.019	6.190	1
+c-CH(CH2)OCH2	2	1930.420	4.383	1.871	6.122	1
+CH3CHCHO	2	1957.078	4.371	3.023	6.309	1
+CH3CH2CO	2	1542.364	4.512	2.559	6.264	1
+CH2C(OH)CH2	2	1894.738	4.406	0.000	0.000	1
+CH2CHCH2O	2	1768.159	4.415	1.882	6.326	1
+CH2OCHCH2	2	1797.881	4.417	0.674	6.685	1
+CH2CH2CHO	2	1799.674	4.448	2.732	6.097	1
+CH2CHCHOH	2	1880.863	4.458	0.000	0.000	1
+c-CH2CH2CHO	2	2057.568	4.304	1.962	5.922	1
+c-CH2CHCH2O	2	2071.120	4.315	1.788	5.874	1
+CH3CH2CHO	2	1842.071	4.521	2.653	6.163	1
+CH3COCH3	2	1839.794	4.568	2.955	6.212	1
+CH2CHCH2OH	2	1986.907	4.584	1.776	6.522	1
+CH3CHCHOH	2	2089.255	4.514	1.278	6.585	1
+CH3C(OH)CH2	2	1882.705	4.486	0.631	6.621	1
+c-CH2CH2CH2O	2	2117.987	4.362	1.986	5.904	1
+c-CH2OCH(CH3)	2	1974.486	4.448	1.998	6.015	1
+c-CH2CH2CH(OH)	2	1991.085	4.430	1.549	6.079	1
+CH3CH2CH2O	2	1689.836	4.608	1.977	6.507	1
+CH3CH(O)CH3	2	1605.038	4.666	2.063	6.631	1
+CH3CH2CHOH	2	1781.616	4.600	1.243	6.804	1
+CH3CHCH2OH	2	1858.168	4.575	1.587	6.667	1
+CH2CH2CH2OH	2	1747.965	4.593	1.807	6.588	1
+CH3C(OH)CH3	2	1640.650	4.671	1.451	6.915	1
+CH3CH(OH)CH2	2	1592.485	4.689	1.463	6.709	1
+CH2CH2OCH3	2	1672.703	4.665	1.232	6.595	1
+CH3CH2OCH2	2	1650.963	4.662	1.408	6.814	1
+CH3CHOCH3	2	1618.837	4.725	1.097	6.919	1
+CH3CH2CH2OH	2	1847.343	4.635	1.678	6.636	1
+(CH3)2CHOH	2	1581.874	4.759	1.673	6.685	1
+CH3CH2OCH3	2	1620.653	4.789	1.234	6.781	1
+!
+O2	1	676.424	3.069	0.000	1.487	3.8
+HO2	2	963.003	3.129	2.146	1.959	3.8
+H2O2	2	1361.148	3.179	1.702	2.239	3.8
+CO2	1	1201.184	3.386	0.000	2.598	2.1
+OCOH	2	1250.801	3.600	2.854	3.334	2.1
+!OCHO(B2)	2	767.671	3.503	0.000	0.000	2
+OCHO	2	767.671	3.503	1.552	3.046	2
+CHOO	2	1916.784	3.531	3.211	4.798	2
+OCHOH	2	1325.130	3.700	1.438	3.330	2
+CH2OO	2	1823.477	3.650	3.976	4.365	2
+c-CH2OO	2	1781.856	3.566	2.553	3.210	2
+OCH2OH	2	1248.670	3.878	1.372	3.682	2
+CH3OO	2	1251.465	3.933	2.708	3.789	2
+OHCH2OH 	2 	1409.636	3.880	0.059	3.825	2
+CH3OOH	                2	1515.877	3.969	0.303	4.067	2
+3OCCO	1	1958.595	3.736	0.000	4.543	2
+OCCHO	2	2010.845	3.900	2.597	4.984	2
+OHCCO	2	2195.390	3.894	2.458	5.288	2
+CCOOH	2	2079.148	3.917	3.300	4.939	2
+OCHCHO	2	1818.974	4.088	0.000	4.673	2
+c-C(O)OCH2	2	2122.934	3.927	3.300	4.475	2
+OCCHOH	                2	2141.970	3.968	1.959	4.970	2
+OHCCOH	                2	2767.074	3.745	1.975	4.879	2
+CH3C(O)O	                2	1555.141	4.155	3.262	4.220	2
+OCOCH3	                2	1704.818	4.123	2.560	4.971	2
+OCHOCH2 	2	1652.489	4.209	1.610	5.148	2
+OCHCH2O 	2	1497.579	4.207	0.000	0.000	2
+CHCHOOH	2	2099.760	4.126	1.447	5.482	2
+CH2CHOO 	2	1762.424	4.104	2.615	5.892	2
+CH2C(O)OH	2	1827.403	4.136	1.706	5.020	2
+CH3C(O)OH	2	1884.383	4.189	1.683	5.053	2
+CH3OCHO	                2	1854.317	4.198	1.798	5.041	1
+CH2C(OH)2	2	2089.324	4.188	1.670	5.539	1
+CH3OCOH	                2	1583.591	4.360	0.834	5.670	1
+OCHCH2OH	2	1960.081	4.224	2.547	5.069	1
+OHCHCHOH	2	2107.333	4.171	2.262	5.429	1
+CH2CHOOH	2	2217.294	4.139	1.487	5.675	1
+OHCHCH2OH	2	1665.527	4.362	1.346	5.681	1
+CH3OCHOH	2	1672.125	4.340	1.696	5.714	1
+!OHCH2OCH2	#N/A	skipped	0.000	0.959	5.656	1
+OHCH2CH2O	2	1703.453	4.359	1.781	5.440	1
+CH3OCH2O	2	1633.580	4.386	1.565	5.406	1
+CH3CH2OO	2	1729.734	4.282	2.808	5.516	1
+CH2CH2OOH	2	1846.838	4.374	2.091	5.696	1
+CH3CH2OOH	2	1929.148	4.363	1.844	5.778	1
+CH3OOCH3	2	1761.326	4.483	1.669	5.882	1
+!
+O3	2	1758.196	3.302	0.550	2.820	1
+OOOH	2	1444.279	3.514	1.025	3.136	1
+OHOOH	2	1782.586	3.578	1.002	3.216	1
+c-C(O)OO	2	1940.047	3.682	0.838	3.798	1
+OC(O)O	2	2429.531	3.656	0.106	5.649	1
+OCHOO	2	1559.197	3.918	1.538	4.071	1
+OHC(O)O	2	2049.064	3.728	2.653	3.878	1
+OCOOH	2	1800.574	3.890	2.551	4.268	1
+OCHOOH	2	2022.313	3.896	1.462	4.166	1
+OC(OH)2	2	1825.022	3.967	0.202	3.918	1
+c-CH(OH)OO	2	1926.470	3.889	1.157	3.892	1
+OCH2OOH	2	1690.517	4.118	0.961	4.507	1
+OHCH2OO	2	1700.732	4.049	1.922	4.407	1
+C(OH)3	                2	1642.076	4.121	0.948	4.674	1
+CH3OOO	                2	1862.471	4.099	1.548	5.095	1
+OHCH2OOH	2	2056.868	4.086	2.111	4.696	1
+CH(OH)3	                2	1661.415	4.160	1.525	4.514	1
+CH3OOOH	2	1979.445	4.164	1.253	4.989	1
+!
+! Found in tran_v5a.dat with fewer than 4 heavy atoms, but not in SJK’s list
+CH2OCHO   	2	1720.845	4.139	0	0	1
+CH3OCO	                2	1602.365	4.182	0	0	1
+CH2CCH2OH	2	1826.007	4.411	0	0	1
+CH3CCHOH	2	2035.814	4.492	0	0	1
+CH3C(OH)CH	2	1970.985	4.368	0	0	1
+CH3C(O)CH3	2	1812.574	4.572	0	0	1
+!
+! NOT CALCULATED
+! These species were listed in tran_v5a.dat. As they have 5 or more heavy atoms, s and e were not calculated.
+! It might be better to rescale these to the new values of N2+N2, but I didn’t do that.
+C5H2                    1       386.805         4.852         0.000         0.000         1.000    ! LJcjp
+H2CCCCCH                2       389.341         5.055         0.000         0.000         1.000    ! LJcjp
+HCCCHCCH                2       378.067         5.021         0.000         0.000         1.000    ! LJcjp
+C5H5                    2       412.245         5.177         0.000         0.000         1.000    ! LJcjp
+C6H2                    1       422.726         5.034         0.000         0.000         1.000    ! LJcjp
+C6H5                    2       412.300         5.349         0.000         0.000         1.000    ! orig
+C6H6                    2       412.300         5.349         0.000         0.000         1.000    ! orig
+C4H5C2H                 2       412.300         5.349         0.000         0.000         1.000    ! JAM(12/02)
+C6H5O                   2       537.311         5.334         1.600         0.000         1.000    ! LJDcjp
+PC6H4O2                 2       450.000         5.500         0.000         0.000         1.000    ! HR
+OC6H4O2                 2       450.000         5.500         0.000         0.000         1.000    ! HR
+C6H3O2                  2       450.000         5.500         0.000         0.000         1.000    ! HR
+C6H3O3                  2       450.000         5.500         0.000         0.000         1.000    !  "
+C6H5C2H                 2       484.117         5.702         0.000         0.000         1.000    ! LJcjp
+C6H4                    2       444.128         5.250         0.000         0.000         1.000    ! LJcjp
+H2C4O                   2       357.521         4.459         0.000         0.000         1.000    ! LJcjp
+C5H5(L)                 1       357.000         5.180         0.000         0.000         1.000    !
+C5H6                    1       357.000         5.180         0.000         0.000         1.000    !
+C5H4                    1       357.000         5.180         0.000         0.000         1.000    !HR,10/00
+C5H4O                   2       450.000         5.500         0.000         0.000         1.000    !    
+C5H5O                   2       450.000         5.500         0.000         0.000         1.000    !    
+C5H4OH                  2       450.000         5.500         0.000         0.000         1.000    !    
+C6H5OH                  2       537.311         5.334         1.600         0.000         1.000    ! LJDcjp
+FULVENE                 2       430.306         5.441         0.000         0.000         1.000    ! LJcjp
+C6H7                    2       439.817         5.466         0.000         0.000         1.000    ! LJcjp
+CH2CCHCH2CHCH2          2       439.817         5.466         0.000         0.000         1.000    ! JAM
+CHCCH2CH2CHCH2          2       439.817         5.466         0.000         0.000         1.000    ! JAM
+C6H813                  2       439.817         5.466         0.000         0.000         1.000    ! LJcjp
+C6H814                  2       439.817         5.466         0.000         0.000         1.000    ! LJcjp
+C7H7                    2       458.053         5.783         0.000         0.000         1.000    ! LJcjp
+C7H8                    2       458.053         5.783         0.000         0.000         1.000    ! LJcjp
+C7H8O                   2       537.311         5.334         1.600         0.000         1.000    ! cjp-ug
+A1YNE*                  2       484.117         5.702         0.000         0.000         1.000    ! LJcjp
+C8H8                    2       500.778         6.012         0.000         0.000         1.000    ! LJcjp
+C8H10                   2       500.778         6.012         0.000         0.000         1.000    ! cjp-ug
+INDENE*                 2       402.900         6.744         0.000         0.000         1.000    ! A2 (HR)
+INDENE                  2       402.900         6.744         0.000         0.000         1.000    ! A2 (HR)
+C10H7S                  2       402.900         6.744         0.000         0.000         1.000    ! A2 (HR)
+C10H7P                  2       402.900         6.744         0.000         0.000         1.000    ! A2 (HR)
+C10H7O                  2       402.900         6.744         0.000         0.000         1.000    ! CJP MS
+C10H7OH                 2       402.900         6.744         0.000         0.000         1.000    ! CJP MS
+C10H8                   2       402.900         6.744         0.000         0.000         1.000    ! A2 (HR)
+OHCH2CH2OO              2       470.600         4.410         0.000         0.000         1.500    ! 7/01 same as c2h5oh, wjp Marinov
+OCCHCCH                 2       357.521         4.459         0.000         0.000         1.000    ! same as H2C4O
+CHCCH2CHCCH2            2       412.300         5.349         0.000         0.000         1.000    ! same as C4H5C2H
+C4H3O                   2       357.521         4.459         0.000         0.000         1.000    ! same as H2C4O, need to find better approx
+CH2CHCHCHCCH            2       412.300         5.349         0.000         0.000         1.000    ! same as C4H5C2H
+CH2CHCH2OOH             2       291.619         5.630         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 545.506K Pc=  51.832bar Vc= 221.500cm3/mol Tb= 379.320K	(CdH2R, CdHR2, CsH2R2, Ether, Alcohol)
+CH3CHCHOOH              2       300.701         5.636         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 558.062K Pc=  52.586bar Vc= 220.500cm3/mol Tb= 386.800K	(CdHR2, CdHR2, CsH3R, Ether, Alcohol)
+CH3C(OOH)CH2            2       299.217         5.604         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 548.662K Pc=  52.207bar Vc= 222.500cm3/mol Tb= 379.200K	(CdH2R, CdR3, CsH3R, Ether, Alcohol)
+CH3CH2CH2OO             2       283.390         5.691         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 545.530K Pc=  51.093bar Vc= 240.500cm3/mol Tb= 382.640K	(CsH3R, CsH2R2, CsH2R2, Ether, Alcohol)
+CH3CH(OO)CH3            2       292.005         5.652         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 548.825K Pc=  51.683bar Vc= 234.500cm3/mol Tb= 382.200K	(CsH3R, CsHR3, CsH3R, Ether, Alcohol)
+CH2CH2CH2OOH            2       283.390         5.691         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 545.530K Pc=  51.093bar Vc= 240.500cm3/mol Tb= 382.640K	(CsH3R, CsH2R2, CsH2R2, Ether, Alcohol)
+CH3CHCH2OOH             2       283.390         5.691         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 545.530K Pc=  51.093bar Vc= 240.500cm3/mol Tb= 382.640K	(CsH3R, CsH2R2, CsH2R2, Ether, Alcohol)
+CH3CH(OOH)CH2           2       292.005         5.652         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 548.825K Pc=  51.683bar Vc= 234.500cm3/mol Tb= 382.200K	(CsH3R, CsHR3, CsH3R, Ether, Alcohol)
+CH3CH2CH2OOH            2       286.907         5.762         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 545.530K Pc=  48.834bar Vc= 240.500cm3/mol Tb= 382.640K	(CsH3R, CsH2R2, CsH2R2, Ether, Alcohol)
+CH3CH(OOH)CH3           2       295.546         5.724         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 548.825K Pc=  49.384bar Vc= 234.500cm3/mol Tb= 382.200K	(CsH3R, CsHR3, CsH3R, Ether, Alcohol)
+CH3CH(OO)CHO            2       284.952         5.774         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 604.845K Pc=  57.654bar Vc= 251.500cm3/mol Tb= 430.860K	(CsH3R, CsHR3, Aldehyde_Ccentered, Aldehyde_Ocentered, Ether, Alcohol)
+OCHCH2CH2OO             2       276.180         5.818         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 601.523K Pc=  56.960bar Vc= 257.500cm3/mol Tb= 431.300K	(Aldehyde_Ocentered, Aldehyde_Ccentered, CsH2R2, CsH2R2, Ether, Alcohol)
+CH3C(O)CH2OO            2       287.433         5.853         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 611.340K Pc=  56.026bar Vc= 246.500cm3/mol Tb= 436.510K	(CsH3R, Ketone_Ccentered, CsH2R2, Ketone_Ocentered, Ether, Alcohol)
+c-CH2OCH(CH2OO)         2       294.936         5.565         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 594.138K Pc=  61.226bar Vc= 218.500cm3/mol Tb= 416.330K	(Alcohol, Ether, CsH2R2, CsringHR3, CsringH2R2, Ether_ring)
+CH3CH(OOH)CHO           2       288.954         5.851         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 604.845K Pc=  54.951bar Vc= 251.500cm3/mol Tb= 430.860K	(CsH3R, CsHR3, Aldehyde_Ccentered, Ether, Alcohol, Aldehyde_Ocentered)
+OCHCH2CH2OOH            2       280.143         5.894         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 601.523K Pc=  54.305bar Vc= 257.500cm3/mol Tb= 431.300K	(Aldehyde_Ocentered, Aldehyde_Ccentered, CsH2R2, CsH2R2, Ether, Alcohol)
+CH3C(O)CH2OOH           2       291.453         5.929         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 611.340K Pc=  53.435bar Vc= 246.500cm3/mol Tb= 436.510K	(CsH3R, Ketone_Ccentered, CsH2R2, Ketone_Ocentered, Ether, Alcohol)
+c-CH2OCH(CH2OOH)        2       298.925         5.642         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 594.138K Pc=  58.272bar Vc= 218.500cm3/mol Tb= 416.330K	(Ether_ring, CsringH2R2, CsringHR3, CsH2R2, Ether, Alcohol)
+OHOCH2CH2CH2OO          2       222.067         6.383         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 656.622K Pc=  57.046bar Vc= 277.500cm3/mol Tb= 497.240K	(Alcohol, Ether, CsH2R2, CsH2R2, CsH2R2, Ether, Alcohol)
+CH3CH(OO)CH2OOH         2       229.119         6.330         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 659.188K Pc=  57.742bar Vc= 271.500cm3/mol Tb= 496.800K	(CsH3R, CsHR3, CsH2R2, Ether, Alcohol, Ether, Alcohol)
+CH3CH(OOH)CH2OO         2       229.119         6.330         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 659.188K Pc=  57.742bar Vc= 271.500cm3/mol Tb= 496.800K	(CsH3R, CsHR3, CsH2R2, Ether, Alcohol, Ether, Alcohol)
+HOOCH2CHCH2OOH          2       222.067         6.383         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 656.622K Pc=  57.046bar Vc= 277.500cm3/mol Tb= 497.240K	(Alcohol, Ether, CsH2R2, CsH2R2, CsH2R2, Ether, Alcohol)
+CH2CH(OOH)CH2OOH        2       229.119         6.330         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 659.188K Pc=  57.742bar Vc= 271.500cm3/mol Tb= 496.800K	(CsH3R, CsHR3, CsH2R2, Ether, Alcohol, Ether, Alcohol)
+OCHCH2CH2O              2       282.162         5.625         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 579.054K Pc=  58.450bar Vc= 239.500cm3/mol Tb= 408.880K	(Alcohol, CsH2R2, CsH2R2, Aldehyde_Ccentered, Aldehyde_Ocentered)
+CH3CH(O)CHO             2       291.052         5.584         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 582.482K Pc=  59.172bar Vc= 233.500cm3/mol Tb= 408.440K	(CsH3R, CsHR3, Aldehyde_Ccentered, Alcohol, Aldehyde_Ocentered)
+CH3C(O)CH2O             2       293.712         5.662         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 589.060K Pc=  57.479bar Vc= 228.500cm3/mol Tb= 414.090K	(CsH3R, Ketone_Ccentered, CsH2R2, Ketone_Ocentered, Alcohol)
+c-CH2OCH(CH2O)          2       300.616         5.380         0.000         0.000         1.000    ! LJ parameters estimated by RMG: Tc= 571.713K Pc=  62.888bar Vc= 200.500cm3/mol Tb= 393.910K	(Alcohol, CsH2R2, CsringHR3, CsringH2R2, Ether_ring)

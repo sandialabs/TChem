@@ -26,21 +26,30 @@ Sandia National Laboratories, Livermore, CA, USA
 namespace TChem {
 namespace Impl {
 
+template<typename ValueType, typename DeviceType>
 struct SurfaceCoverageModification
 {
 
-  template<typename MemberType,
-           typename RealType1DViewType,
-           typename KineticSurfModelConstDataType>
+  using value_type = ValueType;
+  using device_type = DeviceType;
+  using scalar_type = typename ats<value_type>::scalar_type;
+  using real_type = scalar_type;
+
+  /// sacado is value type
+  using value_type_1d_view_type = Tines::value_type_1d_view<value_type,device_type>;
+
+  using kinetic_surf_model_type = KineticSurfModelConstData<device_type>;
+
+  template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
   const MemberType& member,
   /// input
-  const real_type& t,
-  const RealType1DViewType& concX,
-  const RealType1DViewType& concXSurf,
+  const value_type& t,
+  const value_type_1d_view_type& concX,
+  const value_type_1d_view_type& concXSurf,
   //outputs
-  const RealType1DViewType& CoverageFactor,
-  const KineticSurfModelConstDataType& kmcdSurf)
+  const value_type_1d_view_type& CoverageFactor,
+  const kinetic_surf_model_type& kmcdSurf)
   {
     const real_type ten(10), one(1);
 
@@ -49,7 +58,7 @@ struct SurfaceCoverageModification
     coverage_modification_type cov;
 
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, kmcdSurf.nReac),
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.nReac),
       [&](const ordinal_type& i) {
        CoverageFactor(i) = one;
      });
@@ -57,11 +66,11 @@ struct SurfaceCoverageModification
     member.team_barrier();
 
     Kokkos::parallel_for(
-      Kokkos::TeamVectorRange(member, NumofConvFac),
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, NumofConvFac),
       [&](const ordinal_type& i) {
 
           cov = kmcdSurf.coverageFactor(i);
-          real_type act;
+          value_type act;
           if (cov._isgas){
             act = concX(cov._species_index); // molar concentration
             // printf("I am a gas species \n" );
@@ -72,9 +81,9 @@ struct SurfaceCoverageModification
           // printf("eta %e, mu %e, epsilon %e reac indx %d spec indx %d \n",
           // cov._eta, cov._mu, cov._epsilon, cov._reaction_index, cov._species_index  );
 
-          const real_type prod = ats<real_type>::pow(ten, cov._eta * act)*
-                                 ats<real_type>::pow(act, cov._mu) *
-                                 ats<real_type>::exp(-cov._epsilon * act/t);
+          const value_type prod = ats<value_type>::pow(ten, cov._eta * act)*
+                                 ats<value_type>::pow(act, cov._mu) *
+                                 ats<value_type>::exp(-cov._epsilon * act/t);
 
         CoverageFactor(cov._reaction_index) *= prod;
 

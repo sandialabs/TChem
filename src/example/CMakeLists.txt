@@ -3,42 +3,40 @@ SET(TCHEM_EXAMPLE_SOURCES "")
 
 # Append examples that work for all device types
 LIST(APPEND TCHEM_EXAMPLE_SOURCES
-  TChem_KForwardReverseSurface.cpp
-  TChem_GkSurfGas.cpp
-  TChem_PlugFlowReactorRHS.cpp
-  TChem_NetProductionRatePerMass.cpp
-  TChem_NetProductionRateSurfacePerMass.cpp
-  TChem_InitialCondSurface.cpp
-  TChem_TransientContStirredTankReactor.cpp
-  TChem_Jacobian.cpp
-  TChem_IgnitionZeroD_ModelVariation.cpp
-  TChem_IgnitionZeroDSA.cpp
-  TChem_PlugFlowReactor.cpp
-  TChem_PlugFlowReactorSmat.cpp
-  TChem_SimpleSurface.cpp
-  TChem_SurfaceRHS.cpp
-  TChem_ThermalProperties.cpp
-  TChem_JacobianSacado.cpp
-  TChem_PlugFlowReactorJacobianSacado.cpp
-  TChem_TransientContStirredTankReactorJacobianSacado.cpp
-  TChem_JacobianVerification.cpp
-  TChem_SourceTermToyProblem.cpp
-  TChem_TransientContStirredTankReactorRHS.cpp
-  TChem_Driver.cpp
-  TChem_Driver_C.cpp
-  TChem_PlugFlowReactorModelVariation.cpp
-  TChem_TransientContStirredTankReactorModelVariation.cpp
-  TChem_ConstantVolumeIgnitionReactorSmatrixSensitivityAnalysis.cpp
-  TChem_IgnitionZeroD_SourceTermJacobian.cpp
-  TChem_KForwardReverse.cpp
-  TChem_KForwardReverseSurfaceModelVarition.cpp
-  TChem_NetProductionRatePerMass_Yaml.cpp
-  TChem_NetProductionRatePerMassNCAR.cpp
-  TChem_ThermalProperties_Yaml.cpp
-  TChem_NetProductionRateSurfacePerMass_Yaml.cpp
-  TChem_RateOfProgressJacobian.cpp
-  TChem_IgnitionZeroDJacobians.cpp
   TChem_AtmosphericChemistry.cpp
+  TChem_ConstantVolumeIgnitionReactorSmatrixSensitivityAnalysis.cpp
+  TChem_GkSurfGas.cpp
+  TChem_IgnitionZeroD_ModelVariation.cpp
+  TChem_IgnitionZeroD_SourceTermJacobian.cpp
+  TChem_IgnitionZeroDJacobians.cpp
+  TChem_IgnitionZeroDSA.cpp
+  TChem_InitialCondSurface.cpp
+  TChem_Jacobian.cpp
+  TChem_JacobianSacado.cpp
+  TChem_JacobianVerification.cpp
+  TChem_KForwardReverse.cpp
+  TChem_KForwardReverseSurface.cpp
+  TChem_KForwardReverseSurfaceModelVariation.cpp
+  TChem_NetProductionRatePerMass_Yaml.cpp
+  TChem_NetProductionRatePerMass.cpp
+  TChem_NetProductionRatePerMassNCAR.cpp
+  TChem_NetProductionRateSurfacePerMass_Yaml.cpp
+  TChem_NetProductionRateSurfacePerMass.cpp
+  TChem_PlugFlowReactor.cpp
+  TChem_PlugFlowReactorJacobianSacado.cpp
+  TChem_PlugFlowReactorModelVariation.cpp
+  TChem_PlugFlowReactorRHS.cpp
+  TChem_PlugFlowReactorSmat.cpp
+  TChem_RateOfProgressJacobian.cpp
+  TChem_SimpleSurface.cpp
+  TChem_SourceTermToyProblem.cpp
+  TChem_SurfaceRHS.cpp
+  TChem_ThermalProperties_Yaml.cpp
+  TChem_ThermalProperties.cpp
+  TChem_TransientContStirredTankReactor.cpp
+  TChem_TransientContStirredTankReactorJacobianSacado.cpp
+  TChem_TransientContStirredTankReactorModelVariation.cpp
+  TChem_TransientContStirredTankReactorRHS.cpp
 )
 
 
@@ -48,6 +46,55 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
 FOREACH(TCHEM_EXAMPLE_SOURCE ${TCHEM_EXAMPLE_SOURCES} )
   STRING( REPLACE ".cpp" ".x" TCHEM_EXAMPLE_EXE ${TCHEM_EXAMPLE_SOURCE} )
   ADD_EXECUTABLE(${TCHEM_EXAMPLE_EXE} ${TCHEM_EXAMPLE_SOURCE})
+  TARGET_LINK_LIBRARIES(${TCHEM_EXAMPLE_EXE} ${TCHEM_LINK_LIBRARIES})
+  INSTALL(TARGETS ${TCHEM_EXAMPLE_EXE}
+          PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE
+          DESTINATION "${CMAKE_INSTALL_PREFIX}/${TCHEM_INSTALL_EXAMPLE_PATH}")
+ENDFOREACH()
+
+#
+# Driver example with definition
+#
+SET(TCHEM_EXAMPLE_EXES "")
+LIST(APPEND TCHEM_EXAMPLE_EXES
+  TChem_Driver_GasNetProductionRate.x
+  TChem_Driver_GasTimeIntegration.x
+  TChem_Driver_GasJacobianAndRHS.x
+  TChem_Driver_GasArrheniusVariation.x
+)
+
+SET(TCHEM_EXAMPLE_MACROS "")
+LIST(APPEND TCHEM_EXAMPLE_MACROS
+  __TCHEM_DRIVER_GAS_NET_PRODUCTION_RATE__
+  __TCHEM_DRIVER_GAS_TIME_INTEGRATION__
+  __TCHEM_DRIVER_GAS_JACOBIAN_AND_RHS__
+  __TCHEM_DRIVER_GAS_ARRHENIUS_VARIATION__
+)
+
+FOREACH(TCHEM_EXAMPLE_EXE TCHEM_EXAMPLE_MACRO IN ZIP_LISTS TCHEM_EXAMPLE_EXES TCHEM_EXAMPLE_MACROS)
+  ADD_EXECUTABLE(${TCHEM_EXAMPLE_EXE} TChem_Driver.cpp)
+  TARGET_COMPILE_DEFINITIONS(${TCHEM_EXAMPLE_EXE} PUBLIC ${TCHEM_EXAMPLE_MACRO})
+  TARGET_LINK_LIBRARIES(${TCHEM_EXAMPLE_EXE} ${TCHEM_LINK_LIBRARIES})
+  INSTALL(TARGETS ${TCHEM_EXAMPLE_EXE}
+          PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE
+          DESTINATION "${CMAKE_INSTALL_PREFIX}/${TCHEM_INSTALL_EXAMPLE_PATH}")
+ENDFOREACH()
+
+SET(TCHEM_EXAMPLE_EXES "")
+LIST(APPEND TCHEM_EXAMPLE_EXES
+  TChem_Driver_C_GasNetProductionRate.x
+  TChem_Driver_C_GasTimeIntegration.x
+)
+
+SET(TCHEM_EXAMPLE_MACROS "")
+LIST(APPEND TCHEM_EXAMPLE_MACROS
+  __TCHEM_DRIVER_GAS_NET_PRODUCTION_RATE__
+  __TCHEM_DRIVER_GAS_TIME_INTEGRATION__
+)
+
+FOREACH(TCHEM_EXAMPLE_EXE TCHEM_EXAMPLE_MACRO IN ZIP_LISTS TCHEM_EXAMPLE_EXES TCHEM_EXAMPLE_MACROS)
+  ADD_EXECUTABLE(${TCHEM_EXAMPLE_EXE} TChem_Driver_C.cpp)
+  TARGET_COMPILE_DEFINITIONS(${TCHEM_EXAMPLE_EXE} PUBLIC ${TCHEM_EXAMPLE_MACRO})
   TARGET_LINK_LIBRARIES(${TCHEM_EXAMPLE_EXE} ${TCHEM_LINK_LIBRARIES})
   INSTALL(TARGETS ${TCHEM_EXAMPLE_EXE}
           PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE
@@ -86,7 +133,9 @@ INSTALL(DIRECTORY data
 
 #
 FILE(COPY runs
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+     FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
 
 INSTALL(DIRECTORY runs
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/example)
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/example
+        FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)

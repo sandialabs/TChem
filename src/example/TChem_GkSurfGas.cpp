@@ -84,14 +84,10 @@ main(int argc, char* argv[])
     using device_type = typename Tines::UseThisDevice<TChem::exec_space>::type;
 
     // need to fix it
-    TChem::KineticModelData kmdSurf(
+    TChem::KineticModelData kmd(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
-    const auto kmcd =
-      kmdSurf
-        .createConstData<device_type>(); // data struc with gas phase info
-    const auto kmcdSurf =
-      kmdSurf.createConstSurfData<device_type>(); // data struc with
-                                                        // surface phase info
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
+    const auto kmcdSurf = TChem::createSurfaceKineticModelConstData<device_type>(kmd);
 
     /// input: state vectors: temperature, pressure and mass fraction
     real_type_2d_view state(

@@ -106,16 +106,26 @@ static constexpr bool verboseEnabled = false;
 
 #if defined(TCHEM_ENABLE_DEBUG)
 #if defined(KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST)
-#define TCHEM_CHECK_ERROR(err, msg)                                            \
-  if (err)                                                                     \
+#define TCHEM_DEBUG_CHECK_ERROR(err, msg)				\
+  if (err)								\
     std::logic_error(msg);
 #else
-#define TCHEM_CHECK_ERROR(err, msg)                                            \
-  if (err)                                                                     \
+#define TCHEM_DEBUG_CHECK_ERROR(err, msg)				\
+  if (err)								\
     printf("%s\n", msg);
 #endif
 #else
-#define TCHEM_CHECK_ERROR(err, msg)
+#define TCHEM_DEBUG_CHECK_ERROR(err, msg)
+#endif
+
+#if defined(KOKKOS_ACTIVE_EXECUTION_MEMORY_SPACE_HOST)
+#define TCHEM_CHECK_ERROR(err, msg)					\
+  if (err)								\
+    std::logic_error(msg);
+#else
+#define TCHEM_CHECK_ERROR(err, msg)					\
+  if (err)								\
+    printf("%s\n", msg);
 #endif
 
 /// parameters
@@ -269,6 +279,11 @@ struct ArrheniusReactionType
 
 using arrhenius_reaction_type_1d_dual_view = Tines::value_type_1d_dual_view<ArrheniusReactionType, exec_space>;
 
+/// kinetic model data
+struct KineticModelData;
+using kmd_type = KineticModelData;
+using kmd_type_1d_view_host = Tines::value_type_1d_view<kmd_type,interf_host_device_type>;
+
 /// time marching data structure
 struct TimeAdvance
 {
@@ -353,6 +368,7 @@ struct TransientContStirredTankReactorData
 /// utility function
 using do_not_init_tag = std::string; // Kokkos::ViewAllocateWithoutInitializing;
                                      // // currently not working
+
 template<typename T>
 using ats = Tines::ArithTraits<T>;
 
@@ -665,14 +681,14 @@ struct FakeTeam
 namespace Impl {
 
   // default
-  //#define TCHEM_LEAGUE_RANGE_DYNAMIC
+  #define TCHEM_LEAGUE_RANGE_DYNAMIC
   //#define TCHEM_LEAGUE_RANGE_STATIC
-  
+
 /// decoupling team from nbatch
 template<typename MemberType>
 static KOKKOS_INLINE_FUNCTION void
 getLeagueRange(const MemberType & member, const ordinal_type n,
-	       ordinal_type & ibeg, ordinal_type & iend, ordinal_type & iinc) 
+	       ordinal_type & ibeg, ordinal_type & iend, ordinal_type & iinc)
 {
 #if defined(TCHEM_LEAGUE_RANGE_DYNAMIC)
   ibeg = member.league_rank();
@@ -681,15 +697,15 @@ getLeagueRange(const MemberType & member, const ordinal_type n,
 #elif defined(TCHEM_LEAGUE_RANGE_STATIC)
   const ordinal_type lsize = member.league_size();
   const ordinal_type istep = (n/lsize) + (n%lsize > 0);
-  ibeg = member.league_rank*istep;
-  const ordinal_Type itmp = ibeg + istep;
+  ibeg = member.league_rank()*istep;
+  const ordinal_type itmp = ibeg + istep;
   iend = itmp < n ? itmp : n;
   iinc = 1;
 #else
-  TCHEM_CHECK_ERROR(member.league_size() != n, "Error: league size does not match to input");	
+  TCHEM_CHECK_ERROR(member.league_size() != n, "Error: league size does not match to input");
   ibeg = member.league_rank();
   iend = ibeg+1;
-  iinc = 1;	
+  iinc = 1;
 #endif
 }
 
@@ -1370,12 +1386,12 @@ compareFilesValues(const std::string& filename1, const std::string& filename2)
       printf("test : Could not open %s -> Abort !\n", filename2.c_str());
       return (false);
     }
-    printf("Files are not exactly the same \n");
+    printf("There are differences between the reference file and current file: reference: %s current: %s \n", filename2.c_str(), filename1.c_str());
     printf("Maximum relative error : %15.10e \n",max_relative_error );
     printf("Maximum absolute error : %15.10e \n", max_absolute_error );
     printf("Current value :  %15.10e Reference value : %15.10e \n",save_value1 ,save_value2 );
-    const real_type threshold = ats::epsilon() * save_value2;
-    if ( max_relative_error < threshold) {
+    const real_type threshold = ats::epsilon() * real_type(100);
+    if ( max_absolute_error < threshold) {
       printf("PASS with threshold: %15.10e \n", threshold );
       passTest=true;
     } else {

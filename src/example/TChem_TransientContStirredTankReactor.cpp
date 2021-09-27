@@ -192,9 +192,9 @@ main(int argc, char* argv[])
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
     if (verbose) {
-      printf("Inlet mass faction %e\n", mdotIn );
-      printf("Catalytic Area %e\n",Acat);
-      printf("Vol %e\n",Vol );
+      printf("Inlet mass flow %e kg/s \n", mdotIn );
+      printf("Catalytic Area %e m2 \n",Acat);
+      printf("Vol %e m3 \n",Vol );
     }
 
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
@@ -205,14 +205,10 @@ main(int argc, char* argv[])
 
     /// construct kmd and use the view for testing
 
-    TChem::KineticModelData kmdSurf(
+    TChem::KineticModelData kmd(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
-    const auto kmcd =
-      kmdSurf
-        .createConstData<device_type>(); // data struc with gas phase info
-    const auto kmcdSurf =
-      kmdSurf.createConstSurfData<device_type>(); // data struc with
-                                                        // surface phase info
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
+    const auto kmcdSurf = TChem::createSurfaceKineticModelConstData<device_type>(kmd);
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);

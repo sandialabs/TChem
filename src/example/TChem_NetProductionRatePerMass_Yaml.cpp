@@ -38,7 +38,7 @@ main(int argc, char* argv[])
   std::string inputFile(prefixPath + "input.dat");
   std::string outputFile(prefixPath + "omega.dat");
   std::string thermFile(prefixPath + "therm.dat");
-  int nBatch(1);
+  int nBatch(1), team_size(-1), vector_size(-1);;
   bool verbose(true);
   bool useYaml(true);
   bool use_sample_format(false);
@@ -58,6 +58,12 @@ main(int argc, char* argv[])
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
+  //
+  opts.set_option<int>(
+    "team_thread_size", "time thread size ", &team_size);
+  //
+  opts.set_option<int>(
+    "vector_thread_size", "vector thread size ", &vector_size);  
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
   opts.set_option<bool>(
@@ -75,6 +81,7 @@ main(int argc, char* argv[])
 
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
+    const auto exec_space_instance = TChem::exec_space();
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd;
@@ -88,7 +95,7 @@ main(int argc, char* argv[])
 
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
-    const auto kmcd = kmd.createConstData<device_type>();
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
 
     /// input: state vectors: temperature, pressure and mass fraction
     real_type_2d_view state(
@@ -138,6 +145,21 @@ main(int argc, char* argv[])
 
     }
 
+    using policy_type =
+      typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
+
+    policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
+    const ordinal_type level = 1;
+
+    if (team_size > 0 && vector_size > 0) {
+      policy = policy_type(exec_space_instance, nBatch, team_size, vector_size);
+    }
+
+    const ordinal_type per_team_extent = NetProductionRatePerMass::getWorkSpaceSize(kmcd);
+    ordinal_type per_team_scratch =
+      TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+
 
     Kokkos::Impl::Timer timer;
 
@@ -146,7 +168,7 @@ main(int argc, char* argv[])
     const real_type t_deepcopy = timer.seconds();
 
     timer.reset();
-    TChem::NetProductionRatePerMass::runDeviceBatch(nBatch, state, omega, kmcd);
+    TChem::NetProductionRatePerMass::runDeviceBatch(policy, state, omega, kmcd);
     Kokkos::fence(); /// timing purpose
     const real_type t_device_batch = timer.seconds();
 

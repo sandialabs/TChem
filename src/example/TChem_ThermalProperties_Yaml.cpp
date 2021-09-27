@@ -81,7 +81,7 @@ main(int argc, char* argv[])
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile);
-    const auto kmcd = kmd.createConstData<device_type>();
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
 

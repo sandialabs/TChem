@@ -43,6 +43,20 @@ public:
   ///
   /// copy utils
   ///
+  void copyToNonConstView(py::array_t<ordinal_type> a, TChem::ordinal_type_1d_view_host b) {
+    py::buffer_info buf = a.request();
+    TCHEM_CHECK_ERROR(buf.ndim != 1, "Error: input state is not rank 1 array");
+    const ordinal_type * src = (const ordinal_type*)buf.ptr;
+    const int ss = buf.strides[0]/sizeof(ordinal_type);
+    auto tgt = b;
+    TCHEM_CHECK_ERROR(tgt.extent(0) != buf.shape[0], "Error: vector length does not match");
+
+    /// this is a small vector
+    const int m = tgt.extent(0);
+    for (int ii=0;ii<m;++ii)
+      tgt(ii) = src[ii*ss];
+  }
+
   void copyToNonConstView(py::array_t<real_type> a, TChem::real_type_1d_view_host b) {
     py::buffer_info buf = a.request();
     TCHEM_CHECK_ERROR(buf.ndim != 1, "Error: input state is not rank 1 array");
@@ -109,19 +123,33 @@ public:
     });
   }
 
-  ///
-  /// kinetic model interface
-  /// - when a kinetic model recreate, all view objects are freed.
-  void createKineticModel(const std::string& chem_file, const std::string& therm_file) {
-    _obj->createKineticModel(chem_file, therm_file);
-  }
+  void copyToNonConstView(py::array_t<real_type> a, TChem::real_type_3d_view_host b) {
+    py::buffer_info buf = a.request();
+    TCHEM_CHECK_ERROR(buf.ndim != 3, "Error: input state is not rank 2 array");
 
-  int getNumberOfSpecies() const {
-    return _obj->getNumberOfSpecies();
-  }
+    const real_type * src = (const real_type*)buf.ptr;
+    const int
+      ss0 = buf.strides[0]/sizeof(real_type),
+      ss1 = buf.strides[1]/sizeof(real_type),
+      ss2 = buf.strides[2]/sizeof(real_type);
 
-  int getNumberOfReactions() const {
-    return _obj->getNumberOfReactions();
+    auto tgt = b;
+    TCHEM_CHECK_ERROR(tgt.extent(0) != buf.shape[0] ||
+		      tgt.extent(1) != buf.shape[1] ||
+		      tgt.extent(2) != buf.shape[2]
+		      , "Error: matrix length does not match");
+
+    /// this is a small vector
+    const int m = tgt.extent(0), n = tgt.extent(1), l = tgt.extent(2), nl = n*l;
+
+    const Kokkos::RangePolicy<host_exec_space> policy(0, m*n*l);
+    Kokkos::parallel_for(policy, [=](const int ijk) {
+      const int ii = ijk/(nl);
+      const int ij = ijk - (ii*nl);
+      const int jj = ij/l;
+      const int kk = ij%l;
+      tgt(ii,jj,kk) = src[ii*ss0+jj*ss1+kk*ss2];
+    });
   }
 
   ///
@@ -134,6 +162,62 @@ public:
   int getNumberOfSamples() const {
     return _obj->getNumberOfSamples();
   }
+
+  ///
+  /// kinetic model interface
+  /// - when a kinetic model recreate, all view objects are freed.
+  void createGasKineticModel(const std::string& chem_file, const std::string& therm_file) {
+    _obj->createGasKineticModel(chem_file, therm_file);
+  }
+
+  void cloneGasKineticModel() {
+    _obj->cloneGasKineticModel();
+  }
+
+  /// make factors unit
+  void modifyGasArrheniusForwardParameters(py::array_t<ordinal_type> reac_indices,
+					   py::array_t<real_type> factors) {
+    TCHEM_CHECK_ERROR(reac_indices.ndim() != 1, "Error: input reac indices is not rank 1 array");
+    TCHEM_CHECK_ERROR(factors.ndim() != 3, "Error: input reac factors is not rank 3 array");
+
+    TChem::ordinal_type_1d_view_host
+      reac_indices_view(TChem::do_not_init_tag("reac indices"),
+			reac_indices.shape(0));
+
+    TChem::real_type_3d_view_host
+      factors_view(TChem::do_not_init_tag("factors"),
+		   factors.shape(0), factors.shape(1),factors.shape(2));
+
+
+    /// when input array is sliced (non contiguous array), it needs to be repacked
+    copyToNonConstView(reac_indices, reac_indices_view);
+    copyToNonConstView(factors, factors_view);
+    _obj->modifyGasArrheniusForwardParameters(reac_indices_view, factors_view);
+  }
+
+  void createGasKineticModelConstData() {
+    _obj->createGasKineticModelConstData();
+  }
+
+  void createGasKineticModelConstDataWithArreniusForwardParameters(py::array_t<ordinal_type> reac_indices,
+             py::array_t<real_type> factors)
+  {
+    // 1. make copies of kinetic model
+    _obj->cloneGasKineticModel();
+    // 2. modify arrhenius parameters
+    modifyGasArrheniusForwardParameters(reac_indices, factors);
+    // 3. create constant gas model
+    _obj->createGasKineticModelConstData();
+  }
+
+  int getNumberOfSpecies() const {
+    return _obj->getNumberOfSpecies();
+  }
+
+  int getNumberOfReactions() const {
+    return _obj->getNumberOfReactions();
+  }
+
 
   ///
   /// state vector setup helper
@@ -181,6 +265,49 @@ public:
     return tgt;
   }
 
+  py::array_t<real_type> getGasArrheniusForwardParameterModel(const int imodel,
+							      py::array_t<ordinal_type> reac_indices,
+							      const int param_index) {
+    py::buffer_info reac_buf = reac_indices.request();
+    TCHEM_CHECK_ERROR(reac_buf.ndim != 1, "Error: input reac indices is not rank 1 array");
+
+    const ordinal_type * reac_ptr = (const ordinal_type*)reac_buf.ptr;
+    const int rs = reac_buf.strides[0]/sizeof(ordinal_type);
+    const int n_reac_buf = reac_buf.shape[0];
+
+    auto tgt = py::array_t<real_type>(n_reac_buf);
+
+    py::buffer_info tgt_buf = tgt.request();
+    real_type * tgt_ptr = (real_type*)tgt_buf.ptr;
+    const int ts = tgt_buf.strides[0]/sizeof(real_type);
+    for (int i=0;i<n_reac_buf;++i) {
+      const int reac_index = reac_ptr[i*rs];
+      tgt_ptr[i*ts] = _obj->getGasArrheniusForwardParameter(imodel, reac_index, param_index);
+    }
+    return tgt;
+  }
+
+  py::array_t<real_type> getGasArrheniusForwardParameterReference(py::array_t<ordinal_type> reac_indices,
+								  const int param_index) {
+    py::buffer_info reac_buf = reac_indices.request();
+    TCHEM_CHECK_ERROR(reac_buf.ndim != 1, "Error: input reac indices is not rank 1 array");
+
+    const ordinal_type * reac_ptr = (const ordinal_type*)reac_buf.ptr;
+    const int rs = reac_buf.strides[0]/sizeof(ordinal_type);
+    const int n_reac_buf = reac_buf.shape[0];
+
+    auto tgt = py::array_t<real_type>(n_reac_buf);
+    py::buffer_info tgt_buf = tgt.request();
+    real_type * tgt_ptr = (real_type*)tgt_buf.ptr;
+    const int ts = tgt_buf.strides[0]/sizeof(real_type);
+
+    for (int i=0;i<n_reac_buf;++i) {
+      const int reac_index = reac_ptr[i*rs];
+      tgt_ptr[i*ts] = _obj->getGasArrheniusForwardParameter(reac_index, param_index);
+    }
+    return tgt;
+  }
+
   void setStateVectorAll(py::array_t<real_type> src) {
     TCHEM_CHECK_ERROR(!_obj->isStateVectorCreated(), "Error: state vector is not created");
 
@@ -204,14 +331,14 @@ public:
   ///
   /// net production rate
   ///
-  void createNetProductionRatePerMass() {
-    _obj->createNetProductionRatePerMass();
+  void createGasNetProductionRatePerMass() {
+    _obj->createGasNetProductionRatePerMass();
   }
 
-  py::array_t<real_type> getNetProductionRatePerMassSingle(const int i) {
-    TCHEM_CHECK_ERROR(!_obj->isNetProductionRatePerMassCreated(), "Error: net production rate per mass is not created");
+  py::array_t<real_type> getGasNetProductionRatePerMassSingle(const int i) {
+    TCHEM_CHECK_ERROR(!_obj->isGasNetProductionRatePerMassCreated(), "Error: net production rate per mass is not created");
     TChem::real_type_1d_const_view_host src;
-    _obj->getNetProductionRatePerMassHost(i, src);
+    _obj->getGasNetProductionRatePerMassHost(i, src);
 
     auto tgt = py::array_t<real_type>(src.extent(0));
 
@@ -219,10 +346,10 @@ public:
     return tgt;
   }
 
-  py::array_t<real_type> getNetProductionRatePerMassAll() {
-    TCHEM_CHECK_ERROR(!_obj->isNetProductionRatePerMassCreated(), "Error: net production rate per mass is not created");
+  py::array_t<real_type> getGasNetProductionRatePerMassAll() {
+    TCHEM_CHECK_ERROR(!_obj->isGasNetProductionRatePerMassCreated(), "Error: net production rate per mass is not created");
     TChem::real_type_2d_const_view_host src;
-    _obj->getNetProductionRatePerMassHost(src);
+    _obj->getGasNetProductionRatePerMassHost(src);
 
     auto tgt = py::array_t<real_type>(src.span());
     tgt.resize({src.extent(0), src.extent(1)});
@@ -230,8 +357,8 @@ public:
     return tgt;
   }
 
-  void computeNetProductionRatePerMass() {
-    _obj->computeNetProductionRatePerMassDevice();
+  void computeGasNetProductionRatePerMass() {
+    _obj->computeGasNetProductionRatePerMassDevice();
   }
 
   // jacobian
@@ -303,11 +430,11 @@ public:
 
   // kforward and reverse
 
-  py::array_t<real_type> getForwardReactionRateConstants() {
-    TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
+  py::array_t<real_type> getGasForwardReactionRateConstants() {
+    TCHEM_CHECK_ERROR(!_obj->isGasReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
     TChem::real_type_2d_const_view_host kfor;
     TChem::real_type_2d_const_view_host krev;
-    _obj->getReactionRateConstantsHost(kfor, krev);
+    _obj->getGasReactionRateConstantsHost(kfor, krev);
 
     auto tgt = py::array_t<real_type>(kfor.span());
     tgt.resize({kfor.extent(0), kfor.extent(1)});
@@ -316,11 +443,11 @@ public:
     return tgt;
   }
 
-  py::array_t<real_type> getReverseReactionRateConstants() {
-    TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
+  py::array_t<real_type> getGasReverseReactionRateConstants() {
+    TCHEM_CHECK_ERROR(!_obj->isGasReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
     TChem::real_type_2d_const_view_host kfor;
     TChem::real_type_2d_const_view_host krev;
-    _obj->getReactionRateConstantsHost(kfor, krev);
+    _obj->getGasReactionRateConstantsHost(kfor, krev);
 
     auto tgt = py::array_t<real_type>(krev.span());
     tgt.resize({krev.extent(0), krev.extent(1)});
@@ -329,11 +456,11 @@ public:
     return tgt;
   }
 
-  py::array_t<real_type> getForwardReactionRateConstantsSingle(const int i) {
-    TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
+  py::array_t<real_type> getGasForwardReactionRateConstantsSingle(const int i) {
+    TCHEM_CHECK_ERROR(!_obj->isGasReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
     TChem::real_type_1d_const_view_host kfor;
     TChem::real_type_1d_const_view_host krev;
-    _obj->getReactionRateConstantsHost(i, kfor, krev);
+    _obj->getGasReactionRateConstantsHost(i, kfor, krev);
 
     auto tgt = py::array_t<real_type>(kfor.span());
     tgt.resize({kfor.extent(0)});
@@ -342,11 +469,11 @@ public:
     return tgt;
   }
 
-  py::array_t<real_type> getReverseReactionRateConstantsSingle(const int i) {
-    TCHEM_CHECK_ERROR(!_obj->isReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
+  py::array_t<real_type> getGasReverseReactionRateConstantsSingle(const int i) {
+    TCHEM_CHECK_ERROR(!_obj->isGasReactionRateConstantsCreated(), "Error: reaction rate constants are not created");
     TChem::real_type_1d_const_view_host kfor;
     TChem::real_type_1d_const_view_host krev;
-    _obj->getReactionRateConstantsHost(i, kfor, krev);
+    _obj->getGasReactionRateConstantsHost(i, kfor, krev);
 
     auto tgt = py::array_t<real_type>(krev.span());
     tgt.resize({krev.extent(0)});
@@ -355,20 +482,20 @@ public:
     return tgt;
   }
 
-  void createReactionRateConstants() {
-    _obj->createReactionRateConstants();
+  void createGasReactionRateConstants() {
+    _obj->createGasReactionRateConstants();
   }
 
-  void computeReactionRateConstants() {
-    _obj->computeReactionRateConstantsDevice();
+  void computeGasReactionRateConstants() {
+    _obj->computeGasReactionRateConstantsDevice();
   }
 
   // enthalpy mix
 
-  py::array_t<real_type> getEnthapyMass() {
-    TCHEM_CHECK_ERROR(!_obj->isEnthapyMassCreated(), "Error: enthalpy is not created");
+  py::array_t<real_type> getGasEnthapyMass() {
+    TCHEM_CHECK_ERROR(!_obj->isGasEnthapyMassCreated(), "Error: enthalpy is not created");
     TChem::real_type_2d_const_view_host src;
-    _obj->getEnthapyMassHost(src);
+    _obj->getGasEnthapyMassHost(src);
 
     auto tgt = py::array_t<real_type>(src.span());
     tgt.resize({src.extent(0), src.extent(1)});
@@ -377,10 +504,10 @@ public:
     return tgt;
   }
 
-  py::array_t<real_type> getEnthapyMixMass() {
-    TCHEM_CHECK_ERROR(!_obj->isEnthapyMassCreated(), "Error: enthalpy is not created");
+  py::array_t<real_type> getGasEnthapyMixMass() {
+    TCHEM_CHECK_ERROR(!_obj->isGasEnthapyMassCreated(), "Error: enthalpy is not created");
     TChem::real_type_1d_const_view_host src;
-    _obj->getEnthapyMixMassHost(src);
+    _obj->getGasEnthapyMixMassHost(src);
 
     auto tgt = py::array_t<real_type>(src.span());
     tgt.resize({src.extent(0)});
@@ -389,12 +516,12 @@ public:
     return tgt;
   }
 
-  void createEnthapyMass() {
-    _obj->createEnthapyMass();
+  void createGasEnthapyMass() {
+    _obj->createGasEnthapyMass();
   }
 
-  void computeEnthapyMass() {
-    _obj->computeEnthapyMassDevice();
+  void computeGasEnthapyMass() {
+    _obj->computeGasEnthapyMassDevice();
   }
 
   /// homogeneous gas reactor
@@ -423,10 +550,6 @@ public:
   ///
   /// t and dt accessor
   ///
-  void unsetTimeAdvance() {
-    _obj->unsetTimeAdvance();
-  }
-
   py::array_t<real_type> getTimeStep() {
     TChem::real_type_1d_const_view_host src;
     _obj->getTimeStepHost(src);
@@ -460,7 +583,7 @@ public:
 };
 
 PYBIND11_MODULE(pytchem, m) {
-    m.doc() = R"pbdoc(
+  m.doc() = R"pbdoc(
         TChem for Python
         ----------------
         .. currentmodule:: pytchem
@@ -469,156 +592,186 @@ PYBIND11_MODULE(pytchem, m) {
         KokkosHelper
         TChemDriver
     )pbdoc";
-    m.def("initialize", &TChemKokkosInterface::initialize, "Initialize Kokkos");
-    m.def("finalize", &TChemKokkosInterface::finalize, "Finalize Kokkos");
-    m.def("fence", &TChemKokkosInterface::fence, "Execute Kokkos::fence");
-    py::class_<TChemDriver>
-      (m,
-       "TChemDriver",
-       R"pbdoc(A class to manage data movement between numpy to kokkos views in TChem::Driver object)pbdoc")
-      .def(py::init<>())
-      //// kinetic model interface
-      .def("createKineticModel",
-	   py_overload_cast<const std::string&,const std::string&>()(&TChemDriver::createKineticModel),
-	   py::arg("chemkin_input"), py::arg("thermo_data"),
-	   "Create a kinetic model from CHEMKIN input files")
-      .def("getNumberOfSpecies",
-	   (&TChemDriver::getNumberOfSpecies),
-	   "Get the number of species registered in the kinetic model")
-      .def("getNumberOfReactions",
-	   (&TChemDriver::getNumberOfReactions),
-	   "Get the number of reactions registered in the kinetic model")
-      //// batch parallel interface
-      .def("setNumberOfSamples",
-	   (&TChemDriver::setNumberOfSamples), py::arg("number_of_samples"),
-	   "Set the number of samples; this is used for Kokkos view allocation")
-      .def("getNumberOfSamples",
-	   (&TChemDriver::getNumberOfSamples),
-	   "Get the number of samples which is currently used in the driver")
-      /// state vector helpers
-      .def("getLengthOfStateVector",
-	   (&TChemDriver::getLengthOfStateVector),
-	   "Get the size of state vector i.e., rho, P, T, Y_{0-Nspec-1}")
-      .def("getSpeciesIndex",
-           (&TChemDriver::getSpeciesIndex),py::arg("species_name"),
-           "Get species index" )
-      .def("getStateVariableIndex",
-           (&TChemDriver::getStateVariableIndex), py::arg("var_name"), "Get state variable index " )
-      /// state vector
-      .def("createStateVector",
-	   (&TChemDriver::createStateVector),
-	   "Allocate memory for state vector (# samples, state vector length)")
-      .def("setStateVector",
-	   (&TChemDriver::setStateVectorSingle), py::arg("sample_index"), py::arg("1d_state_vector"),
-	   "Overwrite state vector for a single sample")
-      .def("setStateVector",
-	   (&TChemDriver::setStateVectorAll), py::arg("2d_state_vector"),
-	   "Overwrite state vector for all samples")
-      .def("getStateVector",
-	   (&TChemDriver::getStateVectorSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
-	   "Retrieve state vector for a single sample")
-      .def("getStateVector",
-	   (&TChemDriver::getStateVectorAll), py::return_value_policy::take_ownership,
-	   "Retrieve state vector for all samples")
-      /// net production rate
-      .def("createNetProductionRatePerMass",
-	   (&TChemDriver::createNetProductionRatePerMass),
-	   "Allocate memory for net production rate per mass (# samples, # species)")
-      .def("getNetProductionRatePerMass",
-	   (&TChemDriver::getNetProductionRatePerMassSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
-	   "Retrive net production rate for a single sample")
-      .def("getNetProductionRatePerMass",
-	   (&TChemDriver::getNetProductionRatePerMassAll), py::return_value_policy::take_ownership,
-	   "Retrieve net production rate for all samples")
-      .def("computeNetProductionRatePerMass",
-	   (&TChemDriver::computeNetProductionRatePerMass), "Compute net production rate")
-     // jacobian homogeneous gas reactor
-     .def("createJacobianHomogeneousGasReactor",
-    (&TChemDriver::createJacobianHomogeneousGasReactor),
-    "Allocate memory for homogeneous-gas-reactor Jacobian  (# samples, # species + 1  # species + 1)")
-     .def("getJacobianHomogeneousGasReactor",
-    (&TChemDriver::getJacobianHomogeneousGasReactorSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
-    "Retrive homogeneous-gas-reactor Jacobian for a single sample")
+  m.def("initialize", &TChemKokkosInterface::initialize, "Initialize Kokkos");
+  m.def("finalize", &TChemKokkosInterface::finalize, "Finalize Kokkos");
+  m.def("fence", &TChemKokkosInterface::fence, "Execute Kokkos::fence");
+  py::class_<TChemDriver>
+    (m,
+     "TChemDriver",
+     R"pbdoc(A class to manage data movement between numpy to kokkos views in TChem::Driver object)pbdoc")
+    .def(py::init<>())
+    /// kinetic model interface
+    .def("createGasKineticModel",
+	 py_overload_cast<const std::string&,const std::string&>()(&TChemDriver::createGasKineticModel),
+	 py::arg("chemkin_input"), py::arg("thermo_data"),
+	 "Create a kinetic model from CHEMKIN input files")
+    /// batch parallel interface
+    .def("setNumberOfSamples",
+	 (&TChemDriver::setNumberOfSamples), py::arg("number_of_samples"),
+	 "Set the number of samples; this is used for Kokkos view allocation")
+    .def("getNumberOfSamples",
+	 (&TChemDriver::getNumberOfSamples),
+	 "Get the number of samples which is currently used in the driver")
+    /// modify kinetic model
+    .def("cloneGasKineticModel",
+	 (&TChemDriver::cloneGasKineticModel),
+	 "Internally create clones of the kinetic model")
+    .def("modifyGasArrheniusForwardParameters",
+	 (&TChemDriver::modifyGasArrheniusForwardParameters),
+	 py::arg("reac_indices"), py::arg("factors"),
+	 "Modify the cloned kinetic models Arrhenius parameters")
+    .def("createGasKineticModelConstData",
+	 (&TChemDriver::createGasKineticModelConstData),
+	 "Internally construct const object of the kinetic model and load them to device")
+   .def("createGasKineticModelConstDataWithArreniusForwardParameters",
+   (&TChemDriver::createGasKineticModelConstDataWithArreniusForwardParameters),
+   py::arg("reac_indices"), py::arg("factors"),
+   "Creates clones of the kinetic model; modifies the Arrhenius forward parameters of the clones;"
+    "and creates a const object of the kinetics models."
+    "factors is a 3d array of size: number of samples, number of reactions to be modified, and 3 kinetic parameters."
+    " kinetic parameters: pre exponential (0), temperature coefficient(1), and activation energy(2)")
+    // arrhenius parameter accessor
+    .def("getGasArrheniusForwardParameter",
+	 (&TChemDriver::getGasArrheniusForwardParameterReference),
+	 py::arg("reac_indices"), py::arg("param_index"),
+	 py::return_value_policy::take_ownership,
+	 "Retrive pre exponential for reactions listed by reaction_indices")
+    .def("getGasArrheniusForwardParameter",
+	 (&TChemDriver::getGasArrheniusForwardParameterModel),
+	 py::arg("imodel"), py::arg("reac_indices"), py::arg("param_index"),
+	 py::return_value_policy::take_ownership,
+	 "Retrive pre exponential for reactions listed by reaction_indices")
+    /// const object interface
+    .def("getNumberOfSpecies",
+	 (&TChemDriver::getNumberOfSpecies),
+	 "Get the number of species registered in the kinetic model")
+    .def("getNumberOfReactions",
+	 (&TChemDriver::getNumberOfReactions),
+	 "Get the number of reactions registered in the kinetic model")
+    /// state vector helpers
+    .def("getLengthOfStateVector",
+	 (&TChemDriver::getLengthOfStateVector),
+	 "Get the size of state vector i.e., rho, P, T, Y_{0-Nspec-1}")
+    .def("getSpeciesIndex",
+	 (&TChemDriver::getSpeciesIndex),py::arg("species_name"),
+	 "Get species index" )
+    .def("getStateVariableIndex",
+	 (&TChemDriver::getStateVariableIndex), py::arg("var_name"), "Get state variable index " )
+    /// state vector
+    .def("createStateVector",
+	 (&TChemDriver::createStateVector),
+	 "Allocate memory for state vector (# samples, state vector length)")
+    .def("setStateVector",
+	 (&TChemDriver::setStateVectorSingle), py::arg("sample_index"), py::arg("1d_state_vector"),
+	 "Overwrite state vector for a single sample")
+    .def("setStateVector",
+	 (&TChemDriver::setStateVectorAll), py::arg("2d_state_vector"),
+	 "Overwrite state vector for all samples")
+    .def("getStateVector",
+	 (&TChemDriver::getStateVectorSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+	 "Retrieve state vector for a single sample")
+    .def("getStateVector",
+	 (&TChemDriver::getStateVectorAll), py::return_value_policy::take_ownership,
+	 "Retrieve state vector for all samples")
+    /// net production rate
+    .def("createGasNetProductionRatePerMass",
+	 (&TChemDriver::createGasNetProductionRatePerMass),
+	 "Allocate memory for net production rate per mass (# samples, # species)")
+    .def("getGasNetProductionRatePerMass",
+	 (&TChemDriver::getGasNetProductionRatePerMassSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+	 "Retrive net production rate for a single sample")
+    .def("getGasNetProductionRatePerMass",
+	 (&TChemDriver::getGasNetProductionRatePerMassAll), py::return_value_policy::take_ownership,
+	 "Retrieve net production rate for all samples")
+    .def("computeGasNetProductionRatePerMass",
+	 (&TChemDriver::computeGasNetProductionRatePerMass), "Compute net production rate")
+    // jacobian homogeneous gas reactor
+    .def("createJacobianHomogeneousGasReactor",
+	 (&TChemDriver::createJacobianHomogeneousGasReactor),
+	 "Allocate memory for homogeneous-gas-reactor Jacobian  (# samples, # species + 1  # species + 1)")
+    .def("getJacobianHomogeneousGasReactor",
+	 (&TChemDriver::getJacobianHomogeneousGasReactorSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+	 "Retrive homogeneous-gas-reactor Jacobian for a single sample")
     //  .def("getJacobianHomogeneousGasReactor",
     // (&TChemDriver::getJacobianHomogeneousGasReactor), py::return_value_policy::take_ownership,
     // "Retrieve homogeneous-gas-reactor Jacobian for all samples")
-     .def("computeJacobianHomogeneousGasReactor",
-    (&TChemDriver::computeJacobianHomogeneousGasReactor), "Compute Jacobian matrix for homogeneous gas reactor")
+    .def("computeJacobianHomogeneousGasReactor",
+	 (&TChemDriver::computeJacobianHomogeneousGasReactor), "Compute Jacobian matrix for homogeneous gas reactor")
     // rhs homogeneous gas reactor
     .def("createRHS_HomogeneousGasReactor",
-   (&TChemDriver::createRHS_HomogeneousGasReactor),
-   "Allocate memory for homogeneous-gas-reactor RHS  (# samples, # species + 1 )")
+	 (&TChemDriver::createRHS_HomogeneousGasReactor),
+	 "Allocate memory for homogeneous-gas-reactor RHS  (# samples, # species + 1 )")
     .def("getRHS_HomogeneousGasReactor",
-   (&TChemDriver::getRHS_HomogeneousGasReactorSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
-   "Retrive homogeneous-gas-reactor RHS for a single sample")
+	 (&TChemDriver::getRHS_HomogeneousGasReactorSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+	 "Retrive homogeneous-gas-reactor RHS for a single sample")
     .def("getRHS_HomogeneousGasReactor",
-   (&TChemDriver::getRHS_HomogeneousGasReactor), py::return_value_policy::take_ownership,
-   "Retrieve homogeneous-gas-reactor RHS_ for all samples")
+	 (&TChemDriver::getRHS_HomogeneousGasReactor), py::return_value_policy::take_ownership,
+	 "Retrieve homogeneous-gas-reactor RHS_ for all samples")
     .def("computeRHS_HomogeneousGasReactor",
-   (&TChemDriver::computeRHS_HomogeneousGasReactor), "Compute RHS for homogeneous gas reactor")
-   // kforwar and reverse
-   .def("createReactionRateConstants",
-  (&TChemDriver::createReactionRateConstants),
-  "Allocate memory for forward/reverse rate constants  (# samples, # reactions )")
-   .def("getForwardReactionRateConstants",
-  (&TChemDriver::getForwardReactionRateConstantsSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
-  "Retrive forward rate constants for a single sample")
-  .def("getReverseReactionRateConstants",
- (&TChemDriver::getReverseReactionRateConstantsSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
- "Retrive reverse rate constants for a single sample")
-   .def("getForwardReactionRateConstants",
-  (&TChemDriver::getForwardReactionRateConstants), py::return_value_policy::take_ownership,
-  "Retrieve forward rate constants  for all samples")
-  .def("getReverseReactionRateConstants",
- (&TChemDriver::getReverseReactionRateConstants), py::return_value_policy::take_ownership,
- "Retrieve reverse rate constants  for all samples")
-   .def("computeReactionRateConstants",
-  (&TChemDriver::computeReactionRateConstants), "Compute forward/reverse rate constant")
-   // ehthalpy mix
-   .def("createEnthapyMass",
-  (&TChemDriver::createEnthapyMass),
-  "Allocate memory for enthalpy mass  (# samples, # species )")
-   .def("getEnthapyMass",
-  (&TChemDriver::getEnthapyMass), py::return_value_policy::take_ownership,
-  "Retrive enthalpy mass per species for all samples")
-   .def("getEnthapyMixMass",
-  (&TChemDriver::getEnthapyMixMass), py::return_value_policy::take_ownership,
-  "Retrieve mixture enthalpy for all samples")
-   .def("computeEnthapyMass",
-  (&TChemDriver::computeEnthapyMass), "Compute enthalpy mass and mixture enthalpy")
+	 (&TChemDriver::computeRHS_HomogeneousGasReactor), "Compute RHS for homogeneous gas reactor")
+    // kforwar and reverse
+    .def("createGasReactionRateConstants",
+	 (&TChemDriver::createGasReactionRateConstants),
+	 "Allocate memory for forward/reverse rate constants  (# samples, # reactions )")
+    .def("getGasForwardReactionRateConstants",
+	 (&TChemDriver::getGasForwardReactionRateConstantsSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+	 "Retrive forward rate constants for a single sample")
+    .def("getGasReverseReactionRateConstants",
+	 (&TChemDriver::getGasReverseReactionRateConstantsSingle), py::arg("sample_index"), py::return_value_policy::take_ownership,
+	 "Retrive reverse rate constants for a single sample")
+    .def("getGasForwardReactionRateConstants",
+	 (&TChemDriver::getGasForwardReactionRateConstants), py::return_value_policy::take_ownership,
+	 "Retrieve forward rate constants  for all samples")
+    .def("getGasReverseReactionRateConstants",
+	 (&TChemDriver::getGasReverseReactionRateConstants), py::return_value_policy::take_ownership,
+	 "Retrieve reverse rate constants  for all samples")
+    .def("computeGasReactionRateConstants",
+	 (&TChemDriver::computeGasReactionRateConstants), "Compute forward/reverse rate constant")
+    // ehthalpy mix
+    .def("createGasEnthapyMass",
+	 (&TChemDriver::createGasEnthapyMass),
+	 "Allocate memory for enthalpy mass  (# samples, # species )")
+    .def("getGasEnthapyMass",
+	 (&TChemDriver::getGasEnthapyMass), py::return_value_policy::take_ownership,
+	 "Retrive enthalpy mass per species for all samples")
+    .def("getGasEnthapyMixMass",
+	 (&TChemDriver::getGasEnthapyMixMass), py::return_value_policy::take_ownership,
+	 "Retrieve mixture enthalpy for all samples")
+    .def("computeGasEnthapyMass",
+	 (&TChemDriver::computeGasEnthapyMass), "Compute enthalpy mass and mixture enthalpy")
 
-      /// homogeneous gas reactor
-      .def("setTimeAdvanceHomogeneousGasReactor",(&TChemDriver::setTimeAdvanceHomogeneousGasReactor),
-           py::arg("tbeg"),  py::arg("tend"), py::arg("dtmin"), py::arg("dtmax"),
-           py::arg("jacobian_interval"),
-           py::arg("max_num_newton_iterations"),
-           py::arg("num_time_iterations_per_interval"),
-           py::arg("atol_newton"), py::arg("rtol_newton"),
-           py::arg("atol_time"), py::arg("rtol_time"),
-           "Set time advance object for homogeneous gas reactor")
-      .def("computeTimeAdvanceHomogeneousGasReactor",
-           (&TChemDriver::computeTimeAdvanceHomogeneousGasReactor),
-           "Compute Time Advance for a Homogeneous-Gas Reactor ")
-      /// time step accessors
+    /// homogeneous gas reactor
+    .def("setTimeAdvanceHomogeneousGasReactor",(&TChemDriver::setTimeAdvanceHomogeneousGasReactor),
+	 py::arg("tbeg"),  py::arg("tend"), py::arg("dtmin"), py::arg("dtmax"),
+	 py::arg("jacobian_interval"),
+	 py::arg("max_num_newton_iterations"),
+	 py::arg("num_time_iterations_per_interval"),
+	 py::arg("atol_newton"), py::arg("rtol_newton"),
+	 py::arg("atol_time"), py::arg("rtol_time"),
+	 "Set time advance object for homogeneous gas reactor")
+    .def("computeTimeAdvanceHomogeneousGasReactor",
+	 (&TChemDriver::computeTimeAdvanceHomogeneousGasReactor),
+	 "Compute Time Advance for a Homogeneous-Gas Reactor ")
+    /// time step accessors
     .def("getTimeStep",
-	  (&TChemDriver::getTimeStep), py::return_value_policy::take_ownership,
-	  "Retrieve time line of all samples")
+	 (&TChemDriver::getTimeStep), py::return_value_policy::take_ownership,
+	 "Retrieve time line of all samples")
     .def("getTimeStepSize",
-	  (&TChemDriver::getTimeStepSize), py::return_value_policy::take_ownership,
-	  "Retrieve time step sizes of all samples")
-      /// view utils
-   .def("createAllViews",
+	 (&TChemDriver::getTimeStepSize), py::return_value_policy::take_ownership,
+	 "Retrieve time step sizes of all samples")
+    /// view utils
+    .def("createAllViews",
 	 (&TChemDriver::createAllViews),
 	 "Allocate all necessary workspace for this driver")
     .def("freeAllViews",
-	  (&TChemDriver::freeAllViews),
-	  "Free all necessary workspace for this driver")
+	 (&TChemDriver::freeAllViews),
+	 "Free all necessary workspace for this driver")
     .def("showViewStatus",
-	   (&TChemDriver::showViewStatus),
-	   "Print member variable view status")
-      ;
+	 (&TChemDriver::showViewStatus),
+	 "Print member variable view status")
+    ;
 
-    m.attr("__version__") = "development";
+  m.attr("__version__") = "development";
 }
 
 #endif

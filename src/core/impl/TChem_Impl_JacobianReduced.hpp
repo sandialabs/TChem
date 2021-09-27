@@ -123,6 +123,7 @@ struct JacobianReduced
                                  team_sum,
                                  iter,
                                  kmcd);
+    member.team_barrier();
 
     /// 1. compute rhomix and wmix
     const real_type rhomix = RhoMixMs::team_invoke(member, t, p, Ys, kmcd);
@@ -132,13 +133,14 @@ struct JacobianReduced
     const ordinal_type jacDimReduced = kmcd.nSpec + 1;
 
     /// 2.1 modify the first column
+    member.team_barrier();
     Kokkos::parallel_for(
-      Kokkos::TeamThreadRange(member, jacDimReduced),
+      Kokkos::ThreadVectorRange(member, jacDimReduced),
       [&](const ordinal_type& j) {
         if (j == 0) {
           /// modify the first column
           const real_type drhodT = -rhomix / t;
-          Kokkos::parallel_for(Kokkos::ThreadVectorRange(member, jacDimReduced),
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(member, jacDimReduced),
                                [&](const ordinal_type& i) {
                                  jac_reduced(i, 0) =
                                    jac_full(i + 2, 2) +
@@ -147,7 +149,7 @@ struct JacobianReduced
         } else {
           /// modify the the rest of columns
           const real_type drhodY = -rhomix * wmix / kmcd.sMass(j - 1);
-          Kokkos::parallel_for(Kokkos::ThreadVectorRange(member, jacDimReduced),
+          Kokkos::parallel_for(Kokkos::TeamThreadRange(member, jacDimReduced),
                                [&](const ordinal_type& i) {
                                  jac_reduced(i, j) =
                                    jac_full(i + 2, j + 2) +

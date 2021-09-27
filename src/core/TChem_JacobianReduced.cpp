@@ -63,7 +63,7 @@ namespace TChem {
           swork = Scratch<real_type_1d_view_type>(member.team_scratch(level), per_team_extent);
           work = real_type_1d_view_type(swork.data(), swork.span());
         }
-        
+
 	ordinal_type ibeg(0), iend(0), iinc(0);
 	Impl::getLeagueRange(member, n, ibeg, iend, iinc);
 	for (ordinal_type i=ibeg;i<iend;i+=iinc) {
@@ -81,6 +81,13 @@ namespace TChem {
 	  }
 	}
       });
+#if defined(KOKKOS_ENABLE_CUDA)
+    {
+      auto err = cudaGetLastError();
+      if (err)
+        printf("error %s \n", cudaGetErrorString(err));
+    }
+#endif
     Kokkos::Profiling::popRegion();
   }
 

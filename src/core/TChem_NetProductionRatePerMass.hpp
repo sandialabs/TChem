@@ -48,7 +48,6 @@ struct NetProductionRatePerMass
   }
 
   static void runHostBatch( /// input
-    const ordinal_type nBatch,
     const real_type_2d_view_host_type& state,
     /// output
     const real_type_2d_view_host_type& omega,
@@ -64,7 +63,6 @@ struct NetProductionRatePerMass
     const kinetic_model_type& kmcd);
   //
   static void runDeviceBatch( /// input
-    const ordinal_type nBatch,
     const real_type_2d_view_type& state,
     /// output
     const real_type_2d_view_type& omega,

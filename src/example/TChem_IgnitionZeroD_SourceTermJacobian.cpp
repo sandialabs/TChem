@@ -77,7 +77,7 @@ main(int argc, char* argv[])
 
     /// construct const (read-only) data and move the data to device.
     /// for host device, it is soft copy (pointer assignmnet).
-    auto kmcd = kmd.createConstData<host_device_type>();
+    auto kmcd = TChem::createGasKineticModelConstData<host_device_type>(kmd);
 
     ///
     /// 5. Problem setup

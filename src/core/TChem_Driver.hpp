@@ -30,13 +30,19 @@ namespace TChem {
     using policy_type = typename TChem::UseThisTeamPolicy<exec_space>::type;
 
   private:
-
-    bool _kmd_created;
     std::string _chem_file, _therm_file;
+    
     TChem::KineticModelData _kmd;
-    TChem::KineticModelConstData<interf_device_type> _kmcd_device;
-    TChem::KineticModelConstData<interf_host_device_type> _kmcd_host;
+    TChem::KineticModelGasConstData<interf_device_type> _kmcd_device;
+    TChem::KineticModelGasConstData<interf_host_device_type> _kmcd_host;
 
+    // model variation
+    Kokkos::View<TChem::KineticModelData*, Kokkos::HostSpace> _kmds;
+    Kokkos::View<TChem::KineticModelGasConstData<interf_device_type>*,interf_device_type> _kmcds_device;
+    Kokkos::View<TChem::KineticModelGasConstData<interf_host_device_type>*,interf_host_device_type> _kmcds_host;
+
+    bool _is_gasphase_kmcd_created;
+    
     ordinal_type _n_sample;
 
     ///
@@ -48,21 +54,20 @@ namespace TChem {
     /// variables
     real_type_2d_dual_view _state;
 
-    real_type_2d_dual_view _net_production_rate_per_mass;
-    //  jacobian homogeneous gas reactor
-    real_type_3d_dual_view _jacobian_homogeneous_gas_reactor;
-
-    // rhs homogeneous gas reactor
-    real_type_2d_dual_view _rhs_homogeneous_gas_reactor;
-
+    // Forward and reverse constants
+    real_type_2d_dual_view _kforward;
+    real_type_2d_dual_view _kreverse;
+    
     // enthalpy mix
     real_type_2d_dual_view _enthalpy_mass;
     real_type_1d_dual_view _enthalpy_mix_mass;
 
-    // Forward and reverse constants
-    real_type_2d_dual_view _kforward;
-    real_type_2d_dual_view _kreverse;
-    policy_type _policy_KForRev;
+    // gas phase net production rates
+    real_type_2d_dual_view _net_production_rate_per_mass;
+
+    //  homogeneous gas reactor
+    real_type_3d_dual_view _jacobian_homogeneous_gas_reactor;
+    real_type_2d_dual_view _rhs_homogeneous_gas_reactor;
 
     /// time integations
     time_advance_type_1d_view _tadv;
@@ -76,13 +81,10 @@ namespace TChem {
 
     /// this is for time integration where the policy is reused
     policy_type _policy  ;
-    policy_type _policy_enthalpy;
-
-    /// with reactor set function, this flag is on and time advance is ready
-    ordinal_type _is_time_advance_set;
 
     void createTeamExecutionPolicy(const ordinal_type& per_team_extent);
     void createTimeAdvance(const ordinal_type& number_of_ODEs, const ordinal_type & number_of_equations );
+    bool isTimeAdvanceCreated() const;
     void setTimeAdvance(const TChem::time_advance_type& tadv_default,
                         const real_type& atol_newton, const real_type&rtol_newton,
                         const real_type& atol_time, const real_type& rtol_time);
@@ -91,13 +93,27 @@ namespace TChem {
   public:
     Driver();
     Driver(const std::string& chem_file, const std::string& therm_file);
+
+    void freeAll();
     ~Driver();
 
+    
     ///
     /// kinetic model interface; new kinetic model will free all views
     ///
-    void createKineticModel(const std::string& chem_file, const std::string& therm_file);
-    void freeKineticModel();
+    void createGasKineticModel(const std::string& chem_file, const std::string& therm_file);
+    bool isGasKineticModelCreated() const;
+
+    void cloneGasKineticModel();
+    bool isGasKineticModelCloned() const;
+
+    void modifyGasArrheniusForwardParameters(const ordinal_type_1d_view_host & reac_indices,
+						  const real_type_3d_view_host & factors);
+    void createGasKineticModelConstData();
+    bool isGasKineticModelConstDataCreated() const;
+    
+    void freeGasKineticModel();
+
     ordinal_type getNumberOfSpecies() const;
     ordinal_type getNumberOfReactions() const;
 
@@ -115,6 +131,31 @@ namespace TChem {
     ordinal_type getStateVariableIndex(const std::string& var_name) const;
 
     ///
+    /// arrhenius forward parameter accessor
+    ///
+
+    /// from the reference const object
+    real_type getGasArrheniusForwardParameter(const ordinal_type reac_index,
+					      const ordinal_type param_index);
+    void getGasArrheniusForwardParameter(const ordinal_type_1d_view_host & reac_indices,
+					 const ordinal_type param_index,
+					 const real_type_1d_view_host & params);
+    void getGasArrheniusForwardParameter(const ordinal_type_1d_view_host & reac_indices,
+					 const real_type_2d_view_host & params);
+
+    /// from the array object
+    real_type getGasArrheniusForwardParameter(const ordinal_type imodel,
+					      const ordinal_type reac_index,
+					      const ordinal_type param_index);
+    void getGasArrheniusForwardParameter(const ordinal_type imodel,
+					 const ordinal_type_1d_view_host & reac_indices,
+					 const ordinal_type param_index,
+					 const real_type_1d_view_host & params);
+    void getGasArrheniusForwardParameter(const ordinal_type imodel,
+					 const ordinal_type_1d_view_host & reac_indices,
+					 const real_type_2d_view_host & params);
+    
+    ///
     /// state vector
     ///
     bool isStateVectorCreated() const; /// why
@@ -128,18 +169,48 @@ namespace TChem {
     void getStateVectorNonConstHost(real_type_2d_view_host& view);
 
     ///
+    /// reaction rate constant
+    ///
+    bool isGasReactionRateConstantsCreated() const;
+    void createGasReactionRateConstants();
+    void freeGasReactionRateConstants();
+    void getGasReactionRateConstantsHost(const ordinal_type i,
+					      real_type_1d_const_view_host& view1,
+					      real_type_1d_const_view_host& view2) ;
+    void getGasReactionRateConstantsHost(real_type_2d_const_view_host& view1,
+					      real_type_2d_const_view_host& view2);
+    void computeGasReactionRateConstantsDevice();
+    
+    ///
+    /// enthalphy mass
+    ///
+    bool isGasEnthapyMassCreated() const;
+    void createGasEnthapyMass();
+    void freeGasEnthapyMass();
+
+    real_type getGasEnthapyMixMassHost(const ordinal_type i);
+    void getGasEnthapyMixMassHost(real_type_1d_const_view_host& view);
+    
+    void getGasEnthapyMassHost(const ordinal_type i, real_type_1d_const_view_host& view);    
+    void getGasEnthapyMassHost(real_type_2d_const_view_host& view);
+
+    void computeGasEnthapyMassDevice() ;
+    
+    ///
     /// net production rate
     ///
-    bool isNetProductionRatePerMassCreated() const;
-    void createNetProductionRatePerMass();
-    void freeNetProductionRatePerMass();
-    void getNetProductionRatePerMassHost(const ordinal_type i, real_type_1d_const_view_host& view);
-    void getNetProductionRatePerMassHost(real_type_2d_const_view_host& view);
+    bool isGasNetProductionRatePerMassCreated() const;
+    void createGasNetProductionRatePerMass();
+    void freeGasNetProductionRatePerMass();
+    void getGasNetProductionRatePerMassHost(const ordinal_type i, real_type_1d_const_view_host& view);
+    void getGasNetProductionRatePerMassHost(real_type_2d_const_view_host& view);
 
 
-    void computeNetProductionRatePerMassDevice();
+    void computeGasNetProductionRatePerMassDevice();
 
-    // Jacobina homogeneous gas reactor
+    ///
+    /// homogeneous gas reactor
+    ///
     bool isJacobianHomogeneousGasReactorCreated() const;
     void createJacobianHomogeneousGasReactor();
     void freeJacobianHomogeneousGasReactor();
@@ -155,30 +226,10 @@ namespace TChem {
     void getRHS_HomogeneousGasReactorHost(real_type_2d_const_view_host& view);
     void computeRHS_HomogeneousGasReactorDevice() ;
 
-    // k forward and reverse
-    bool isReactionRateConstantsCreated() const;
-    void createReactionRateConstants();
-    void freeReactionRateConstants();
-    void getReactionRateConstantsHost(const ordinal_type i,
-                                      real_type_1d_const_view_host& view1,
-                                      real_type_1d_const_view_host& view2) ;
-    void getReactionRateConstantsHost(real_type_2d_const_view_host& view1,
-                                      real_type_2d_const_view_host& view2);
-    void computeReactionRateConstantsDevice() ;
-
-    // enthalpy mix
-    bool isEnthapyMassCreated() const;
-    void createEnthapyMass();
-    void freeEnthapyMass();
-    // void getEnthapyMassHost(const ordinal_type i, real_type_1d_const_view_host& view) ;
-    void getEnthapyMassHost(real_type_2d_const_view_host& view);
-    void getEnthapyMixMassHost(real_type_1d_const_view_host& view);
-    void computeEnthapyMassDevice() ;
 
     ///
     /// time integration
     ///
-    void unsetTimeAdvance();
     void setTimeAdvanceHomogeneousGasReactor(const real_type & tbeg,
 					     const real_type & tend,
 					     const real_type & dtmin,
@@ -190,7 +241,6 @@ namespace TChem {
 					     const real_type& atol_time, const real_type& rtol_time);
     real_type computeTimeAdvanceHomogeneousGasReactorDevice();
 
-    ///
     /// t and dt accessor
     ///
     void getTimeStepHost(real_type_1d_const_view_host& view);
@@ -206,9 +256,12 @@ namespace TChem {
 #ifdef __cplusplus
 extern "C" {
 #endif
-  void TChem_createKineticModel(const char * chem_file, const char * therm_file);
+  void TChem_createGasKineticModel(const char * chem_file, const char * therm_file);
   bool TChem_isKineticModelCreated();
-  void TChem_freeKineticModel();
+  void TChem_createGasKineticModelConstData();
+  bool TChem_isGasKineticModelConstDataCreated();
+  void TChem_freeGasKineticModel();
+
   int  TChem_getNumberOfSpecies();
   int  TChem_getNumberOfReactions();
 
@@ -227,15 +280,14 @@ extern "C" {
   void TChem_getSingleStateVectorHost(const int i, real_type * view);
   void TChem_getAllStateVectorHost(real_type * view);
 
-  bool TChem_isNetProductionRatePerMassCreated();
-  void TChem_createNetProductionRatePerMass();
-  void TChem_freeNetProductionRatePerMass();
-  void TChem_getSingleNetProductionRatePerMassHost(const int i, real_type * view);
-  void TChem_getAllNetProductionRatePerMassHost(real_type * view);
+  bool TChem_isGasNetProductionRatePerMassCreated();
+  void TChem_createGasNetProductionRatePerMass();
+  void TChem_freeGasNetProductionRatePerMass();
+  void TChem_getSingleGasNetProductionRatePerMassHost(const int i, real_type * view);
+  void TChem_getAllGasNetProductionRatePerMassHost(real_type * view);
 
-  void TChem_computeNetProductionRatePerMassDevice();
+  void TChem_computeGasNetProductionRatePerMassDevice();
 
-  void TChem_unsetTimeAdvance();
   void TChem_setTimeAdvanceHomogeneousGasReactor(const real_type tbeg,
 						 const real_type tend,
 						 const real_type dtmin,

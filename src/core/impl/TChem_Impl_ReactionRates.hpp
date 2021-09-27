@@ -171,53 +171,26 @@ struct ReactionRates
     member.team_barrier();
 
     /// 6. update rop with Crnd and assemble reaction rates
-    auto rop = ropFor;
-    Kokkos::parallel_for(
-      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac), [&](const ordinal_type& i) {
-        rop(i) -= ropRev(i);
-        rop(i) *= Crnd(i);
-        const value_type rop_at_i = rop(i);
+#if defined(SACADO_VIEW_CUDA_HIERARCHICAL)
+    Kokkos::abort("This is not ready yet");
+#else
+    Kokkos::parallel_for
+      (Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac), 
+       [&](const ordinal_type& i) {
+        ropFor(i) -= ropRev(i);
+        ropFor(i) *= Crnd(i);
         for (ordinal_type j = 0; j < kmcd.reacNreac(i); ++j) {
           const ordinal_type kspec = kmcd.reacSidx(i, j);
-          // omega(kspec) += kmcd.reacNuki(i,j)*rop_at_i;
-          const value_type val = kmcd.reacNuki(i, j) * rop_at_i;
-          // omega(kspec) += val;
-          Kokkos::atomic_add(&omega(kspec), val);
+          Kokkos::atomic_add(&omega(kspec), kmcd.reacNuki(i, j) * ropFor(i));
         }
         const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
         for (ordinal_type j = 0; j < kmcd.reacNprod(i); ++j) {
           const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
-          // omega(kspec) += kmcd.reacNuki(i,j+joff)*rop_at_i;
-          const value_type val = kmcd.reacNuki(i, j + joff) * rop_at_i;
-          Kokkos::atomic_add(&omega(kspec), val);
-          // omega(kspec) += val;
+          Kokkos::atomic_add(&omega(kspec), kmcd.reacNuki(i, j + joff) * ropFor(i));
         }
       });
-
-    member.team_barrier();
-#if defined(__CUDA_ARCH__)
-    /// I don't know why... atomic add scales with vector dimension
-    /// I still quite dont understand about local sacado variable in parallel kernel
-    if (ats<value_type>::is_sacado) {
-      const real_type mystery(blockDim.x);
-      Kokkos::parallel_for
-        (Kokkos::TeamThreadRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
-          omega(i) /= mystery;
-        });    
-      member.team_barrier();
-    }
 #endif
-
-    // Kokkos::single(Kokkos::PerTeam(member), [=]() {
-    //     if (member.league_rank() == 0) {
-    //       printf("1 omega %e, %e, %e, rop %e, crnd %e\n", 
-    //              Tines::ats<value_type>::sacadoScalarValue(omega(0)), 
-    //              Tines::ats<value_type>::sacadoScalarValue(omega(1)), 
-    //              Tines::ats<value_type>::sacadoScalarValue(omega(2)),
-    //              Tines::ats<value_type>::sacadoScalarValue(rop(0)),
-    //              Tines::ats<value_type>::sacadoScalarValue(Crnd(0)));
-    //     }
-    //   });
+    member.team_barrier();
 
     /// 9. transform from mole/(cm3.s) to kmol/(m3.s)
     {

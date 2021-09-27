@@ -100,7 +100,7 @@ main(int argc, char* argv[])
   opts.set_option<real_type>(
     "rtol-newton", "Relative tolerance used in newton solver", &rtol_newton);
   opts.set_option<bool>(
-    "run-ignition-zero-d",
+    "run-constant-pressure",
     "if true code runs ignition zero d reactor; else code runs constant volume ignition reactor", &run_ignition_zero_d);
   opts.set_option<std::string>("outputfile",
     "Output file name e.g., IgnSolution.dat", &outputFile);
@@ -179,7 +179,7 @@ main(int argc, char* argv[])
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
     const TChem::KineticModelConstData<device_type> kmcd =
-      kmd.createConstData<device_type>();
+      TChem::createGasKineticModelConstData<device_type>(kmd);
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);

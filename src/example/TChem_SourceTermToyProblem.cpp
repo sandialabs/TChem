@@ -88,7 +88,7 @@ main(int argc, char* argv[])
     #endif
 
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
-    const auto kmcd = kmd.createConstData<device_type>();
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
 
     /// input: state vectors: temperature, pressure and mass fraction
     real_type_2d_view state(

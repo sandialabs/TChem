@@ -165,7 +165,7 @@ namespace Impl {
 				       const real_type_1d_view_type& s,
 				       const real_type_2d_view_type& J) const
     {
-
+#if TCHEM_ETI_FAD_SIZE > 0
       const ordinal_type len = ats<value_type>::sacadoStorageCapacity();
       const ordinal_type m = getNumberOfEquations();
 
@@ -191,6 +191,11 @@ namespace Impl {
 	     });
 	 });
       member.team_barrier();
+
+#else
+    Kokkos::abort("Error: Sacado cannot be used with scalar instanciation");
+#endif
+
     }
 
   //

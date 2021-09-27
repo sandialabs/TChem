@@ -93,14 +93,10 @@ main(int argc, char* argv[])
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
     // need to fix it
-    TChem::KineticModelData kmdSurf(
+    TChem::KineticModelData kmd(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
-    const auto kmcd =
-      kmdSurf
-        .createConstData<device_type>(); // data struc with gas phase info
-    const auto kmcdSurf =
-      kmdSurf.createConstSurfData<device_type>(); // data struc with
-                                                        // surface phase info
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
+    const auto kmcdSurf = TChem::createSurfaceKineticModelConstData<device_type>(kmd);
 
     /// input: state vectors: temperature, pressure and mass fraction
     real_type_2d_view state(
@@ -146,10 +142,9 @@ main(int argc, char* argv[])
     const real_type t_deepcopy = timer.seconds();
 
     timer.reset();
-    TChem::NetProductionRatePerMass::runDeviceBatch(nBatch, state, omega, kmcd);
+    TChem::NetProductionRatePerMass::runDeviceBatch(state, omega, kmcd);
 
-    TChem::NetProductionRateSurfacePerMass::runDeviceBatch(
-      nBatch, state, zSurf, omegaGasSurf, omegaSurf, kmcd, kmcdSurf);
+    TChem::NetProductionRateSurfacePerMass::runDeviceBatch(state, zSurf, omegaGasSurf, omegaSurf, kmcd, kmcdSurf);
     Kokkos::fence(); /// timing purpose
     const real_type t_device_batch = timer.seconds();
 

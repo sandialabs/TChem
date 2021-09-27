@@ -29,9 +29,10 @@ Sandia National Laboratories, Livermore, CA, USA
 /// kmcd - const data for kinetic model
 
 namespace TChem {
+  #define TCHEM_ETI_FAD_SIZE @SLFAD_SIZE@ 
   constexpr bool is_scalar = @SLFAD_SIZE@ == 0;
   using value_type = typename std::conditional<is_scalar,
-					       real_type, 
+					       real_type,
                                                Sacado::Fad::SLFad<real_type,@SLFAD_SIZE@> >::type;
 
   using policy_type = typename UseThisTeamPolicy<@EXEC_SPACE@>::type;
@@ -44,7 +45,7 @@ namespace TChem {
    const value_type& dummyValueType,
    /// team size setting
    const policy_type& policy,
-   
+
    /// input
    const Tines::value_type_1d_view<real_type, device_type>& tol_newton,
    const Tines::value_type_2d_view<real_type, device_type>& tol_time,

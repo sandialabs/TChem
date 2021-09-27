@@ -52,7 +52,8 @@ struct SourceTerm
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
     const kinetic_model_type& kmcd)
   {
-    const ordinal_type workspace_size = (4 * kmcd.nSpec + 8 * kmcd.nReac);
+    const ordinal_type len = ats<value_type>::sacadoStorageCapacity();
+    const ordinal_type workspace_size = (4 * kmcd.nSpec + 6 * kmcd.nReac)*len + 2*kmcd.nReac;
     return workspace_size;
   }
 
@@ -136,31 +137,51 @@ struct SourceTerm
     EnthalpySpecMs::team_invoke(member, t, hks, cpks, kmcd);
 
     /// 5. transform reaction rates to source term (Wi/rho)
-    const value_type orho = one / rhomix;
-    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
-                         [&](const ordinal_type& i) { omega(i) *= orho; });
+    {
+      const value_type orho = one / rhomix;
+      Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
+                           [&](const ordinal_type& i) { 
+                             omega(i) *= orho; 
+                             if (i == 0 ) {
+                               omega_t(0) = zero;
+                             }
+                           });
+    }
+    member.team_barrier();
 
-    /// 6. compute source term for temperature
-    Kokkos::single(Kokkos::PerTeam(member), [&]() { omega_t(0) = zero; });
-    member.team_barrier();
-    Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
-                         [&](const ordinal_type& i) {
-                           const value_type val = -omega(i) * hks(i);
-                           Kokkos::atomic_add(&omega_t(0), val);
-                           // omega_t(0) += val;
-                         });
-    member.team_barrier();
-#if defined(__CUDA_ARCH__)
-    if (ats<value_type>::is_sacado) {
-      const real_type mystery(blockDim.x);
-      Kokkos::parallel_for
-        (Kokkos::TeamThreadRange(member, 1), [&](const ordinal_type& dummy) {
-          omega_t(0) /= mystery;
-        });    
+    /// 6. compute source term for temperature      
+#if defined(SACADO_VIEW_CUDA_HIERARCHICAL)
+    Kokkos::abort("This is not ready yet");
+    // {
+    //   using reducer_type = Tines::SumReducer<value_type>;
+    //   typename reducer_type::value_type val(0);
+
+    //   // RealType cpmix(0);
+    //   Kokkos::parallel_reduce
+    //     (Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
+    //      [&](const ordinal_type& i, typename reducer_type::value_type& update) {
+    //       update += (-omega(i)*hks(i));
+    //     }, reducer_type(val));
+    //   Kokkos::parallel_for
+    //     (Tines::RangeFactory<value_type>::TeamVectorRange(member, 1),
+    //      [&](const ordinal_type& dummy) {
+    //       omega_t(0) = val;
+    //       omega_t(0) /= cpmix; 
+    //     });
+    // }
+#else
+    {
+      Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
+                           [&](const ordinal_type& i) {
+                             Kokkos::atomic_add(&omega_t(0), -omega(i)*hks(i));
+                           });
       member.team_barrier();
+      Kokkos::single(Kokkos::PerTeam(member), [&]() {
+          omega_t(0) /= cpmix; 
+        });
     }
 #endif
-    Kokkos::single(Kokkos::PerTeam(member), [&]() { omega_t(0) /= cpmix; });
+    member.team_barrier();
   }
 
   template<typename MemberType,typename WorkViewType>
@@ -181,7 +202,7 @@ struct SourceTerm
   {
 
     auto w = (real_type*)work.data();
-    const ordinal_type len = value_type().length();
+    const ordinal_type len = ats<value_type>::sacadoStorageCapacity();
     const ordinal_type sacadoStorageDimension = ats<value_type>::sacadoStorageDimension(t);
 
     auto gk = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);

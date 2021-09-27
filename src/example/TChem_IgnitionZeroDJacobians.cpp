@@ -121,7 +121,7 @@ main(int argc, char* argv[])
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
-    const auto kmcd = kmd.createConstData<device_type>();
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
@@ -355,7 +355,6 @@ main(int argc, char* argv[])
     if (run_sacado_Jacobian)  {
       printf("Running analytical-Jacobian (sacado) computations using: team_size %d vector_size %d... \n", team_size, vector_size);
       const ordinal_type m = kmcd.nSpec+1;
-      printf("nBatch %d, m %d\n", nBatch, m);
       real_type_3d_view sacado_Jacobian("sacado_Jacobian", nBatch, m, m);
 
       policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());

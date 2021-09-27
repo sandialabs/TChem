@@ -24,34 +24,40 @@ namespace TChem {
       const ordinal_type m = kmcd.nSpec + 1;
 
       // we need to value type to compute work size space
-      ordinal_type len(0);
+      ordinal_type len(0), stw(0);
       if (m < 16) {
         using value_type = Sacado::Fad::SLFad<real_type,16>;
         len = ats<value_type>::sacadoStorageCapacity();
+        stw = Impl::SourceTerm<value_type,device_type>::getWorkSpaceSize(kmcd);    
       } else if  (m < 32) {
         using value_type = Sacado::Fad::SLFad<real_type,32>;
+        stw = Impl::SourceTerm<value_type,device_type>::getWorkSpaceSize(kmcd);    
         len = ats<value_type>::sacadoStorageCapacity();
       } else if  (m < 64) {
         using value_type = Sacado::Fad::SLFad<real_type,64>;
         len = ats<value_type>::sacadoStorageCapacity();
+        stw = Impl::SourceTerm<value_type,device_type>::getWorkSpaceSize(kmcd);    
       } else if  (m < 128) {
         using value_type = Sacado::Fad::SLFad<real_type,128>;
         len = ats<value_type>::sacadoStorageCapacity();
+        stw = Impl::SourceTerm<value_type,device_type>::getWorkSpaceSize(kmcd);    
       } else if  (m < 256) {
         using value_type = Sacado::Fad::SLFad<real_type,256>;
         len = ats<value_type>::sacadoStorageCapacity();
+        stw = Impl::SourceTerm<value_type,device_type>::getWorkSpaceSize(kmcd);    
       } else if  (m < 512) {
         using value_type = Sacado::Fad::SLFad<real_type,512>;
         len = ats<value_type>::sacadoStorageCapacity();
+        stw = Impl::SourceTerm<value_type,device_type>::getWorkSpaceSize(kmcd);    
       } else if (m < 1024){
         using value_type = Sacado::Fad::SLFad<real_type,1024>;
         len = ats<value_type>::sacadoStorageCapacity();
+        stw = Impl::SourceTerm<value_type,device_type>::getWorkSpaceSize(kmcd);    
       } else{
         TCHEM_CHECK_ERROR(1, "Error: Number of equations is bigger than size of sacado fad type");
       }
-      /// source term workspace + two sacado vector for the state vector and source term vector
-      const ordinal_type source_term_worksize = Impl::SourceTerm<real_type,device_type>::getWorkSpaceSize(kmcd);    
-      return (source_term_worksize + 2*m)*len;
+
+      return stw + 2*m*len;
     }
 
     static void runDeviceBatch(/// input

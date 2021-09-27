@@ -84,8 +84,8 @@ main(int argc, char* argv[])
 
     TChem::KineticModelData kmd(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
-    const auto kmcd = kmd.createConstData<host_device_type>();
-    const auto kmcdSurf = kmd.createConstSurfData<host_device_type>();
+    const auto kmcd = TChem::createGasKineticModelConstData<host_device_type>(kmd);
+    const auto kmcdSurf = TChem::createSurfaceKineticModelConstData<host_device_type>(kmd);
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);

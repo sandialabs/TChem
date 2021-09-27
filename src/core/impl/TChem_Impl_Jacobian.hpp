@@ -110,11 +110,13 @@ struct Jacobian
     const real_type tln = ats<real_type>::log(t);
 
     const real_type rhomix = RhoMixMs::team_invoke(member, t, p, Ys, kmcd);
+    member.team_barrier();
 
     /// initialize and transform molar concentrations (kmol/m3) to (moles/cm3)
     {
 
       MolarConcentrations::team_invoke(member, t, p, rhomix, Ys, concX, kmcd);
+      member.team_barrier();
 
       const real_type one_e_minus_three(1e-3);
       Kokkos::parallel_for(Kokkos::TeamVectorRange(member, kmcd.nSpec),
@@ -125,33 +127,36 @@ struct Jacobian
                                team_sum(i) = zero;
                            });
     }
+    member.team_barrier();
 
     /// compute 3rd-body concentrations
     ThirdBodyConcentrations ::team_invoke(member,
                                           concX,
                                           concM, /// output
                                           kmcd);
+    member.team_barrier();
 
     /// compute (-ln(T)+dS/R-dH/RT) for each species
     Gk::team_invoke(member, t, gk, hks, cpks,
                     kmcd); /// only need gk
-
     GkDerivative::team_invoke(member,
                               t,
                               gkp,
                               hks,
                               cpks,
                               kmcd); /// only need gkp
+    member.team_barrier();
 
     /// compute forward and reverse rate constants
     KForwardReverse::team_invoke(member, t, p, gk, kfor, krev, iter, kmcd);
-
     KForwardReverseDerivative::team_invoke(
       member, t, p, kforp, krevp, gkp, iter, kmcd);
+    member.team_barrier();
 
     /// compute rate-of-progress
     RateOfProgress::team_invoke(
       member,  kfor, krev, concX, ropFor, ropRev, iter, kmcd);
+    member.team_barrier();
 
     /// compute pressure dependent factors */
     Crnd::team_invoke(member, t, kfor, concX, concM, crnd, iter, kmcd);
@@ -166,17 +171,16 @@ struct Jacobian
           const ordinal_type kspec = kmcd.reacSidx(i, j);
           // omega(kspec) += kmcd.reacNuki(i,j)*rop_at_i;
           const real_type val = kmcd.reacNuki(i, j) * rop_at_i;
-          Kokkos::atomic_fetch_add(&omega(kspec), val);
+          Kokkos::atomic_add(&omega(kspec), val);
         }
         const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
         for (ordinal_type j = 0; j < kmcd.reacNprod(i); ++j) {
           const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
           // omega(kspec) += kmcd.reacNuki(i,j+joff)*rop_at_i;
           const real_type val = kmcd.reacNuki(i, j + joff) * rop_at_i;
-          Kokkos::atomic_fetch_add(&omega(kspec), val);
+          Kokkos::atomic_add(&omega(kspec), val);
         }
       });
-
     member.team_barrier();
 
     /// transform from mole/(cm3.s) to kg/(m3.s)
@@ -217,6 +221,7 @@ struct Jacobian
                                     CrndDer,
                                     PrDer,
                                     kmcd);
+        member.team_barrier();
 
         arbord = ((iord < kmcd.nOrdReac) && (kmcd.reacAOrd(iord) == j));
         /// const j variables
@@ -289,6 +294,7 @@ struct Jacobian
                 }
               }); /* done loop over species (counter i) for integer
                      stoichiometric coefficients */
+            member.team_barrier();
           }       /* end if integer coeffs */
         }
 
@@ -355,6 +361,7 @@ struct Jacobian
                   } /* done section for arbitrary order reaction */
                 }
               }); /* done loop over species i */
+            member.team_barrier();
           }
         } /* done if real stoichiometric coeffs */
       }   /* done loop over the number of reactions */
@@ -362,11 +369,10 @@ struct Jacobian
 
     /* get density, cpmix, species cp, species enthalpies */
     /// derivative should be invoked first as cpks is used later
-    const real_type cpmix_der =
-      CpMixMsDerivative::team_invoke(member, t, Ys, cpks, kmcd);
+    const real_type cpmix_der = CpMixMsDerivative::team_invoke(member, t, Ys, cpks, kmcd);
     const real_type cpmix = CpMixMs::team_invoke(member, t, Ys, cpks, kmcd);
-
     EnthalpySpecMs::team_invoke(member, t, hks, cpks, kmcd);
+    member.team_barrier();
 
     /* Multiply by appropriate masses */
     Kokkos::parallel_for(
@@ -382,7 +388,6 @@ struct Jacobian
                                  (kmcd.sMass(i) / kmcd.sMass(k));
                              });
       });
-
     member.team_barrier();
 
     /* compute F[3+i,0] */
@@ -404,7 +409,7 @@ struct Jacobian
                            [&](const ordinal_type& k) {
                              local_sum += hks(k) * jacobian(k + 3, 0);
                            });
-      Kokkos::atomic_fetch_add(&team_sum(0), local_sum);
+      Kokkos::atomic_add(&team_sum(0), local_sum);
       member.team_barrier();
       Kokkos::single(Kokkos::PerTeam(member), [&]() {
         jacobian(2, 0) = (jacobian(2, 0) - team_sum(0)) / cpmix;
@@ -420,9 +425,9 @@ struct Jacobian
                              local_sum[1] += cpks(k) * omega(k);
                              local_sum[2] += hks(k) * jacobian(3 + k, 2);
                            });
-      Kokkos::atomic_fetch_add(&team_sum(1), local_sum[0]);
-      Kokkos::atomic_fetch_add(&team_sum(2), local_sum[1]);
-      Kokkos::atomic_fetch_add(&team_sum(3), local_sum[2]);
+      Kokkos::atomic_add(&team_sum(1), local_sum[0]);
+      Kokkos::atomic_add(&team_sum(2), local_sum[1]);
+      Kokkos::atomic_add(&team_sum(3), local_sum[2]);
       member.team_barrier();
       Kokkos::single(Kokkos::PerTeam(member), [&]() {
         jacobian(2, 2) =
@@ -430,8 +435,8 @@ struct Jacobian
           team_sum(3) / cpmix;
         team_sum(1) /= (rhomix * cpmix * cpmix);
       });
-      member.team_barrier();
     }
+    member.team_barrier();
 
     /* compute F[2,3+i] */
     {
@@ -444,6 +449,7 @@ struct Jacobian
                                                   team_sum(1) * cpks(i);
                            });
     }
+    member.team_barrier();
 
 #if defined(TCHEM_ENABLE_SERIAL_TEST_OUTPUT) && !defined(__CUDA_ARCH__)
     if (member.league_rank() == 0) {

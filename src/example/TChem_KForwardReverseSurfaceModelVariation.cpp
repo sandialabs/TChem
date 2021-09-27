@@ -118,14 +118,11 @@ main(int argc, char* argv[])
     TChem::host_exec_space::print_configuration(std::cout, detail);
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
     //
-    TChem::KineticModelData kmdSurf(
+    TChem::KineticModelData kmd(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
-    const auto kmcd =
-      kmdSurf
-        .createConstData<device_type>(); // data struc with gas phase info
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<device_type>(); // data struc with
-                                                        // surface phase info
+      TChem::createSurfaceKineticModelConstData<device_type>(kmd); // data struc with
 
     printf("Number of Species %d \n", kmcd.nSpec);
     printf("Number of Reactions %d \n", kmcd.nReac);
@@ -166,25 +163,27 @@ main(int argc, char* argv[])
 
     /// different sample would have a different kinetic model
     //gas phase
-    auto kmds = cloneKineticModelData(kmdSurf, nBatch);
-
+    auto kmds = kmd.clone(nBatch);
     if (inputFile["Gas"])
     {
       printf("reading gas phase ...\n");
+      constexpr ordinal_type gas(0);
       const auto DesignOfExperimentGas = inputFile["Gas"]["DesignOfExperiment"];
-      TChem::KineticModelsModifyWithArrheniusForwardParameters(kmds, DesignOfExperimentGas, nBatch );
+      TChem::modifyArrheniusForwardParameter(kmds, gas, DesignOfExperimentGas);
     }
-    auto kmcds = TChem::createKineticModelConstData<device_type>(kmds);
+
+    auto kmcds = TChem::createGasKineticModelConstData<device_type>(kmds);
 
     //surface phase
     if (inputFile["Surface"])
     {
       printf("reading surface phase ...\n");
+      constexpr ordinal_type surface(1);
       const auto DesignOfExperimentSurface = inputFile["Surface"]["DesignOfExperiment"];
-      TChem::KineticModelsModifyWithArrheniusForwardSurfaceParameters(kmds, DesignOfExperimentSurface, nBatch );
+      TChem::modifyArrheniusForwardParameter(kmds, surface, DesignOfExperimentSurface);
     }
 
-    auto kmcdSurfs = TChem::createKineticSurfModelConstData<device_type>(kmds);
+    auto kmcdSurfs = TChem::createSurfaceKineticModelConstData<device_type>(kmds);
 
     if (inputFile["Gas"])
     {

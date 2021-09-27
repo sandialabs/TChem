@@ -84,8 +84,7 @@ main(int argc, char* argv[])
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd = TChem::KineticModelData(chemFile);
-    const auto kmcd = kmd.createNCAR_ConstData<host_device_type>();
-
+    const auto kmcd = TChem::createNCAR_KineticModelConstData<host_device_type>(kmd);
     const auto member = Tines::HostSerialTeamMember();
 
     // forward constant

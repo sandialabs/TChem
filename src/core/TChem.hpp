@@ -26,6 +26,8 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TC_kmodint.hpp"
 #include "TC_kmodint_surface.hpp"
 
+#include "TChem_KineticModelData.hpp"
+
 #include "TChem_EnthalpyMass.hpp"
 #include "TChem_EntropyMass.hpp"
 #include "TChem_GkSurfGas.hpp"
@@ -39,7 +41,6 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_JacobianReduced.hpp"
 #include "TChem_KForwardReverse.hpp"
 #include "TChem_KForwardReverseSurface.hpp"
-#include "TChem_KineticModelData.hpp"
 #include "TChem_NetProductionRatePerMass.hpp"
 #include "TChem_NetProductionRatePerMole.hpp"
 #include "TChem_NetProductionRateSurfacePerMass.hpp"

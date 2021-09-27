@@ -136,14 +136,10 @@ main(int argc, char* argv[])
 
     /// construct kmd and use the view for testing
 
-    TChem::KineticModelData kmdSurf(
-      chemFile, thermFile, chemSurfFile, thermSurfFile);
-    const auto kmcd =
-      kmdSurf
-        .createConstData<device_type>(); // data struc with gas phase info
-    const auto kmcdSurf =
-      kmdSurf.createConstSurfData<device_type>(); // data struc with
-                                                        // surface phase info
+    TChem::KineticModelData kmd(chemFile, thermFile, chemSurfFile, thermSurfFile);
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
+    const auto kmcdSurf = TChem::createSurfaceKineticModelConstData<device_type>(kmd);
+
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
 

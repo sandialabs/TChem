@@ -187,9 +187,7 @@ main(int argc, char* argv[])
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
-    const TChem::KineticModelConstData<device_type> kmcd =
-      kmd.createConstData<device_type>();
-
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
@@ -232,9 +230,10 @@ main(int argc, char* argv[])
     real_type_2d_view_host mole_fraction_host;
 
     /// different sample would have a different kinetic model
-    auto kmds = cloneKineticModelData(kmd, nBatch);
-    TChem::KineticModelsModifyWithArrheniusForwardParameters(kmds, inputFileParamModifiers, nBatch );
-    auto kmcds = TChem::createKineticModelConstData<device_type>(kmds);
+    auto kmds = kmd.clone(nBatch);
+    constexpr ordinal_type gas(0);
+    TChem::modifyArrheniusForwardParameter(kmds, gas, inputFileParamModifiers);
+    auto kmcds = TChem::createGasKineticModelConstData<device_type>(kmds);
 
 
     if (verbose) {

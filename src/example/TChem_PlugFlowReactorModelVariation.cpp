@@ -149,7 +149,7 @@ main(int argc, char* argv[])
     &nBatch);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
-  opts.set_option<int>("jacobian-interval", "Jacobians are evaluated in this interval during Newton solve", &jacobian_interval); 
+  opts.set_option<int>("jacobian-interval", "Jacobians are evaluated in this interval during Newton solve", &jacobian_interval);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
   opts.set_option<bool>(
@@ -187,14 +187,12 @@ main(int argc, char* argv[])
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
     /// construct kmd and use the view for testing
 
-    TChem::KineticModelData kmdSurf(
+    TChem::KineticModelData kmd(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
     const auto kmcd =
-      kmdSurf
-        .createConstData<device_type>(); // data struc with gas phase info
+      TChem::createGasKineticModelConstData<device_type>(kmd); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<device_type>(); // data struc with
-                                                        // surface phase info
+      TChem::createSurfaceKineticModelConstData<device_type>(kmd); // data struc with
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
@@ -252,25 +250,25 @@ main(int argc, char* argv[])
 
     /// different sample would have a different kinetic model
     //gas phase
-    auto kmds = cloneKineticModelData(kmdSurf, nBatch);
-
+    auto kmds = kmd.clone(nBatch);
     if (inputFile["Gas"])
     {
       printf("reading gas phase ...\n");
+      constexpr ordinal_type gas(0);
       const auto DesignOfExperimentGas = inputFile["Gas"]["DesignOfExperiment"];
-      TChem::KineticModelsModifyWithArrheniusForwardParameters(kmds, DesignOfExperimentGas, nBatch );
+      TChem::modifyArrheniusForwardParameter(kmds, gas, DesignOfExperimentGas);
     }
 
-    auto kmcds = TChem::createKineticModelConstData<device_type>(kmds);
+    auto kmcds = TChem::createGasKineticModelConstData<device_type>(kmds);
 
     if (inputFile["Surface"])
     {
       printf("reading surface phase ...\n");
+      constexpr ordinal_type surface(1);
       const auto DesignOfExperimentSurface = inputFile["Surface"]["DesignOfExperiment"];
-      //surface phase
-      TChem::KineticModelsModifyWithArrheniusForwardSurfaceParameters(kmds, DesignOfExperimentSurface, nBatch );
+      TChem::modifyArrheniusForwardParameter(kmds, surface, DesignOfExperimentSurface);
     }
-    auto kmcdSurfs = TChem::createKineticSurfModelConstData<device_type>(kmds);
+    auto kmcdSurfs = TChem::createSurfaceKineticModelConstData<device_type>(kmds);
 
 
     if (inputFile["Gas"])
@@ -470,7 +468,7 @@ main(int argc, char* argv[])
 
       // solve initial condition for PFR solution
       TChem::InitialCondSurface::runDeviceBatch(policy,
-                                                tol_newton_host_initial_condition,
+                                                tol_newton_initial_condition,
                                                 max_num_newton_iterations_initial_condition,
                                                 state,
                                                 siteFraction, // input
@@ -701,6 +699,6 @@ main(int argc, char* argv[])
   #else
    printf("This example requires Yaml ...\n" );
   #endif
-  
+
   return 0;
 }

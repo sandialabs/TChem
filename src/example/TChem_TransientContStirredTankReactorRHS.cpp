@@ -80,13 +80,12 @@ main(int argc, char* argv[])
 
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
 
-    TChem::KineticModelData kmdSurf(
+    TChem::KineticModelData kmd(
       chemFile, thermFile, chemSurfFile, thermSurfFile);
     const auto kmcd =
-      kmdSurf
-        .createConstData<device_type>(); // data struc with gas phase info
+      TChem::createGasKineticModelConstData<device_type>(kmd); // data struc with gas phase info
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<device_type>(); // data struc with
+      TChem::createSurfaceKineticModelConstData<device_type>(kmd); // data struc with
                                                         // surface phase info
 
     /// input: state vectors: temperature, pressure and mass fraction

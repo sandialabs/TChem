@@ -1,0 +1,115 @@
+NCAR-version: v1.0
+environmental_conditions:
+  pressure:
+    evolving: false
+    initial_value: [6152.049805]
+    units: Pa
+  temperature:
+    evolving: false
+    initial_value: [206.6374207]
+    units: K
+initial_state:
+  Ar: [0.0334]
+  CO2: [0.00146]
+  H2O: [1.19e-05]
+  N2: [2.8]
+  O2: [0.75]
+  O3: [8.1e-06]
+  M: [1] ## mol/mol
+model_info:
+  chemistry_time_step:
+    units: sec
+    value: 1.0
+  evolving_conditions:
+    exist: false
+  output_time_step:
+    units: sec
+    value: 1.0
+  simulation_length:
+    units: sec
+    value: 100.0
+  cells: 5
+reactions:
+- coefficients:
+    A: 2.42E-17 # time 0 photolysis O2_1 
+  products:
+    O: 2.0
+  reactants:
+    O2: 1.0
+  type: ARRHENIUS
+- coefficients:
+    A: 6.61E-09 # time 0 photolysis O3_1 
+  products:
+    O1D: 1.0
+    O2: 1.0
+  reactants:
+    O3: 1.0
+  type: ARRHENIUS
+- coefficients:
+    A: 1.15E-05 # time 0 photolysis O3_2 
+  products:
+    O: 1.0
+    O2: 1.0
+  reactants:
+    O3: 1.0
+  type: ARRHENIUS
+- coefficients:
+    A: 2.15e-11
+    Ea: -1.518e-21
+  products:
+    N2: 1.0
+    O: 1.0
+  reactants:
+    O1D: 1.0
+    N2: 1.0
+  type: ARRHENIUS
+- coefficients:
+    A: 3.3e-11
+    Ea: -7.59e-22
+  products:
+    O2: 1.0
+    O: 1.0
+  reactants:
+    O1D: 1.0
+    O2: 1.0
+  type: ARRHENIUS
+- coefficients:
+    A: 8e-12
+    Ea: 2.8428e-20
+  products:
+    O2: 2.0
+  reactants:
+    O3: 1.0
+    O: 1.0
+  type: ARRHENIUS
+- coefficients:
+    A: 6e-34
+    B: -2.4
+  products:
+    O3: 1.0
+    M: 1.0
+  reactants:
+    M: 1.0
+    O2: 1.0
+    O: 1.0
+  type: ARRHENIUS
+species:
+  M:
+    units: molecules m-3
+    type : tracer-CONSTANT  
+  Ar:
+    units: mol m-3
+  CO2:
+    units: mol m-3
+  H2O:
+    units: mol m-3
+  N2:
+    units: mol m-3
+  O1D:
+    units: mol m-3
+  O:
+    units: mol m-3
+  O2:
+    units: mol m-3
+  O3:
+    units: mol m-3

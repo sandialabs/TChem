@@ -88,7 +88,6 @@ NetProductionRatePerMass_TemplateRun( /// input
 }
 void
 NetProductionRatePerMass::runHostBatch( /// input
-  const ordinal_type nBatch,
   const real_type_2d_view_host_type& state,
   /// output
   const real_type_2d_view_host_type& omega,
@@ -103,8 +102,7 @@ NetProductionRatePerMass::runHostBatch( /// input
   const ordinal_type per_team_scratch =
     Scratch<real_type_1d_view_host_type>::shmem_size(per_team_extent);
 
-  // policy_type policy(nBatch); // error
-  policy_type policy(nBatch, Kokkos::AUTO()); // fine
+  policy_type policy(state.extent(0), Kokkos::AUTO()); // fine
   policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
   NetProductionRatePerMass_TemplateRun( /// input
@@ -137,7 +135,6 @@ NetProductionRatePerMass::runDeviceBatch( /// input
 
 void
 NetProductionRatePerMass::runDeviceBatch( /// input
-  const ordinal_type nBatch,
   const real_type_2d_view_type& state,
   /// output
   const real_type_2d_view_type& omega,
@@ -152,9 +149,7 @@ NetProductionRatePerMass::runDeviceBatch( /// input
   const ordinal_type per_team_scratch =
     Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
 
-  // policy_type policy(nBatch); // error
-  policy_type policy(nBatch, Kokkos::AUTO()); // fine
-  // policy_type policy(nBatch, Kokkos::AUTO(), Kokkos::AUTO()); // error
+  policy_type policy(state.extent(0), Kokkos::AUTO()); // fine
   policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
   NetProductionRatePerMass_TemplateRun( /// input

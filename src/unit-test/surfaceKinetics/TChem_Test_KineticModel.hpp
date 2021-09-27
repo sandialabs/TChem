@@ -41,14 +41,16 @@ TEST( KineticModelData, constructor ) {
   using host_device_type = typename Tines::UseThisDevice<TChem::host_exec_space>::type;
 
   /// check const data operations on gas phase
-  const auto kmcd_device = kmd.createConstData<device_type>();
-  const auto kmcd_host   = kmd.createConstData<host_device_type>();
+  const auto kmcd_device = TChem::createGasKineticModelConstData<device_type>(kmd);
+  const auto kmcd_host = TChem::createGasKineticModelConstData<host_device_type>(kmd);
 
   EXPECT_EQ(kmcd_device.nSpec, kmcd_host.nSpec);
 
   /// check const data operations on surface phase
-  const auto kmcdSurf_device = kmd.createConstSurfData<device_type>();
-  const auto kmcdSurf_host   = kmd.createConstSurfData<host_device_type>();
+  const auto kmcdSurf_device =
+    TChem::createSurfaceKineticModelConstData<device_type>(kmd);
+  const auto kmcdSurf_host =
+    TChem::createSurfaceKineticModelConstData<host_device_type>(kmd);
 
   EXPECT_EQ(kmcdSurf_device.nSpec, kmcdSurf_host.nSpec);
 

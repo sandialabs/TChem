@@ -28,7 +28,6 @@ namespace TChem {
 
 void
 NetProductionRateSurfacePerMass::runHostBatch( /// input
-  const ordinal_type nBatch,
   const real_type_2d_view_host_type& state,
   /// input
   const real_type_2d_view_host_type& site_fraction,
@@ -50,7 +49,7 @@ NetProductionRateSurfacePerMass::runHostBatch( /// input
     Scratch<real_type_1d_view_host_type>::shmem_size(per_team_extent);
 
   // policy_type policy(nBatch); // error
-  policy_type policy(nBatch, Kokkos::AUTO()); // fine
+  policy_type policy(state.extent(0), Kokkos::AUTO()); // fine
 
   // policy_type policy(nBatch, Kokkos::AUTO(), Kokkos::AUTO()); // error
   policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
@@ -106,7 +105,6 @@ NetProductionRateSurfacePerMass::runHostBatch( /// input
 
 void
 NetProductionRateSurfacePerMass::runDeviceBatch( /// input
-  const ordinal_type nBatch,
   const real_type_2d_view_type& state,
   /// input
   const real_type_2d_view_type& site_fraction,
@@ -128,7 +126,7 @@ NetProductionRateSurfacePerMass::runDeviceBatch( /// input
     Scratch<real_type_1d_view_type>::shmem_size(per_team_extent);
 
   // policy_type policy(nBatch); // error
-  policy_type policy(nBatch, Kokkos::AUTO()); // fine
+  policy_type policy(state.extent(0), Kokkos::AUTO()); // fine
   // policy_type policy(nBatch, Kokkos::AUTO(), Kokkos::AUTO()); // error
   policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
   Kokkos::parallel_for(

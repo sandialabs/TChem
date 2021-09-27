@@ -110,6 +110,14 @@ namespace TChem {
           }
         }
       });
+#if defined(KOKKOS_ENABLE_CUDA)
+    {
+      auto err = cudaGetLastError();
+      if (err)
+        printf("error %s \n", cudaGetErrorString(err));
+    }
+#endif
+
     Kokkos::Profiling::popRegion();
   }
 

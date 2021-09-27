@@ -55,8 +55,8 @@ namespace TChem {
         value_type_1d_view_type x_fad(wptr, m, m+1); wptr += m*len; 
         value_type_1d_view_type f_fad(wptr, m, m+1); wptr += m*len;
         
-        const ordinal_type ws = Impl::SourceTerm<real_type,device_type>::getWorkSpaceSize(kmcd);
-        real_type_1d_view_type w(wptr, ws*len); wptr += w.span();
+        const ordinal_type ws = Impl::SourceTerm<value_type,device_type>::getWorkSpaceSize(kmcd);
+        real_type_1d_view_type w(wptr, ws); wptr += w.span();
         
         ordinal_type ibeg(0), iend(0), iinc(0);
         Impl::getLeagueRange(member, n, ibeg, iend, iinc);        
@@ -99,8 +99,16 @@ namespace TChem {
               const ordinal_type k0 = k/m, k1 = k%m;
               jacobian(i,k0,k1) = f_fad(k0).fastAccessDx(k1);
             });
+          member.team_barrier();
         }
       });
+#if defined(KOKKOS_ENABLE_CUDA)
+    {
+      auto err = cudaGetLastError();
+      if (err)
+        printf("error %s \n", cudaGetErrorString(err));
+    }
+#endif
     Kokkos::Profiling::popRegion();
   }
   

@@ -27,15 +27,11 @@ using real_type = TChem::real_type;
 int
 main(int argc, char* argv[])
 {
-  //#define TCHEM_TEST_DRIVER_NET_PRODUCTION_RATE
-#define TCHEM_TEST_DRIVER_HOMOGENEOUS_BATCH_REACTOR
-
-
   /// default inputs
-#if defined(TCHEM_TEST_DRIVER_NET_PRODUCTION_RATE)
+#if defined(__TCHEM_DRIVER_GAS_NET_PRODUCTION_RATE__)
   std::string prefixPath("data/reaction-rates/");
 #endif
-#if defined(TCHEM_TEST_DRIVER_HOMOGENEOUS_BATCH_REACTOR)
+#if defined(__TCHEM_DRIVER_GAS_TIME_INTEGRATION__)
   std::string prefixPath("data/ignition-zero-d/");
 #endif
   std::string chemFile(prefixPath + "chem.inp");
@@ -68,9 +64,11 @@ main(int argc, char* argv[])
   if (r_parse)
     return 0; // print help return
 
-#if defined(TCHEM_TEST_DRIVER_NET_PRODUCTION_RATE)
+#if defined(__TCHEM_DRIVER_GAS_NET_PRODUCTION_RATE__)
   {
-    TChem_createKineticModel(chemFile.c_str(), thermFile.c_str());
+    TChem_createGasKineticModel(chemFile.c_str(), thermFile.c_str());
+    TChem_createGasKineticModelConstData();
+    
     TChem_setNumberOfSamples(nBatch);
     TChem_createStateVector();
     TChem_showAllViews("After creating state vectors and net production rate per mass");
@@ -78,29 +76,31 @@ main(int argc, char* argv[])
     const int nspec = TChem_getNumberOfSpecies();
     const int lensv = TChem_getLengthOfStateVector();
     std::vector<real_type> state_std_vector(lensv);
-    typename TChem::Driver::real_type_1d_view_host state(state_std_vector.data(), lensv);
+    typename TChem::real_type_1d_view_host state(state_std_vector.data(), lensv);
     TChem::Test::readStateVector(inputFile, nspec, state);
     for (int i=0;i<nBatch;++i)
       TChem_setSingleStateVectorHost(i, state.data());
 
     TChem_showAllViews("After set state vector");
     
-    TChem_computeNetProductionRatePerMassDevice();
+    TChem_computeGasNetProductionRatePerMassDevice();
     TChem_showAllViews("After compute net production rate per mass device");
 
     std::vector<real_type> output_std_vector(lensv);
-    typename TChem::Driver::real_type_1d_view_host output(output_std_vector.data(), lensv);
-    TChem_getSingleNetProductionRatePerMassHost(0, output.data());
+    typename TChem::real_type_1d_view_host output(output_std_vector.data(), lensv);
+    TChem_getSingleGasNetProductionRatePerMassHost(0, output.data());
     TChem_showAllViews("After get net production rate per mass host");
     
     TChem::Test::writeReactionRates(outputFile, nspec, output);
-    TChem_freeKineticModel();
+    TChem_freeGasKineticModel();
   }
 #endif
   
-#if defined(TCHEM_TEST_DRIVER_HOMOGENEOUS_BATCH_REACTOR)
+#if defined(__TCHEM_DRIVER_GAS_TIME_INTEGRATION__)
   {
-    TChem_createKineticModel(chemFile.c_str(), thermFile.c_str());    
+    TChem_createGasKineticModel(chemFile.c_str(), thermFile.c_str());    
+    TChem_createGasKineticModelConstData();
+    
     TChem_setNumberOfSamples(nBatch);
     TChem_createStateVector();
     TChem_showAllViews("After creating state vectors and net production rate per mass");
@@ -141,6 +141,7 @@ main(int argc, char* argv[])
       printf("\n");
     }
 
+    TChem_freeGasKineticModel();    
   }
 #endif
 

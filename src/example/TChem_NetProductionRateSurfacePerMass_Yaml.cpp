@@ -100,22 +100,18 @@ main(int argc, char* argv[])
 
 
     /// construct kmd and use the view for testing
-    TChem::KineticModelData kmdSurf;
+    TChem::KineticModelData kmd;
 
     if (useYaml) {
-      kmdSurf = TChem::KineticModelData(chemFile, true);
+      kmd = TChem::KineticModelData(chemFile, true);
     } else {
-      kmdSurf = TChem::KineticModelData(chemFile, thermFile, chemSurfFile, thermSurfFile);
+      kmd = TChem::KineticModelData(chemFile, thermFile, chemSurfFile, thermSurfFile);
     }
 
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
-
-    const auto kmcd =
-      kmdSurf
-        .createConstData<device_type>(); // data struc with gas phase info
+    const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
     const auto kmcdSurf =
-      kmdSurf.createConstSurfData<device_type>(); // data struc with
-                                                        // surface phase info
+      TChem::createSurfaceKineticModelConstData<device_type>(kmd); // data struc with
 
     /// input: state vectors: temperature, pressure and mass fraction
     real_type_2d_view state(
@@ -192,10 +188,8 @@ main(int argc, char* argv[])
     const real_type t_deepcopy = timer.seconds();
 
     timer.reset();
-    TChem::NetProductionRatePerMass::runDeviceBatch(nBatch, state, omega, kmcd);
-
-    TChem::NetProductionRateSurfacePerMass::runDeviceBatch(
-      nBatch, state, siteFraction, omegaGasSurf, omegaSurf, kmcd, kmcdSurf);
+    TChem::NetProductionRatePerMass::runDeviceBatch(state, omega, kmcd);
+    TChem::NetProductionRateSurfacePerMass::runDeviceBatch(state, siteFraction, omegaGasSurf, omegaSurf, kmcd, kmcdSurf);
     Kokkos::fence(); /// timing purpose
     const real_type t_device_batch = timer.seconds();
 

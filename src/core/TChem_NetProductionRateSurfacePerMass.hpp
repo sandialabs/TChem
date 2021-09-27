@@ -55,7 +55,6 @@ struct NetProductionRateSurfacePerMass
   }
 
   static void runHostBatch( /// input
-    const ordinal_type nBatch,
     const real_type_2d_view_host_type& state,
     /// input
     const real_type_2d_view_host_type& site_fraction,
@@ -68,7 +67,6 @@ struct NetProductionRateSurfacePerMass
     const kinetic_surf_model_host_type& kmcdSurf);
 
   static void runDeviceBatch( /// input
-    const ordinal_type nBatch,
     const real_type_2d_view_type& state,
     /// input
     const real_type_2d_view_type& site_fraction,

@@ -29,8 +29,10 @@ TEST( NetProductionRatePerMass, hostBatch ) {
   /// const data from kmd
   using host_device_type = typename Tines::UseThisDevice<TChem::host_exec_space>::type;
 
-  const auto kmcd = kmd.createConstData<host_device_type>();
-  const auto kmcdSurf = kmd.createConstSurfData<host_device_type>();
+  const auto kmcd = TChem::createGasKineticModelConstData<host_device_type>(kmd);
+  const auto kmcdSurf =
+    TChem::createSurfaceKineticModelConstData<host_device_type>(kmd);
+
 
   /// input: state vectors: density, temperature, pressure and mass concentration
   const ordinal_type nBatch(1);
@@ -62,7 +64,7 @@ TEST( NetProductionRatePerMass, hostBatch ) {
     TChem::Test::cloneView(zSurf);
   }
 
-  TChem::NetProductionRateSurfacePerMass::runHostBatch(nBatch,
+  TChem::NetProductionRateSurfacePerMass::runHostBatch(
                                               state,
                                               zSurf,
                                               omegaGasSurf,
@@ -96,8 +98,10 @@ TEST( NetProductionRatePerMass, hostBatch ) {
 TEST( NetProductionRatePerMass, deviceBatch ) {
   using device_type = typename Tines::UseThisDevice<TChem::exec_space>::type;
   /// const data from kmd
-  const auto kmcd     = kmd.createConstData<device_type>();
-  const auto kmcdSurf = kmd.createConstSurfData<device_type>();
+  const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
+  const auto kmcdSurf =
+    TChem::createSurfaceKineticModelConstData<device_type>(kmd);
+
 
   /// input: state vectors: temperature, pressure and concentration
   const ordinal_type nBatch(1);
@@ -137,7 +141,7 @@ TEST( NetProductionRatePerMass, deviceBatch ) {
  Kokkos::deep_copy(state, state_host);
  Kokkos::deep_copy(zSurf, zSurf_host);
 
- TChem::NetProductionRateSurfacePerMass::runDeviceBatch(nBatch,
+ TChem::NetProductionRateSurfacePerMass::runDeviceBatch(
                                              state,
                                              zSurf,
                                              omegaGasSurf,

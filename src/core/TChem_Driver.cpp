@@ -64,26 +64,17 @@ namespace TChem {
     TCHEM_CHECK_ERROR(!isTimeAdvanceCreated(),
 		      "Time adance first needs to be created; use createTimeAdvance()");
 
-    Kokkos::deep_copy(_tadv, tadv_default);
-    Kokkos::deep_copy(_t.view_device(), tadv_default._tbeg);     _t.modify_device();
-    Kokkos::deep_copy(_dt.view_device(), tadv_default._dtmin);    _dt.modify_device();
+    auto exec_instance = exec_space();
+    Kokkos::deep_copy(exec_instance, _tadv, tadv_default);
+    Kokkos::deep_copy(exec_instance, _t.view_device(), tadv_default._tbeg);     _t.modify_device();
+    Kokkos::deep_copy(exec_instance, _dt.view_device(), tadv_default._dtmin);    _dt.modify_device();
 
-    {
-      auto tol_time = Kokkos::create_mirror_view(Kokkos::HostSpace(), _tol_time);
-      auto tol_newton = Kokkos::create_mirror_view(Kokkos::HostSpace(), _tol_newton);
-      Kokkos::parallel_for
-	(Kokkos::RangePolicy<host_exec_space>(0, _tol_time.extent(0)),
-	 [=](const ordinal_type &i) {
-	   tol_time(i,0) = atol_time;
-	   tol_time(i,1) = rtol_time;
-	   if (i == 0) {
-	     tol_newton(0) = atol_newton;
-	     tol_newton(1) = rtol_newton;
-	   }
-	 });
-      Kokkos::deep_copy(_tol_time, tol_time);
-      Kokkos::deep_copy(_tol_newton, tol_newton);
-    }
+    Kokkos::deep_copy(exec_instance, Kokkos::subview(_tol_time, Kokkos::ALL(), 0), atol_time);
+    Kokkos::deep_copy(exec_instance, Kokkos::subview(_tol_time, Kokkos::ALL(), 1), rtol_time);
+
+    Kokkos::deep_copy(exec_instance, Kokkos::subview(_tol_newton, 0), atol_newton);
+    Kokkos::deep_copy(exec_instance, Kokkos::subview(_tol_newton, 1), rtol_newton);
+    exec_instance.fence();
   }
 
   void

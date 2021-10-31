@@ -272,12 +272,14 @@ namespace TChem {
       r_val(do_not_init_tag("KMCD::gas phase const data objects"),
 	    kmds.extent(0));
     auto r_val_host = Kokkos::create_mirror_view(r_val);
+#if !defined (__CUDA_ARCH__)
     Kokkos::parallel_for
       (Kokkos::RangePolicy<host_exec_space>(0, kmds.extent(0)),
        KOKKOS_LAMBDA(const int i) {
 	r_val_host(i) = createGasKineticModelConstData<DT>(kmds(i));
       });
     Kokkos::deep_copy(r_val, r_val_host);
+#endif
     return r_val;
   }
 

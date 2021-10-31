@@ -1,0 +1,55 @@
+NCAR-version: v1.0
+environmental_conditions:
+  pressure:
+    evolving: false
+    initial_value: [101253.3]
+    units: Pa
+  temperature:
+    evolving: false
+    initial_value: [272.5]
+    units: K
+initial_state:
+  A: [1.0]
+  B: [0.0]
+  C: [0.0]
+model_info:
+  chemistry_time_step:
+    units: sec
+    value: 1.0
+  evolving_conditions:
+    exist: false
+  output_time_step:
+    units: sec
+    value: 1.0
+  simulation_length:
+    units: sec
+    value: 100.0
+  cells: 1 
+reactions:
+- coefficients:
+    k2_A: 4.0e-21 
+  products:
+    B: 1.0
+  reactants:
+    A: 1.0
+  type: CMAQ_H2O2 
+- coefficients:
+    k1_A : 1476.0
+    k1_B : 60.0
+    k1_C : -398.0
+    k2_A : 4.0e-20
+    k2_B : 1.5
+    k2_C : -2.0
+  products:
+    C: 1.0
+  reactants:
+    B: 1.0
+  type: CMAQ_H2O2 
+  time_unit: min
+species:
+  A:
+    units: mol m-3
+  B:
+    units: mol m-3
+  C:
+    units: mol m-3

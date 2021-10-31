@@ -1,0 +1,55 @@
+{
+  "camp-data" : [
+  {
+    "type" : "RELATIVE_TOLERANCE",
+    "value" : 1.0e-30
+  },
+  {
+    "name" : "A",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-30
+  },
+  {
+    "name" : "B",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-30
+  },
+  {
+    "name" : "C",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-30
+  },
+  {
+    "name" : "CMAQ_H2O2",
+    "type" : "MECHANISM",
+    "reactions" : [
+      {
+	"type" : "CMAQ_H2O2",
+	"reactants" : {
+	  "A" : {}
+	},
+	"products" : {
+	  "B" : {}
+	},
+	"k2_A" : 4.0e-21
+      },
+      {
+	"type" : "CMAQ_H2O2",
+	"reactants" : {
+	  "B" : {}
+	},
+	"products" : {
+	  "C" : {}
+	},
+	"k1_A" : 1476.0,
+	"k1_B" : 60,
+	"k1_C" : -398,
+	"k2_A" : 4e-20,
+	"k2_B" : 1.5,
+	"k2_C" : -2,
+	"time unit" : "MIN"
+      }
+    ]
+  }
+  ]
+}

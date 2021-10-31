@@ -233,6 +233,8 @@ namespace TChem {
 
     // aerosol chemistry
     arrhenius_reaction_type_1d_dual_view ArrheniusCoef_;
+    cmaq_h2o2_type_1d_dual_view CMAQ_H2O2Coef_;
+    emission_source_type_1d_dual_view EmissionCoef_;
     ordinal_type  nConstSpec_;
 
     void syncSurfToDevice();
@@ -265,7 +267,7 @@ namespace TChem {
 
     /// create multiple models sharing the data in this model
     kmd_type_1d_view_host clone(const int n_models);
-    
+
     /// this modify begin allocate a view to replace the existing reacArhenFor_
     void modifyArrheniusForwardParametersBegin();
 
@@ -312,7 +314,7 @@ namespace TChem {
 				  const ordinal_type mode,
 				  const YAML::Node& parameters);
 #endif
-  
+
 } // namespace TChem
 #endif
 

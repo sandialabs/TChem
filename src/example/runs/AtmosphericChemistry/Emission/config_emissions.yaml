@@ -1,0 +1,42 @@
+NCAR-version: v1.0
+environmental_conditions:
+  pressure:
+    evolving: false
+    initial_value: [101253.3]
+    units: Pa
+  temperature:
+    evolving: false
+    initial_value: [272.5]
+    units: K
+  air_concetration:
+    initial_value: 1.0
+initial_state:
+  A: [1.0]
+  B: [1.0]
+model_info:
+  chemistry_time_step:
+    units: sec
+    value: 1.0
+  evolving_conditions:
+    exist: false
+  output_time_step:
+    units: sec
+    value: 1.0
+  simulation_length:
+    units: sec
+    value: 100.0
+  cells: 1
+sources:
+- coefficients:
+    emission_rate: 0.954 
+  species: A 
+  type: EMISSION
+- coefficients:
+    emission_rate: 12.3e-2 
+  species: B 
+  type: EMISSION
+species:
+  A:
+    units: mol m-3
+  B:
+    units: mol m-3

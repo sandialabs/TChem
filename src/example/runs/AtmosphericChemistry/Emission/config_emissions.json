@@ -1,0 +1,35 @@
+{
+  "camp-data" : [
+  {
+    "type" : "RELATIVE_TOLERANCE",
+    "value" : 1.0e-10
+  },
+  {
+    "name" : "A",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-8
+  },
+  {
+    "name" : "B",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-8
+  },
+  {
+    "name" : "emissions",
+    "type" : "MECHANISM",
+    "reactions" : [
+      {
+	"type" : "EMISSION",
+	"species" : "A",
+	"rxn id" : "rxn A"
+      },
+      {
+	"type" : "EMISSION",
+	"species" : "B",
+	"rxn id" : "rxn B",
+	"scaling factor" : 12.3
+      }
+    ]
+  }
+  ]
+}

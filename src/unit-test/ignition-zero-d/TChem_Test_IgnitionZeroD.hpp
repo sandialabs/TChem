@@ -34,8 +34,9 @@ TEST(IgnitionZeroD, single)
   std::string dtmax="1e-3";
 
   std::string invoke=(exec +" "+
-           "--inputsPath="+ prefixPath +" "+
+           "--inputs-path="+ prefixPath +" "+
            "--max-time-iterations=" + max_time_iterations +" "+
+           "--use-prefix-path=true " +
            "--atol_newton=" + atol_newton +" "+
            "--rtol_newton=" + rtol_newton +" "+
            "--tol_time=" +tol_time +" "+

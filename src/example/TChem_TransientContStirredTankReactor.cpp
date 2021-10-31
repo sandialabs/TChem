@@ -56,32 +56,31 @@ main(int argc, char* argv[])
 {
 
   /// default inputs
-  std::string prefixPath("data/");
+  std::string prefixPath("runs/T-CSTR/CH4_PT_Quinceno2006/inputs/");
 
-  std::string chemFile("chem.inp");
-  std::string thermFile("therm.dat");
-  std::string chemSurfFile("chemSurf.inp");
-  std::string thermSurfFile("thermSurf.dat");
-  std::string inputFile("sample.dat");
-  std::string inputFileSurf( "inputSurf.dat");
+  std::string chemFile(prefixPath+"chemgri30.inp");
+  std::string thermFile(prefixPath+"thermgri30.dat");
+  std::string chemSurfFile(prefixPath+"chemSurf.inp");
+  std::string thermSurfFile(prefixPath+"thermSurf.dat");
+  std::string inputFile(prefixPath+"sample_phi1.dat");
+  std::string inputFileSurf(prefixPath+"inputSurf.dat");
   std::string outputFile("CSTRSolution.dat");
 
-  real_type mdotIn(3.596978981250784e-06);
-  real_type Vol(0.00013470);
-  real_type Acat (0.0013074);
+  real_type mdotIn(1e-2);
+  real_type Vol(1.347e-1);
+  real_type Acat (1.347e-2);
 
   const real_type zero(0);
-  real_type tbeg(0), tend(0.025);
-  real_type dtmin(1e-10), dtmax(1e-6);
-  real_type atol_time(1e-12),rtol_time(1e-4), atol_newton(1e-12), rtol_newton(1e-6);
-  int num_time_iterations_per_interval(1e1), max_num_time_iterations(4e3),
+  real_type tbeg(0), tend(3);
+  real_type dtmin(1e-20), dtmax(1e-2);
+  real_type atol_time(1e-12),rtol_time(1e-4), atol_newton(1e-18), rtol_newton(1e-8);
+  int num_time_iterations_per_interval(1e1), max_num_time_iterations(10),
     max_num_newton_iterations(100), jacobian_interval(1);
 
   int nBatch(1), team_size(-1), vector_size(-1);
   bool verbose(true);
-  int output_frequency(-1);
 
-  bool use_prefixPath(true);
+  bool use_prefixPath(false);
   bool isoThermic(false);
   bool saveInitialCondition(true);
 
@@ -93,20 +92,20 @@ main(int argc, char* argv[])
     "This example computes temperature, mass fraction, and site "
     "fraction for a Transient continuous stirred tank reactor");
   opts.set_option<std::string>(
-    "prefixPath", "prefixPath e.g.,inputs/", &prefixPath);
+    "inputs-path", "prefixPath e.g.,inputs/", &prefixPath);
   opts.set_option<bool>(
-      "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
-  opts.set_option<real_type>("Acat", "Catalytic area [m2]", &Acat);
-  opts.set_option<real_type>("Vol", "Reactor Volumen [m3]", &Vol);
-  opts.set_option<real_type>("mdotIn", "Inlet mass flow rate [kg/s]", &mdotIn);
-  opts.set_option<bool>("isoThermic", "if True, reaction is isotermic", &isoThermic);
-  opts.set_option<bool>("save_initial_condition", "if True, solution containts"
+      "use-prefix-path", "If true, input file are at the prefix path", &use_prefixPath);
+  opts.set_option<real_type>("catalytic-area", "Catalytic area [m2]", &Acat);
+  opts.set_option<real_type>("reactor-volume", "Reactor Volumen [m3]", &Vol);
+  opts.set_option<real_type>("inlet-mass-flow", "Inlet mass flow rate [kg/s]", &mdotIn);
+  opts.set_option<bool>("isothermic", "if True, reaction is isotermic", &isoThermic);
+  opts.set_option<bool>("save-initial-condition", "if True, solution containts"
                         "initial condition", &saveInitialCondition);
   opts.set_option<bool>(
-    "transient_initial_condition", "If true, use a transient solver "
+    "transient-initial-condition", "If true, use a transient solver "
     "to obtain initial condition of surface species", &transient_initial_condition);
   opts.set_option<bool>(
-      "initial_condition", "If true, use a newton solver to obtain initial"
+      "initial-condition", "If true, use a newton solver to obtain initial"
       "condition of surface species", &initial_condition);
   opts.set_option<std::string>
   ("chemfile", "Chem file name of gas phase e.g., chem.inp",
@@ -115,18 +114,18 @@ main(int argc, char* argv[])
   ("thermfile", "Therm file name of gas phase  e.g., therm.dat", &thermFile);
 
   opts.set_option<std::string>
-  ("chemSurffile","Chem file name of surface phase e.g., chemSurf.inp",
+  ("surf-chemfile","Chem file name of surface phase e.g., chemSurf.inp",
    &chemSurfFile);
 
   opts.set_option<std::string>
-  ("thermSurffile", "Therm file name of surface phase e.g.,thermSurf.dat",
+  ("surf-thermfile", "Therm file name of surface phase e.g.,thermSurf.dat",
   &thermSurfFile);
 
   opts.set_option<std::string>
   ("samplefile", "Input state file name of gas phase e.g., input.dat", &inputFile);
 
   opts.set_option<std::string>
-  ("inputSurffile", "Input state file name of surface e.g., inputSurfGas.dat", &inputFileSurf);
+  ("surf-inputfile", "Input state file name of surface e.g., inputSurfGas.dat", &inputFileSurf);
 
   opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
   opts.set_option<real_type>("tend", "Time end", &tend);
@@ -156,9 +155,6 @@ main(int argc, char* argv[])
   "this interval during Newton solve", &jacobian_interval);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
-
-  opts.set_option<int>(
-    "output_frequency", "save data at this iterations", &output_frequency);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
   opts.set_option<std::string>("outputfile",
@@ -493,7 +489,7 @@ main(int argc, char* argv[])
         real_type_1d_view_host t_host;
         real_type_1d_view_host dt_host;
 
-        if (output_frequency > 0) {
+        {
           t_host = real_type_1d_view_host("time host", nBatch);
           dt_host = real_type_1d_view_host("dt host", nBatch);
         }
@@ -586,11 +582,6 @@ main(int argc, char* argv[])
                      siteFraction_at_i_host);
         }
 #endif
-
-        if (output_frequency > 0) {
-
-          const ordinal_type indx = iter / output_frequency;
-          printf("save at iteration %d indx %d\n", iter, indx);
           // time, sample, state
           // save time and dt
 
@@ -624,7 +615,7 @@ main(int argc, char* argv[])
                      siteFraction_host,
                      fout);
           }
-        }
+
 
 
 
@@ -678,9 +669,8 @@ main(int argc, char* argv[])
 #endif
 
           //
-          if (iter % output_frequency == 0 && output_frequency > 0) {
-            const ordinal_type indx = iter / output_frequency;
-            printf("save at iteration %d indx %d\n", iter, indx);
+           {
+            printf("save at iteration %d\n", iter);
             // time, sample, state
             // save time and dt
 

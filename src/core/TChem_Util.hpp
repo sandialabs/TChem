@@ -279,6 +279,27 @@ struct ArrheniusReactionType
 
 using arrhenius_reaction_type_1d_dual_view = Tines::value_type_1d_dual_view<ArrheniusReactionType, exec_space>;
 
+struct CMAQ_H2O2ReactionType
+{
+  ordinal_type _reaction_index;
+  real_type _A1;
+  real_type _B1;
+  real_type _C1;
+  real_type _A2;
+  real_type _B2;
+  real_type _C2;
+};
+
+using cmaq_h2o2_type_1d_dual_view = Tines::value_type_1d_dual_view<CMAQ_H2O2ReactionType, exec_space>;
+
+struct EMISSION_SourceType
+{
+  ordinal_type _species_index;
+  real_type _emissition_rate;
+};
+
+using emission_source_type_1d_dual_view = Tines::value_type_1d_dual_view<EMISSION_SourceType, exec_space>;
+
 /// kinetic model data
 struct KineticModelData;
 using kmd_type = KineticModelData;

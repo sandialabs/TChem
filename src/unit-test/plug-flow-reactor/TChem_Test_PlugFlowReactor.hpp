@@ -37,16 +37,16 @@ TEST(PlugFlowReactor, single)
   std::string dtmax="1e-3";
 
   std::string invoke=(exec +" "+
-           "--prefixPath="+ prefixPath +" "+
+           "--inputs-path="+ prefixPath +" "+
+           "--use-prefix-path=true "+
            "--max-z-iterations=" + max_z_iterations +" "+
-           "--transient_initial_condition=" + transient_initial_condition +" "+
-           "--initial_condition="+ initial_condition +" "
-           "--atol_newton=" + atol_newton +" "+
-           "--rtol_newton=" + rtol_newton +" "+
-           "--tol_z=" +tol_z +" "+
+           "--transient-initial-condition=" + transient_initial_condition +" "+
+           "--initial-condition="+ initial_condition +" "
+           "--atol-newton=" + atol_newton +" "+
+           "--rtol-newton=" + rtol_newton +" "+
+           "--tol-z=" +tol_z +" "+
            "--dzmin=" + dtmin + " "+
-           "--dzmax=" + dtmax + " "+
-           "--output_frequency=" + save);
+           "--dzmax=" + dtmax);
 
   const auto invoke_c_str = invoke.c_str();
   printf("testing : %s\n", invoke_c_str);

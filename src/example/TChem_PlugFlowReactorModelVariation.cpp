@@ -86,10 +86,10 @@ main(int argc, char* argv[])
     "fraction for a plug flow reactor");
 
   opts.set_option<bool>(
-      "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
+      "use-prefix-path", "If true, input file are at the prefix path", &use_prefixPath);
 
   opts.set_option<std::string>(
-    "prefixPath", "prefixPath e.g.,inputs/", &prefixPath);
+    "inputs-path", "prefixPath e.g.,inputs/", &prefixPath);
 
   opts.set_option<std::string>
   ("chemfile", "Chem file name e.g., chem.inp",
@@ -99,28 +99,28 @@ main(int argc, char* argv[])
   ("thermfile", "Therm file name e.g., therm.dat", &thermFile);
 
   opts.set_option<std::string>
-  ("chemSurffile","Chem file name e.g., chemSurf.inp",
+  ("surf-chemfile","Chem file name e.g., chemSurf.inp",
    &chemSurfFile);
 
   opts.set_option<std::string>
-  ("thermSurffile", "Therm file name e.g.,thermSurf.dat",
+  ("surf-thermfile", "Therm file name e.g.,thermSurf.dat",
   &thermSurfFile);
 
   opts.set_option<std::string>
   ("samplefile", "Input state file name e.g., input.dat", &inputFile);
 
   opts.set_option<std::string>
-  ("inputSurffile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
+  ("surf-inputfile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
 
   opts.set_option<std::string>
-  ("inputVelocityfile", "Input state file name e.g., inputVelocity.dat", &inputFilevelocity);
+  ("velocity-inputfile", "Input state file name e.g., inputVelocity.dat", &inputFilevelocity);
 
   opts.set_option<std::string>("outputfile",
   "Output file name e.g., PFRSolution.dat", &outputFile);
-  opts.set_option<real_type>("Area", "Cross-sectional Area", &Area);
-  opts.set_option<real_type>("Pcat", "Chemically active perimeter,", &Pcat);
+  opts.set_option<real_type>("reactor-area", "Cross-sectional Area [m2]", &Area);
+  opts.set_option<real_type>("catalytic-perimeter", "Chemically active perimeter [m],", &Pcat);
   opts.set_option<std::string>
-  ("inputFileParamModifiers", "Input state file name e.g.,input.dat", &inputFileParamModifiers);
+  ("input-file-param-modifiers", "Input state file name e.g.,input.dat", &inputFileParamModifiers);
 
   opts.set_option<real_type>("zbeg", "Position begin", &tbeg);
   opts.set_option<real_type>("zend", "Position end", &tend);
@@ -153,9 +153,9 @@ main(int argc, char* argv[])
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
   opts.set_option<bool>(
-    "transient_initial_condition", "If true, use a transient solver to obtain initial condition of the constraint", &transient_initial_condition);
+    "transient-initial-condition", "If true, use a transient solver to obtain initial condition of the constraint", &transient_initial_condition);
     opts.set_option<bool>(
-      "initial_condition", "If true, use a newton solver to obtain initial condition of the constraint", &initial_condition);
+      "initial-condition", "If true, use a newton solver to obtain initial condition of the constraint", &initial_condition);
 
 
   const bool r_parse = opts.parse(argc, argv);

@@ -49,20 +49,18 @@ main(int argc, char* argv[])
 {
 
   /// default inputs
-  std::string prefixPath("data/plug-flow-reactor/X/");
-  int output_frequency(-1);
-
-  std::string chemFile("chem.inp");
-  std::string thermFile("therm.dat");
-  std::string chemSurfFile("chemSurf.inp");
-  std::string thermSurfFile("thermSurf.dat");
-  std::string inputFile("sample.dat");
-  std::string inputFileSurf( "inputSurf.dat");
-  bool use_prefixPath(true);
+  std::string prefixPath("data/plug-flow-reactor/CH4-PTnogas/");
+  std::string chemFile(prefixPath+"chem.inp");
+  std::string thermFile(prefixPath+"therm.dat");
+  std::string chemSurfFile(prefixPath+"chemSurf.inp");
+  std::string thermSurfFile(prefixPath+"thermSurf.dat");
+  std::string inputFile(prefixPath+"sample.dat");
+  std::string inputFileSurf(prefixPath+"inputSurf.dat");
+  bool use_prefixPath(false);
 
   const real_type zero(0);
   real_type tbeg(0), tend(100);
-  real_type dtmin(1e-10), dtmax(1e-6);
+  real_type dtmin(1e-20), dtmax(1e-3);
   int num_time_iterations_per_interval(1e1), max_num_time_iterations(1e3),
     max_num_newton_iterations(100), jacobian_interval(1);
   real_type rtol_time(1e-4), atol_newton(1e-12), rtol_newton(1e-6);
@@ -73,13 +71,12 @@ main(int argc, char* argv[])
   /// parse command line arguments
   TChem::CommandLineParser opts(
     "This example computes reaction rates with a given state vector");
-  opts.set_option<std::string>(
-    "prefixPath", "prefixPath e.g.,inputs/", &prefixPath);
-  opts.set_option<int>(
-      "output_frequency", "save data at this iterations", &output_frequency);
-  opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
   opts.set_option<bool>(
-      "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
+      "use-prefix-path", "If true, input file are at the prefix path", &use_prefixPath);
+
+  opts.set_option<std::string>(
+    "inputs-path", "prefixPath e.g.,inputs/", &prefixPath);
+
   opts.set_option<std::string>
   ("chemfile", "Chem file name e.g., chem.inp",
   &chemFile);
@@ -88,18 +85,20 @@ main(int argc, char* argv[])
   ("thermfile", "Therm file name e.g., therm.dat", &thermFile);
 
   opts.set_option<std::string>
-  ("chemSurffile","Chem file name e.g., chemSurf.inp",
+  ("surf-chemfile","Chem file name e.g., chemSurf.inp",
    &chemSurfFile);
 
   opts.set_option<std::string>
-  ("thermSurffile", "Therm file name e.g.,thermSurf.dat",
+  ("surf-thermfile", "Therm file name e.g.,thermSurf.dat",
   &thermSurfFile);
 
   opts.set_option<std::string>
   ("samplefile", "Input state file name e.g., input.dat", &inputFile);
 
   opts.set_option<std::string>
-  ("inputSurffile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
+  ("surf-inputfile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
+
+  opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
   opts.set_option<real_type>("tend", "Time end", &tend);
   opts.set_option<real_type>("dtmin", "Minimum time step size", &dtmin);
   opts.set_option<real_type>("dtmax", "Maximum time step size", &dtmax);
@@ -116,7 +115,7 @@ main(int argc, char* argv[])
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
-    opts.set_option<int>("jacobian-interval", "Jacobians are evaluated in this interval during Newton solve", &jacobian_interval); 
+    opts.set_option<int>("jacobian-interval", "Jacobians are evaluated in this interval during Newton solve", &jacobian_interval);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
     opts.set_option<real_type>(
@@ -285,7 +284,7 @@ main(int argc, char* argv[])
         real_type_1d_view_host t_host;
         real_type_1d_view_host dt_host;
 
-        if (output_frequency > 0) {
+        {
           t_host = real_type_1d_view_host("time host", nBatch);
           dt_host = real_type_1d_view_host("dt host", nBatch);
         }
@@ -340,10 +339,7 @@ main(int argc, char* argv[])
 
         ordinal_type iter = 0;
 
-        if (output_frequency > 0) {
-
-          const ordinal_type indx = iter / output_frequency;
-          printf("save at iteration %d indx %d\n", iter, indx);
+        {
           // time, sample, state
           // save time and dt
 
@@ -405,9 +401,8 @@ main(int argc, char* argv[])
 #endif
 
           //
-          if (iter % output_frequency == 0 && output_frequency > 0) {
-            const ordinal_type indx = iter / output_frequency;
-            printf("save at iteration %d indx %d\n", iter, indx);
+          {
+            printf("save at iteration %d\n", iter);
             // time, sample, state
             // save time and dt
 

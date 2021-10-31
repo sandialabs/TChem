@@ -41,6 +41,10 @@ struct AtmosphericChemistry
     ordinal_type wlen(0);
     time_integrator_type::workspace(m, wlen);
 
+    if(kmcd.nConstSpec > 0) {
+      work_size_problem += kmcd.nSpec;
+    }
+
     return wlen + work_size_problem;
   }
 
@@ -84,12 +88,17 @@ struct AtmosphericChemistry
     auto wptr = work.data();
     auto pw = real_type_1d_view_type(wptr, problem_workspace_size);
     wptr += problem_workspace_size;
-
+    //only needs omega for species mark as constant tracers
+    real_type_1d_view_type omega;
+    if(kmcd.nConstSpec > 0) {
+     omega = real_type_1d_view_type(wptr, kmcd.nSpec);
+     wptr += kmcd.nSpec;
+    }
     /// error check
     const ordinal_type workspace_used(wptr - work.data()),
       workspace_extent(work.extent(0));
     if (workspace_used > workspace_extent) {
-      Kokkos::abort("Error Ignition ZeroD Sacado : workspace used is larger than it is provided\n");
+      Kokkos::abort("Error Atmospheric Chemistry : workspace used is larger than it is provided\n");
     }
 
     /// time integrator workspace
@@ -99,6 +108,7 @@ struct AtmosphericChemistry
     problem._work = pw;    // problem workspace array
     problem._kmcd = kmcd;  // kinetic model
     problem._fac = fac;
+    problem._omega = omega;
     problem._temperature= temperature;
     problem._pressure= pressure;
     problem._const_concentration= const_vals;

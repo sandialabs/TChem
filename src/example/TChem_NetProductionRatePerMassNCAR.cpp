@@ -92,7 +92,6 @@ main(int argc, char* argv[])
     using value_type_1d_view_type = typename kForward_type::value_type_1d_view_type;
 
     value_type_1d_view_type kfor("forward reate constant", kmcd.nReac);
-    value_type_1d_view_type Cnrd("auxiliary factor", kmcd.nReac);
 
     using reaction_rates_type = TChem::Impl::ReactionRatesAerosol<real_type, host_device_type >;
 
@@ -107,7 +106,7 @@ main(int argc, char* argv[])
       const real_type t(272.5);
       const real_type p(101253.3);
 
-      kForward_type::team_invoke( member, t, p, kfor, Cnrd, kmcd);
+      kForward_type::team_invoke( member, t, p, kfor,  kmcd);
 
       for (size_t i = 0; i < kmcd.nReac; i++) {
         printf(" kfor %e\n",kfor(i) );
@@ -136,7 +135,7 @@ main(int argc, char* argv[])
       const real_type t(272.5);
       const real_type p(101253.3);
 
-      kForward_type::team_invoke( member, t, p, kfor, Cnrd, kmcd);
+      kForward_type::team_invoke( member, t, p, kfor, kmcd);
 
       for (size_t i = 0; i < kmcd.nReac; i++) {
         printf(" kfor %e\n",kfor(i) );

@@ -69,7 +69,8 @@ main(int argc, char* argv[])
 {
 
   /// default inputs
-  std::string prefixPath("data/ignition-zero-d/CO/");
+  std::string prefixPath("data/H2/");
+  std::string prefixPathModelParameters("runs/ModelVariation/H2/inputs/");
 
   const real_type zero(0);
   real_type tbeg(0), tend(1);
@@ -77,7 +78,7 @@ main(int argc, char* argv[])
   real_type rtol_time(1e-4), atol_newton(1e-10), rtol_newton(1e-6);
   int num_time_iterations_per_interval(1e1), max_num_time_iterations(1e3),
     max_num_newton_iterations(100), jacobian_interval(1);
-  int output_frequency(-1);
+  // int output_frequency(-1);
 
   real_type T_threshold(1500);
 
@@ -88,24 +89,24 @@ main(int argc, char* argv[])
   bool saveMoleFractions(false);
 
 
-  std::string chemFile("chem.inp");
-  std::string thermFile("therm.dat");
-  std::string inputFile("sample.dat");
-  std::string inputFileParamModifiers("ParameterModifiers.dat");
+  std::string chemFile(prefixPath+"chem.inp");
+  std::string thermFile(prefixPath+"therm.dat");
+  std::string inputFile(prefixPathModelParameters+"sample.dat");
+  std::string inputFileParamModifiers(prefixPathModelParameters+"ParameterModifiers.dat");
   std::string ignition_delay_time_file("IgnitionDelayTime.dat");
   std::string ignition_delay_time_w_threshold_temperature_file("IgnitionDelayTimeTthreshold.dat");
+  std::string outputFile("IgnSolution.dat");
 
 
-  bool use_prefixPath(true);
+  bool use_prefixPath(false);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
     "This example computes the solution of an ignition problem");
   opts.set_option<std::string>(
-    "inputsPath", "path to input files e.g., data/inputs", &prefixPath);
+    "inputs-path", "path to input files e.g., data/inputs", &prefixPath);
   opts.set_option<bool>(
-      "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
-
+      "use-prefix-path", "If true, input file are at the prefix path", &use_prefixPath);
   opts.set_option<std::string>
   ("chemfile", "Chem file name e.g., chem.inp",&chemFile);
   opts.set_option<std::string>
@@ -113,7 +114,7 @@ main(int argc, char* argv[])
   opts.set_option<std::string>
   ("samplefile", "Input state file name e.g.,input.dat", &inputFile);
   opts.set_option<std::string>
-  ("inputFileParamModifiers", "Input state file name e.g.,input.dat", &inputFileParamModifiers);
+  ("input-file-param-modifiers", "Input state file name e.g.,input.dat", &inputFileParamModifiers);
   opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
   opts.set_option<real_type>("tend", "Time end", &tend);
   opts.set_option<real_type>("dtmin", "Minimum time step size", &dtmin);
@@ -136,19 +137,19 @@ main(int argc, char* argv[])
   opts.set_option<int>("jacobian-interval",
                        "Jacobians are evaluated once in this interval",
                        &jacobian_interval);
-  opts.set_option<int>(
-    "output_frequency", "save data at this iterations", &output_frequency);
+  // opts.set_option<int>(
+  //   "output_frequency", "save data at this iterations", &output_frequency);
   // opts.set_option<int>("batchsize", "Batchsize the same state vector
   // described in statefile is cloned", &nBatch);
+  opts.set_option<std::string>("outputfile",
+    "Output file name e.g., IgnSolution.dat", &outputFile);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
   //
   opts.set_option<bool>(
-    "saveMoleFractions", "If true, save mole fractions else mass fractions", &saveMoleFractions);
+    "save-mole-fractions", "If true, save mole fractions else mass fractions", &saveMoleFractions);
   opts.set_option<real_type>(
-    "T_threshold", "Temp threshold in ignition delay time", &T_threshold);
-
-  //
+    "threshold-temperature", " threshold temperature for ignition delay time", &T_threshold);
   opts.set_option<std::string>("ignition-delay-time-file",
     "Output of ignition delay time second using second-derivative method e.g., IgnitionDelayTime.dat",
      &ignition_delay_time_file);
@@ -156,8 +157,8 @@ main(int argc, char* argv[])
     "Output of ignition delay time second using threshold-temperature method  e.g., IgnitionDelayTimeTthreshold.dat",
     &ignition_delay_time_w_threshold_temperature_file);
   opts.set_option<bool>(
-    "OnlyComputeIgnDelayTime",
-    "If true, simulation will end when Temperature is equal to T_threshold ",
+    "only-compute-ignition-delay-time",
+    "If true, simulation will end when Temperature is equal to threshold temperature ",
     &OnlyComputeIgnDelayTime);
 
   opts.set_option<int>("team-size", "User defined team size", &team_size);
@@ -201,7 +202,10 @@ main(int argc, char* argv[])
              T_threshold);
     }
 
-    FILE* fout = fopen("IgnSolution.dat", "w");
+    FILE* fout;
+    if (!OnlyComputeIgnDelayTime) {
+      fout = fopen(outputFile.c_str(), "w");
+    }
 
     /// input from a file; this is not necessary as the input is created
     /// by other applications.
@@ -404,7 +408,7 @@ main(int argc, char* argv[])
         real_type_1d_view_host t_host;
         real_type_1d_view_host dt_host;
 
-        if (output_frequency > 0) {
+        if (!OnlyComputeIgnDelayTime) {
           t_host = real_type_1d_view_host("time host", nBatch);
           dt_host = real_type_1d_view_host("dt host", nBatch);
         }
@@ -444,7 +448,7 @@ main(int argc, char* argv[])
         tadv_default._num_time_iterations_per_interval =
           num_time_iterations_per_interval;
         tadv_default._jacobian_interval = jacobian_interval;
-        
+
         time_advance_type_1d_view tadv("tadv", nBatch);
         Kokkos::deep_copy(tadv, tadv_default);
 
@@ -470,9 +474,7 @@ main(int argc, char* argv[])
 #endif
 
         //
-        if (output_frequency > 0) {
-          const ordinal_type indx = iter / output_frequency;
-          printf("save at iteration %d indx %d\n", iter, indx);
+        if  (!OnlyComputeIgnDelayTime) {
           // time, sample, state
           // save time and dt
 
@@ -581,9 +583,8 @@ main(int argc, char* argv[])
           }
 #endif
 
-          if (iter % output_frequency == 0 && output_frequency > 0) {
-            const ordinal_type indx = iter / output_frequency;
-            printf("save at iteration %d indx %d\n", iter, indx);
+          if  (!OnlyComputeIgnDelayTime) {
+            printf("save at iteration %d \n", iter);
             // time, sample, state
             // save time and dt
 
@@ -673,7 +674,9 @@ main(int argc, char* argv[])
     TChem::Test::write1DVector(ignition_delay_time_w_threshold_temperature_file,
                                IgnDelayTimesT_host);
 
-    fclose(fout);
+    if (!OnlyComputeIgnDelayTime) {
+      fclose(fout);
+    }
   }
   Kokkos::finalize();
 

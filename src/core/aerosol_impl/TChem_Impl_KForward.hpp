@@ -47,21 +47,16 @@ struct KForward
     const value_type& p,
     /// output
     const value_type_1d_view_type& kfor,
-    // work
-    const value_type_1d_view_type& Cnrd,
     /// const input from kinetic model
     const kinetic_model_type& kmcd)
   {
     const value_type t_1 = real_type(1) / t;
     const value_type tln = ats<value_type>::log(t);
     const value_type one(1.0);
-
-
+    const value_type conv = CONV_PPM * p * t_1;
 
     // aux factor
     const ordinal_type n_arrhenius_reac = kmcd.ArrheniusCoef.extent(0);
-
-    member.team_barrier();
 
     Kokkos::parallel_for(
       Tines::RangeFactory<value_type>::TeamVectorRange(member, n_arrhenius_reac), [&](const ordinal_type& i) {
@@ -69,7 +64,7 @@ struct KForward
         kfor(param._reaction_index) = param._A * ats<value_type>::exp(param._C * t_1) *
                                       ( param._B == 0.0 ? one : ats<value_type>::pow (t/param._D, param._B)) *
                                       ( param._E == 0.0 ? one : (one + param._E*p) ) *
-                                      ats<value_type>::pow (CONV_PPM * p * t_1,
+                                      ats<value_type>::pow (conv,
                                       kmcd.reacNreac(param._reaction_index) - ordinal_type(1) ) ;
         // printf("Kforward A_ %e B_ %e C_ %e D_ %e E_ %e \n",param._A, param._B,  param._C,  param._D, param._E  );
         // printf("CONV_ %e PRESSURE_PA_ %e TEMPERATURE_K_ %e NUM_REACT_ %d \n",CONV_PPM, p,  t,  kmcd.reacNreac(param._reaction_index) );
@@ -83,8 +78,6 @@ struct KForward
 
 
     });
-
-    member.team_barrier();
 
     // troe reactions
     const ordinal_type n_troe_reactions = kmcd.reacPfal.extent(0);
@@ -106,7 +99,7 @@ struct KForward
 
         const value_type k0 = k0_A * ( k0_C == 0.0 ? one : ats<value_type>::exp(k0_C * t_1) ) *
                              ( k0_B == 0.0 ? one : ats<value_type>::pow (t/real_type(300.0), k0_B) )*
-                             CONV_PPM * p * t_1;
+                             conv;
 
         const value_type k0_kinf = k0 / ( kinf_A * ( kinf_C == 0.0 ? one :ats<value_type>::exp(kinf_C * t_1) )*
                                   ( kinf_B == 0.0 ? one : ats<value_type>::pow (t/real_type(300.0), kinf_B) ) );
@@ -120,12 +113,27 @@ struct KForward
         kfor(idx_reac) =  k0 / ( real_type(1.0) + k0_kinf ) *
                           ats<value_type>::pow( Fc, real_type(1.0) / ( real_type(1.0) +
                           ats<value_type>::pow( ats<value_type>::log10(k0_kinf) / N , real_type(2.0) ) ) )   *
-                          ats<value_type>::pow (CONV_PPM * p * t_1, kmcd.reacNreac(idx_reac) - ordinal_type(1) ) ;
+                          ats<value_type>::pow (conv, kmcd.reacNreac(idx_reac) - ordinal_type(1) ) ;
 
     });
-    //
+
+    const ordinal_type count_cmaq_h2o2_reac = kmcd.CMAQ_H2O2Coef.extent(0);
+
+    Kokkos::parallel_for(
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, count_cmaq_h2o2_reac), [&](const ordinal_type& i) {
+        const auto param = kmcd.CMAQ_H2O2Coef(i);
+        kfor(param._reaction_index) = (param._A1 * ats<value_type>::exp(param._C1 * t_1) *
+                                      ( param._B1 == 0.0 ? one : ats<value_type>::pow (t/real_type(300.0), param._B1)) +
+                                      param._A2 * ats<value_type>::exp(param._C2 * t_1) *
+                                      ( param._B2 == 0.0 ? one : ats<value_type>::pow (t/real_type(300.0), param._B2))*conv) *
+                                      ats<value_type>::pow (conv,
+                                      kmcd.reacNreac(param._reaction_index) - ordinal_type(1) ) ;
+
+
+    });
+
+
     member.team_barrier();
-    //
 
       // });   /* done computing kforward*/
 #if defined(TCHEM_ENABLE_SERIAL_TEST_OUTPUT) && !defined(__CUDA_ARCH__)

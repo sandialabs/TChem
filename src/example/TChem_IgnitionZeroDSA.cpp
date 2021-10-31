@@ -50,7 +50,7 @@ main(int argc, char* argv[])
 {
 
   /// default inputs
-  std::string prefixPath("data/ignition-zero-d/CO/");
+  std::string prefixPath("data/ignition-zero-d/gri3.0/");
 
   const real_type zero(0);
   real_type tbeg(0), tend(1);
@@ -58,32 +58,31 @@ main(int argc, char* argv[])
   real_type rtol_time(1e-4), atol_newton(1e-10), rtol_newton(1e-6);
   int num_time_iterations_per_interval(1e1), max_num_time_iterations(1e3),
     max_num_newton_iterations(100), jacobian_interval(1);
-  int output_frequency(1);
 
   real_type T_threshold(1500);
 
   int nBatch(1), team_size(-1), vector_size(-1);
-  ;
+
   bool verbose(true);
   bool OnlyComputeIgnDelayTime(false);
   bool run_ignition_zero_d(true);
 
-  std::string chemFile("chem.inp");
-  std::string thermFile("therm.dat");
-  std::string inputFile("sample.dat");
+  std::string chemFile(prefixPath+"chem.inp");
+  std::string thermFile(prefixPath+"therm.dat");
+  std::string inputFile(prefixPath+"sample.dat");
   std::string outputFile("IgnSolution.dat");
   std::string ignition_delay_time_file("IgnitionDelayTime.dat");
   std::string ignition_delay_time_w_threshold_temperature_file("IgnitionDelayTimeTthreshold.dat");
 
-  bool use_prefixPath(true);
+  bool use_prefixPath(false);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
-    "This example computes the solution of an ignition problem");
+    "This example computes the solution of a gas ignition 0D - problem");
   opts.set_option<std::string>(
-    "inputsPath", "path to input files e.g., data/inputs", &prefixPath);
+    "inputs-path", "path to input files e.g., data/inputs", &prefixPath);
   opts.set_option<bool>(
-      "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
+      "use-prefix-path", "If true, input file are at the prefix path", &use_prefixPath);
 
   opts.set_option<std::string>
   ("chemfile", "Chem file name e.g., chem.inp",&chemFile);
@@ -124,19 +123,16 @@ main(int argc, char* argv[])
   opts.set_option<int>("max-newton-iterations",
                        "Maximum number of newton iterations",
                        &max_num_newton_iterations);
-  opts.set_option<int>(
-    "output_frequency", "save data at this iterations", &output_frequency);
-  // opts.set_option<int>("batchsize", "Batchsize the same state vector
   // described in statefile is cloned", &nBatch);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
   opts.set_option<real_type>(
-    "T_threshold", "Temp threshold in ignition delay time", &T_threshold);
+    "threshold-temperature", "threshold temperature in ignition delay time", &T_threshold);
 
   //
   opts.set_option<bool>(
-    "OnlyComputeIgnDelayTime",
-    "If true, simulation will end when Temperature is equal to T_threshold ",
+    "only-compute-ignition-delay-time",
+    "If true, simulation will end when Temperature is equal to the threshold temperature  ",
     &OnlyComputeIgnDelayTime);
 
   opts.set_option<int>("team-size", "User defined team size", &team_size);
@@ -158,16 +154,25 @@ main(int argc, char* argv[])
 
   Kokkos::initialize(argc, argv);
   {
-      printf("----------------------------------------------------- \n");
-      printf("---------------------WARNING------------------------- \n");
+    printf("----------------------------------------------------- \n");
+    printf("---------------------WARNING------------------------- \n");
     if (run_ignition_zero_d){
       printf("   TChem is running Ignition Zero D Reactor \n");
     } else {
       printf("   TChem is running Constant Volume Ignition Reactor \n");
 
     }
-      printf("----------------------------------------------------- \n");
-      printf("----------------------------------------------------- \n");
+
+    if (OnlyComputeIgnDelayTime) {
+        printf("\n");
+        printf("   Computing only ignition delay time.\n"
+               "   This simulation will end when tempearature is equal to\n"
+               "   a threshold temperature of %e [K], and\n"
+               "   time profiles will not be saved\n",
+               T_threshold);
+      }
+    printf("----------------------------------------------------- \n");
+    printf("----------------------------------------------------- \n");
 
     const bool detail = false;
 
@@ -187,13 +192,10 @@ main(int argc, char* argv[])
     printf("Number of Species %d \n", kmcd.nSpec);
     printf("Number of Reactions %d \n", kmcd.nReac);
 
-    if (OnlyComputeIgnDelayTime) {
-      printf("This simulation will end when tempearature is equal to "
-             "T_threshold (K) %e\n",
-             T_threshold);
+    FILE* fout;
+    if (!OnlyComputeIgnDelayTime) {
+      fout = fopen(outputFile.c_str(), "w");
     }
-
-    FILE* fout = fopen(outputFile.c_str(), "w");
 
     /// input from a file; this is not necessary as the input is created
     /// by other applications.
@@ -320,7 +322,7 @@ main(int argc, char* argv[])
       const ordinal_type level = 1;
       ordinal_type per_team_extent(0);
 
-      if (run_ignition_zero_d){
+      if (run_ignition_zero_d) {
         per_team_extent = TChem::IgnitionZeroD::getWorkSpaceSize(kmcd);
       } else {
         per_team_extent = TChem::ConstantVolumeIgnitionReactor::getWorkSpaceSize(kmcd);
@@ -339,7 +341,7 @@ main(int argc, char* argv[])
         real_type_1d_view_host t_host;
         real_type_1d_view_host dt_host;
 
-        if (output_frequency > 0) {
+        if (!OnlyComputeIgnDelayTime) {
           t_host = real_type_1d_view_host("time host", nBatch);
           dt_host = real_type_1d_view_host("dt host", nBatch);
         }
@@ -413,13 +415,10 @@ main(int argc, char* argv[])
         }
 #endif
 
-        //
-        if (output_frequency > 0) {
-          const ordinal_type indx = iter / output_frequency;
-          printf("save at iteration %d indx %d\n", iter, indx);
+        // save initial condition
+        if (!OnlyComputeIgnDelayTime) {
           // time, sample, state
           // save time and dt
-
           Kokkos::deep_copy(dt_host, dt);
           Kokkos::deep_copy(t_host, t);
 
@@ -462,7 +461,7 @@ main(int argc, char* argv[])
                 }
                 //  // end this sample
               }
-            });
+          });
 
           ///* Ignition delay time - second derivative */
           Kokkos::parallel_for(
@@ -508,9 +507,8 @@ main(int argc, char* argv[])
           }
 #endif
 
-          if (iter % output_frequency == 0 && output_frequency > 0) {
-            const ordinal_type indx = iter / output_frequency;
-            printf("save at iteration %d indx %d\n", iter, indx);
+          if (!OnlyComputeIgnDelayTime) {
+            printf("saving at iteration %d \n", iter);
             // time, sample, state
             // save time and dt
 
@@ -519,16 +517,6 @@ main(int argc, char* argv[])
             Kokkos::deep_copy(state_host, state);
 
             writeState(iter, t_host, dt_host, state_host, fout);
-
-            // Kokkos::parallel_for(
-            //   Kokkos::RangePolicy<TChem::exec_space>(0, nBatch),
-            //   KOKKOS_LAMBDA(const ordinal_type &i) {
-            //     output(indx, i, 0) = iter;
-            //     output(indx, i, 1) = t(i);
-            //     output(indx, i, 2) = dt(i);
-            //     for (ordinal_type k = 0; k < stateVecDim; k++)
-            //       output(indx, i, k + 3) = state(i, k);
-            //   });
           }
 
           /// carry over time and dt computed in this step
@@ -548,6 +536,7 @@ main(int argc, char* argv[])
         }
       }
     }
+
     Kokkos::fence(); /// timing purpose
     const real_type t_device_batch = timer.seconds();
 
@@ -577,7 +566,10 @@ main(int argc, char* argv[])
     TChem::Test::write1DVector(ignition_delay_time_w_threshold_temperature_file,
                                IgnDelayTimesT_host);
 
-    fclose(fout);
+    if (!OnlyComputeIgnDelayTime) {
+      fclose(fout);
+    }
+
   }
   Kokkos::finalize();
 

@@ -50,44 +50,44 @@ main(int argc, char* argv[])
 {
 
   /// default inputs
-  std::string prefixPath("data/plug-flow-reactor/X/");
+  std::string prefixPath("data/plug-flow-reactor/CH4-PTnogas/");
 
   real_type Area(0.00053);
   real_type Pcat(0.025977239243415308);
 
   const real_type zero(0);
   real_type tbeg(0), tend(0.025);
-  real_type dtmin(1e-10), dtmax(1e-6);
-  real_type atol_time(1e-12), rtol_time(1e-4), atol_newton(1e-12), rtol_newton(1e-6);
+  real_type dtmin(1e-20), dtmax(1e-3);
+  real_type atol_time(1e-12), rtol_time(1e-8), atol_newton(1e-14), rtol_newton(1e-8);
   int num_time_iterations_per_interval(1e1), max_num_time_iterations(4e3),
     max_num_newton_iterations(20), jacobian_interval(1);
 
   int nBatch(1), team_size(-1), vector_size(-1);
   bool verbose(true);
 
-  bool transient_initial_condition(false);
-  bool initial_condition(true);
+  bool transient_initial_condition(true);
+  bool initial_condition(false);
 
-  std::string chemFile("chem.inp");
-  std::string thermFile("therm.dat");
-  std::string chemSurfFile("chemSurf.inp");
-  std::string thermSurfFile("thermSurf.dat");
-  std::string inputFile("sample.dat");
-  std::string inputFileSurf( "inputSurf.dat");
-  std::string inputFilevelocity( "inputVelocity.dat");
+  std::string chemFile(prefixPath+"chem.inp");
+  std::string thermFile(prefixPath+"therm.dat");
+  std::string chemSurfFile(prefixPath+"chemSurf.inp");
+  std::string thermSurfFile(prefixPath+"thermSurf.dat");
+  std::string inputFile(prefixPath+"sample.dat");
+  std::string inputFileSurf(prefixPath+"inputSurf.dat");
+  std::string inputFilevelocity(prefixPath+"inputVelocity.dat");
   std::string outputFile("PFRSolution.dat");
 
-  bool use_prefixPath(true);
+  bool use_prefixPath(false);
   /// parse command line arguments
   TChem::CommandLineParser opts(
     "This example computes Temperature, density, mass fraction and site "
     "fraction for a plug flow reactor");
 
   opts.set_option<bool>(
-      "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
+      "use-prefix-path", "If true, input file are at the prefix path", &use_prefixPath);
 
   opts.set_option<std::string>(
-    "prefixPath", "prefixPath e.g.,inputs/", &prefixPath);
+    "inputs-path", "prefixPath e.g.,inputs/", &prefixPath);
 
   opts.set_option<std::string>
   ("chemfile", "Chem file name e.g., chem.inp",
@@ -97,40 +97,40 @@ main(int argc, char* argv[])
   ("thermfile", "Therm file name e.g., therm.dat", &thermFile);
 
   opts.set_option<std::string>
-  ("chemSurffile","Chem file name e.g., chemSurf.inp",
+  ("surf-chemfile","Chem file name e.g., chemSurf.inp",
    &chemSurfFile);
 
   opts.set_option<std::string>
-  ("thermSurffile", "Therm file name e.g.,thermSurf.dat",
+  ("surf-thermfile", "Therm file name e.g.,thermSurf.dat",
   &thermSurfFile);
 
   opts.set_option<std::string>
   ("samplefile", "Input state file name e.g., input.dat", &inputFile);
 
   opts.set_option<std::string>
-  ("inputSurffile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
+  ("surf-inputfile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
 
   opts.set_option<std::string>
-  ("inputVelocityfile", "Input state file name e.g., inputVelocity.dat", &inputFilevelocity);
+  ("velocity-inputfile", "Input state file name e.g., inputVelocity.dat", &inputFilevelocity);
 
   opts.set_option<std::string>("outputfile",
   "Output file name e.g., PFRSolution.dat", &outputFile);
-  opts.set_option<real_type>("Area", "Cross-sectional Area", &Area);
-  opts.set_option<real_type>("Pcat", "Chemically active perimeter,", &Pcat);
+  opts.set_option<real_type>("reactor-area", "Cross-sectional Area [m2]", &Area);
+  opts.set_option<real_type>("catalytic-perimeter", "Chemically active perimeter [m],", &Pcat);
 
-  opts.set_option<real_type>("zbeg", "Position begin", &tbeg);
-  opts.set_option<real_type>("zend", "Position end", &tend);
-  opts.set_option<real_type>("dzmin", "Minimum dz step size", &dtmin);
-  opts.set_option<real_type>("dzmax", "Maximum dz step size", &dtmax);
+  opts.set_option<real_type>("zbeg", "Position begin [m]", &tbeg);
+  opts.set_option<real_type>("zend", "Position end [m]", &tend);
+  opts.set_option<real_type>("dzmin", "Minimum dz step size [m]", &dtmin);
+  opts.set_option<real_type>("dzmax", "Maximum dz step size [m]", &dtmax);
   opts.set_option<real_type>(
     "atol-newton", "Absolute tolerance used in newton solver", &atol_newton);
   opts.set_option<real_type>(
     "rtol-newton", "Relative tolerance used in newton solver", &rtol_newton);
   opts.set_option<real_type>(
-    "tol-z", "Tolerance used for adaptive z stepping", &rtol_time);
+    "tol-z", "Tolerance used for adaptive z stepping [m]", &rtol_time);
   //
   opts.set_option<real_type>(
-    "atol-z", "Absolute tolerence used for adaptive time stepping", &atol_time);
+    "atol-z", "Absolute tolerence used for adaptive time stepping ", &atol_time);
   opts.set_option<int>("time-iterations-per-interval",
                        "Number of time iterations per interval to store qoi",
                        &num_time_iterations_per_interval);
@@ -153,9 +153,9 @@ main(int argc, char* argv[])
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
   opts.set_option<bool>(
-    "transient_initial_condition", "If true, use a transient solver to obtain initial condition of the constraint", &transient_initial_condition);
+    "transient-initial-condition", "If true, use a transient solver to obtain initial condition of the constraint", &transient_initial_condition);
     opts.set_option<bool>(
-      "initial_condition", "If true, use a newton solver to obtain initial condition of the constraint", &initial_condition);
+      "initial-condition", "If true, use a newton solver to obtain initial condition of the constraint", &initial_condition);
 
 
   const bool r_parse = opts.parse(argc, argv);

@@ -79,7 +79,6 @@ main(int argc, char* argv[])
 
   int nBatch(1), team_size(-1), vector_size(-1);
   bool verbose(true);
-  int output_frequency(-1);
 
   bool use_prefixPath(true);
   bool isoThermic(false);
@@ -93,47 +92,42 @@ main(int argc, char* argv[])
     "This example computes Temperature, density, mass fraction and site "
     "fraction for a plug flow reactor");
   opts.set_option<std::string>(
-    "prefixPath", "prefixPath e.g.,inputs/", &prefixPath);
-  //
+    "inputs-path", "prefixPath e.g.,inputs/", &prefixPath);
   opts.set_option<bool>(
-      "use_prefixPath", "If true, input file are at the prefix path", &use_prefixPath);
-
-  opts.set_option<real_type>("Acat", "Catalytic area [m2]", &Acat);
-  opts.set_option<real_type>("Vol", "Reactor Volumen [m3]", &Vol);
-  opts.set_option<real_type>("mdotIn", "Inlet mass flow rate [kg/s]", &mdotIn);
-  opts.set_option<bool>("isoThermic", "if True, reaction is isotermic", &isoThermic);
-  opts.set_option<bool>("save_initial_condition", "if True, solution containts initial condition", &saveInitialCondition);
-
-
+      "use-prefix-path", "If true, input file are at the prefix path", &use_prefixPath);
+  opts.set_option<real_type>("catalytic-area", "Catalytic area [m2]", &Acat);
+  opts.set_option<real_type>("reactor-volume", "Reactor Volumen [m3]", &Vol);
+  opts.set_option<real_type>("inlet-mass-flow", "Inlet mass flow rate [kg/s]", &mdotIn);
+  opts.set_option<bool>("isothermic", "if True, reaction is isotermic", &isoThermic);
+  opts.set_option<bool>("save-initial-condition", "if True, solution containts"
+                        "initial condition", &saveInitialCondition);
   opts.set_option<bool>(
-    "transient_initial_condition", "If true, use a transient solver to obtain initial condition of the constraint", &transient_initial_condition);
+    "transient-initial-condition", "If true, use a transient solver "
+    "to obtain initial condition of surface species", &transient_initial_condition);
   opts.set_option<bool>(
-      "initial_condition", "If true, use a newton solver to obtain initial condition of the constraint", &initial_condition);
-
-
-  //
+      "initial-condition", "If true, use a newton solver to obtain initial"
+      "condition of surface species", &initial_condition);
   opts.set_option<std::string>
-  ("chemfile", "Chem file name e.g., chem.inp",
+  ("chemfile", "Chem file name of gas phase e.g., chem.inp",
   &chemFile);
+  opts.set_option<std::string>
+  ("thermfile", "Therm file name of gas phase  e.g., therm.dat", &thermFile);
 
   opts.set_option<std::string>
-  ("thermfile", "Therm file name e.g., therm.dat", &thermFile);
-
-  opts.set_option<std::string>
-  ("chemSurffile","Chem file name e.g., chemSurf.inp",
+  ("surf-chemfile","Chem file name of surface phase e.g., chemSurf.inp",
    &chemSurfFile);
 
   opts.set_option<std::string>
-  ("thermSurffile", "Therm file name e.g.,thermSurf.dat",
+  ("surf-thermfile", "Therm file name of surface phase e.g.,thermSurf.dat",
   &thermSurfFile);
 
   opts.set_option<std::string>
-  ("samplefile", "Input state file name e.g., input.dat", &inputFile);
+  ("samplefile", "Input state file name of gas phase e.g., input.dat", &inputFile);
 
   opts.set_option<std::string>
-  ("inputSurffile", "Input state file name e.g., inputSurfGas.dat", &inputFileSurf);
+  ("surf-inputfile", "Input state file name of surface e.g., inputSurfGas.dat", &inputFileSurf);
   opts.set_option<std::string>
-  ("inputFileParamModifiers", "Input state file name e.g.,input.dat", &inputFileParamModifiers);
+  ("input-file-param-modifiers", "Input state file name e.g.,input.dat", &inputFileParamModifiers);
 
   opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
   opts.set_option<real_type>("tend", "Time end", &tend);
@@ -166,9 +160,6 @@ main(int argc, char* argv[])
   opts.set_option<int>("jacobian-interval", "Jacobians are evaluated in this interval during Newton solve", &jacobian_interval);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
-
-  opts.set_option<int>(
-    "output_frequency", "save data at this iterations", &output_frequency);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
   opts.set_option<std::string>("outputfile",
@@ -551,7 +542,7 @@ main(int argc, char* argv[])
         real_type_1d_view_host t_host;
         real_type_1d_view_host dt_host;
 
-        if (output_frequency > 0) {
+        {
           t_host = real_type_1d_view_host("time host", nBatch);
           dt_host = real_type_1d_view_host("dt host", nBatch);
         }
@@ -624,10 +615,7 @@ main(int argc, char* argv[])
         }
 #endif
 
-        if (output_frequency > 0) {
-
-          const ordinal_type indx = iter / output_frequency;
-          printf("save at iteration %d indx %d\n", iter, indx);
+        {
           // time, sample, state
           // save time and dt
 
@@ -714,9 +702,8 @@ main(int argc, char* argv[])
 #endif
 
           //
-          if (iter % output_frequency == 0 && output_frequency > 0) {
-            const ordinal_type indx = iter / output_frequency;
-            printf("save at iteration %d indx %d\n", iter, indx);
+          {
+            printf("save at iteration %d\n", iter);
             // time, sample, state
             // save time and dt
 

@@ -1,0 +1,85 @@
+NCAR-version: v1.0
+environmental_conditions:
+  pressure:
+    evolving: false
+    initial_value: [101253.3]
+    units: Pa
+  temperature:
+    evolving: false
+    initial_value: [272.5]
+    units: K
+  air_concetration:
+    initial_value: 1.0
+initial_state:
+  A: [1.0]
+  B: [0.0]
+  C: [0.0]
+model_info:
+  chemistry_time_step:
+    units: sec
+    value: 1.0
+  evolving_conditions:
+    exist: false
+  output_time_step:
+    units: sec
+    value: 1.0
+  simulation_length:
+    units: sec
+    value: 100.0
+  cells: 1
+reactions:
+# reaction 1. 
+#CMAQ_OH_HNO3 is replaced by one arrehius reaction and troe reaction with the same species
+#troe
+# k3 (A, B, and C) is set as k0 (A, B, and C) 
+# k2 (A, B, and C) is set as k_inf (A,B, and C) 
+# Fc is always 1 in  CMAQ_OH_HNO3
+- coefficients:
+    k0_A: 4.0e-21 # k3 (CMAQ_OH_HNO3) is k0 in Troe 
+    Fc: 1    
+  products:
+    B: 1.0
+  reactants:
+    A: 1.0
+  type: TROE
+# arrhenius
+# k0 (A, B, C) is A, B, C 
+#E and D are always 0 and 300 which are the default values in arrheius reaction type  
+- coefficients:
+  products:
+    B: 1.0
+  reactants:
+    A: 1.0
+  type: ARRHENIUS
+#reaction 2
+- coefficients:
+    kinf_A : 1350.0 # k2_A
+    kinf_B : 58.0 # k2_B
+    kinf_C : -450.0 # k2_C
+    k0_A   : 4e-20 # k3_A
+    k0_B   : 1.5 # k3_B
+    k0_C   : -2.0 #k3_C
+    Fc     : 1    
+  products:
+    C: 1.0
+  reactants:
+    B: 1.0
+  type: TROE
+  time_unit: min
+- coefficients:
+    A : 1476.0 # k0_A
+    B : 60.0  # k0_B
+    C : -398.0 # k0_C
+  products:
+    C: 1.0
+  reactants:
+    B: 1.0
+  type: ARRHENIUS
+  time_unit: min
+species:
+  A:
+    units: mol m-3
+  B:
+    units: mol m-3
+  C:
+    units: mol m-3

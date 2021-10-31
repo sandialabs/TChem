@@ -34,23 +34,23 @@ struct AtmosphericChemistry
 #if defined(TCHEM_ENABLE_SACADO_JACOBIAN_ATMOSPHERIC_CHEMISTRY)
     if (m < 128) {
       using value_type = Sacado::Fad::SLFad<real_type,128>;
-      work_size = Impl::AtmosphericChemistry<value_type, device_type>::getWorkSpaceSize(kmcd)  + m ;
+      work_size = Impl::AtmosphericChemistry<value_type, device_type>::getWorkSpaceSize(kmcd);
     } else if  (m < 256) {
       using value_type = Sacado::Fad::SLFad<real_type,256>;
-      work_size = Impl::AtmosphericChemistry<value_type, device_type>::getWorkSpaceSize(kmcd)  + m ;
+      work_size = Impl::AtmosphericChemistry<value_type, device_type>::getWorkSpaceSize(kmcd);
     } else if  (m < 512) {
       using value_type = Sacado::Fad::SLFad<real_type,512>;
-      work_size = Impl::AtmosphericChemistry<value_type, device_type>::getWorkSpaceSize(kmcd)  + m ;
+      work_size = Impl::AtmosphericChemistry<value_type, device_type>::getWorkSpaceSize(kmcd);
     } else if (m < 1024){
       using value_type = Sacado::Fad::SLFad<real_type,1024>;
-      work_size = Impl::AtmosphericChemistry<value_type, device_type>::getWorkSpaceSize(kmcd)  + m ;
+      work_size = Impl::AtmosphericChemistry<value_type, device_type>::getWorkSpaceSize(kmcd);
     } else{
       TCHEM_CHECK_ERROR(0,
                         "Error: Number of equations is bigger than size of sacado fad type");
     }
 #else
     {
-      work_size = Impl::AtmosphericChemistry<real_type, device_type>::getWorkSpaceSize(kmcd)  + m ;
+      work_size = Impl::AtmosphericChemistry<real_type, device_type>::getWorkSpaceSize(kmcd);
     }
 #endif
 

@@ -2282,6 +2282,7 @@ namespace TChem {
 
     ordinal_type countReac(0);
     ordinal_type countArrheniusReac(0); // count index for arrhenius pressure parameter E.
+    ordinal_type countCMAQ_H2O2Reac(0);
     maxSpecInReac_ = 0;
     nFallReac_ =0; //troe type reactions
     std::map<std::string,int>::iterator it;
@@ -2373,15 +2374,19 @@ namespace TChem {
 	  {
 	    countArrheniusReac++;
 	  }
-
 	if (reaction_type == "TROE")
 	  {
 	    nFallReac_++;
 
 	  }
+  if (reaction_type == "CMAQ_H2O2")
+    {
+    countCMAQ_H2O2Reac++;
+  }
 
-	countReac++;
-      }
+	   countReac++;
+    }
+
     //twice because we only consider max (products, reactants)
     maxSpecInReac_ *=2;
 
@@ -2393,6 +2398,15 @@ namespace TChem {
     fprintf( echofile,
 	     "kmod.list :  # of arrhenius type reactions                    : %d\n",
 	     countArrheniusReac);
+    //
+    fprintf( echofile,
+       "kmod.list :  # of CMAQ_H2O2 type reactions                    : %d\n",
+       countCMAQ_H2O2Reac);
+    //
+    fprintf( echofile,
+       "kmod.list :  # of Troe type reactions                         : %d\n",
+       nFallReac_);
+
 
     //
     if (nReac_ > 0) {
@@ -2445,7 +2459,12 @@ namespace TChem {
       ArrheniusCoef_ = arrhenius_reaction_type_1d_dual_view(do_not_init_tag("KMD::auxParamReacArhenFor"), countArrheniusReac);
     }
 
+    if (countCMAQ_H2O2Reac > 0 ) {
+      CMAQ_H2O2Coef_ = cmaq_h2o2_type_1d_dual_view(do_not_init_tag("KMD::coefCMAQ_H2O2ReacFor"), countCMAQ_H2O2Reac);
+    }
+
     auto ArrheniusCoefHost = ArrheniusCoef_.view_host();
+    auto CMAQ_H2O2CoefHost = CMAQ_H2O2Coef_.view_host();
 
     //// k0_A, k0_B, k0_C kinf_A,  kinf_B,  kinf_C, Fc, N
     ordinal_type number_of_param_troe(8);
@@ -2463,6 +2482,7 @@ namespace TChem {
 
     ordinal_type count_troe(0);
     ordinal_type count_arrhen_aux_param(0);
+    ordinal_type count_cmaq_h2o2(0);
     ordinal_type ireac(0);
     for (auto const& reaction : reactions)
       {
@@ -2471,7 +2491,7 @@ namespace TChem {
 	if ( reaction_type == "ARRHENIUS")
 	  {
 	    auto rate_coefficients = reaction["coefficients"];
-	    ArrheniusReactionType arrhenius_reaction_type;
+
 	    // pre_exponential
 	    real_type A_coef(1.0);
 	    if (rate_coefficients["A"]) {
@@ -2512,6 +2532,8 @@ namespace TChem {
 	      E_coef = rate_coefficients["E"].as<real_type>();
 	    }
 
+      ArrheniusReactionType arrhenius_reaction_type;
+
 	    // pre_exponential A_tchem = A/D^B;
 	    arrhenius_reaction_type._A = A_coef;
 	    arrhenius_reaction_type._B = B_coef;
@@ -2524,6 +2546,65 @@ namespace TChem {
 	    // printf("Kforward A_ %e B_ %e C_ %e D_ %e E_ %e \n",A_coef, B_coef,  Ea_coef,  D_coef, E_coef );
 
 	  }
+
+  if ( reaction_type == "CMAQ_H2O2")
+  {
+    auto rate_coefficients = reaction["coefficients"];
+
+    real_type k1_A(1.0);
+    if (rate_coefficients["k1_A"]) {
+      k1_A = rate_coefficients["k1_A"].as<real_type>();
+      if (reaction["time_unit"]){
+        if (reaction["time_unit"].as<std::string>()=="min"){
+          k1_A /= real_type(60.0);
+        }
+      }
+    }
+
+    real_type k1_B(0.0);
+    if (rate_coefficients["k1_B"]) {
+      k1_B = rate_coefficients["k1_B"].as<real_type>();
+    }
+
+    real_type k1_C(0.0);
+    if (rate_coefficients["k1_C"]) {
+      k1_C = rate_coefficients["k1_C"].as<real_type>();
+    }
+
+    real_type k2_A(1.0);
+    if (rate_coefficients["k2_A"]) {
+      k2_A = rate_coefficients["k2_A"].as<real_type>();
+      if (reaction["time_unit"]){
+        if (reaction["time_unit"].as<std::string>()=="min"){
+          k2_A /= real_type(60.0);
+        }
+      }
+    }
+
+    real_type k2_B(0.0);
+    if (rate_coefficients["k2_B"]) {
+      k2_B = rate_coefficients["k2_B"].as<real_type>();
+    }
+
+    real_type k2_C(0.0);
+    if (rate_coefficients["k2_C"]) {
+      k2_C = rate_coefficients["k2_C"].as<real_type>();
+    }
+
+    CMAQ_H2O2ReactionType cqmaq_h2o2_reaction;
+
+    cqmaq_h2o2_reaction._A1 = k1_A;
+    cqmaq_h2o2_reaction._B1 = k1_B;
+    cqmaq_h2o2_reaction._C1 = k1_C;
+    // [M]*k2
+    cqmaq_h2o2_reaction._A2 = k2_A*real_type(1e6);
+    cqmaq_h2o2_reaction._B2 = k2_B;
+    cqmaq_h2o2_reaction._C2 = k2_C;
+    cqmaq_h2o2_reaction._reaction_index = ireac;
+    CMAQ_H2O2CoefHost(count_cmaq_h2o2)=cqmaq_h2o2_reaction;
+    count_cmaq_h2o2++;
+
+  } // end "CMAQ_H2O2"
 
 	if (reaction_type == "TROE")
 	  {
@@ -2602,7 +2683,63 @@ namespace TChem {
 	  }// end troe type
 
 	ireac++;
-      } // end reactions
+  } // end reactions
+
+  ordinal_type countEmissionSources(0);
+  for (auto const& source : root["sources"])
+  {
+    if (source["type"].as<std::string>() == "EMISSION")
+      countEmissionSources++;
+  }
+
+  if (countEmissionSources > 0 ) {
+    EmissionCoef_ = emission_source_type_1d_dual_view(do_not_init_tag("KMD::EmissionCoefHost_"), countEmissionSources);
+  }
+
+  auto EmissionCoefHost = EmissionCoef_.view_host();
+  ordinal_type count_emission_coef(0);
+  for (auto const& source : root["sources"])
+  {
+    if (source["type"].as<std::string>() == "EMISSION")
+    {
+      EMISSION_SourceType emission_source;
+      if (source["coefficients"]["emission_rate"]) {
+        emission_source._emissition_rate = source["coefficients"]["emission_rate"].as<real_type>();
+
+      }else{
+        printf("Error EMISSION, emission_rate is not provided \n" );
+        exit(1);
+      }
+
+      if (source["species"])
+      {
+        // get species index
+        it = species_indx.find(source["species"].as<std::string>());
+        if (it != species_indx.end())
+        {
+          emission_source._species_index= it->second;
+        } else
+        {
+          printf("Yaml : Error when interpreting kinetic model  !!!");
+          printf("species does not exit %s\n", source["species"].as<std::string>().c_str() );
+          exit(1);
+          }
+
+
+      }else{
+        printf("Error EMISSION, species name  is not provided \n" );
+        exit(1);
+      }
+      EmissionCoefHost(count_emission_coef)=emission_source;
+      count_emission_coef++;
+    }// end source type emission
+  } // end sources
+
+  fprintf( echofile,
+        "kmod.list :  # of Troe type reactions                         : %d\n",
+        nFallReac_);
+
+
 
 
 
@@ -2657,6 +2794,8 @@ namespace TChem {
     // reacScoef_.modify_host();
     // reacArhenFor_.modify_host();
     ArrheniusCoef_.modify_host();
+    CMAQ_H2O2Coef_.modify_host();
+    EmissionCoef_.modify_host();
 
     reacPfal_.modify_host();
     reacPpar_.modify_host();
@@ -2671,6 +2810,8 @@ namespace TChem {
     reacSidx_.sync_device();
     // reacArhenFor_.sync_device();
     ArrheniusCoef_.sync_device();
+    CMAQ_H2O2Coef_.sync_device();
+    EmissionCoef_.sync_device();
     reacPfal_.sync_device();
     reacPpar_.sync_device();
 

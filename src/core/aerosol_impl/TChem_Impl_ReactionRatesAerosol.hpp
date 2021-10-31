@@ -44,7 +44,11 @@ struct ReactionRatesAerosol
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
     const kinetic_model_type& kmcd)
   {
-    const ordinal_type workspace_size = 3 * kmcd.nReac + kmcd.nSpec;
+    ordinal_type workspace_size = 2 * kmcd.nReac;
+    if (kmcd.nConstSpec > 0 ) {
+      workspace_size +=  kmcd.nSpec;
+    }
+
     return workspace_size;
   }
 
@@ -61,7 +65,6 @@ struct ReactionRatesAerosol
     // work
     const value_type_1d_view_type& ropFor,
     const value_type_1d_view_type& kfor,
-    const value_type_1d_view_type& Cnrd,
     /// const input from kinetic model
     const kinetic_model_type& kmcd)
   {
@@ -77,9 +80,18 @@ struct ReactionRatesAerosol
       omega(i) = real_type(0);
     });
     member.team_barrier();
+    // sources
+    const ordinal_type n_const_sources = kmcd.EmissionCoef.extent(0);
+    auto EmissionCoef = kmcd.EmissionCoef;
+    Kokkos::parallel_for(
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, n_const_sources), [&](const ordinal_type& i) {
+      auto emission_coef_at_i = EmissionCoef(i);
+      omega(emission_coef_at_i._species_index) = emission_coef_at_i._emissition_rate;
+    });
+    member.team_barrier();
 
     // reactions constants
-    kForward_type::team_invoke( member, t, p, kfor, Cnrd, kmcd);
+    kForward_type::team_invoke( member, t, p, kfor, kmcd);
 
     member.team_barrier();
     // rate of progress
@@ -146,9 +158,6 @@ struct ReactionRatesAerosol
       w += kmcd.nReac*len;
       auto kfor = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
       w += kmcd.nReac*len;
-      auto Cnrd = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
-      w += kmcd.nReac*len;
-
       auto concX = value_type_1d_view_type(w, kmcd.nSpec, sacadoStorageDimension);
       w += kmcd.nSpec*len;
 
@@ -174,11 +183,46 @@ struct ReactionRatesAerosol
                          omega,
                          ropFor,
                          kfor,
-                         Cnrd,
                          kmcd);
 
     }
   //
+  template<typename MemberType>
+  KOKKOS_INLINE_FUNCTION static void team_invoke_sacado(
+    const MemberType& member,
+    /// input temperature
+    const value_type& t,
+    const value_type& p,
+    //// inputs
+    const value_type_1d_view_type& X,
+    /// output
+    const value_type_1d_view_type& omega, /// (kmcd.nSpec)
+    // work
+    const real_type_1d_view_type& work,
+    /// const input from kinetic model
+    const kinetic_model_type& kmcd)
+    {
+
+      auto w = (real_type*)work.data();
+      const ordinal_type len = value_type().length();
+      const ordinal_type sacadoStorageDimension = ats<value_type>::sacadoStorageDimension(t);
+
+      auto ropFor = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+      w += kmcd.nReac*len;
+      auto kfor = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
+      w += kmcd.nReac*len;
+      member.team_barrier();
+
+      team_invoke_detail(member,
+                         t,
+                         p,
+                         X,
+                         omega,
+                         ropFor,
+                         kfor,
+                         kmcd);
+
+    }
   template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
@@ -198,12 +242,9 @@ struct ReactionRatesAerosol
     {
 
       auto w = (real_type*)work.data();
-
       auto ropFor = real_type_1d_view_type(w, kmcd.nReac);
       w += kmcd.nReac;
       auto kfor = real_type_1d_view_type(w, kmcd.nReac);
-      w += kmcd.nReac;
-      auto Cnrd = real_type_1d_view_type(w, kmcd.nReac);
       w += kmcd.nReac;
 
       auto concX = real_type_1d_view_type(w, kmcd.nSpec);
@@ -212,19 +253,18 @@ struct ReactionRatesAerosol
       const ordinal_type n_active_vars = kmcd.nSpec-kmcd.nConstSpec;
 
       Kokkos::parallel_for(
-        Tines::RangeFactory<value_type>::TeamVectorRange(member, n_active_vars ),
-         [&](const ordinal_type& i) {
-        concX(i) = X(i);
+          Tines::RangeFactory<value_type>::TeamVectorRange(member, n_active_vars ),
+          [&](const ordinal_type& i) {
+            concX(i) = X(i);
       });
       // constant variables
       Kokkos::parallel_for(
         Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nConstSpec),
-         [=](const ordinal_type& i) {
-           const ordinal_type idx(i + n_active_vars);
-        concX(idx) = const_X(i);
-      });
+          [=](const ordinal_type& i) {
+            const ordinal_type idx(i + n_active_vars);
+            concX(idx) = const_X(i);
+          });
       member.team_barrier();
-
 
       team_invoke_detail(member,
                          t,
@@ -233,7 +273,40 @@ struct ReactionRatesAerosol
                          omega,
                          ropFor,
                          kfor,
-                         Cnrd,
+                         kmcd);
+
+    }
+
+  // source term assuming all species are not constant
+  template<typename MemberType>
+  KOKKOS_INLINE_FUNCTION static void team_invoke(
+    const MemberType& member,
+    /// input temperature
+    const real_type& t,
+    const real_type& p,
+    //// inputs
+    const real_type_1d_view_type& X, // molar concentration of active species
+    /// output
+    const real_type_1d_view_type& omega, /// (kmcd.nSpec)
+    // work
+    const real_type_1d_view_type& work,
+    /// const input from kinetic model
+    const kinetic_model_type& kmcd)
+    {
+
+      auto w = (real_type*)work.data();
+      auto ropFor = real_type_1d_view_type(w, kmcd.nReac);
+      w += kmcd.nReac;
+      auto kfor = real_type_1d_view_type(w, kmcd.nReac);
+      w += kmcd.nReac;
+
+      team_invoke_detail(member,
+                         t,
+                         p,
+                         X,
+                         omega,
+                         ropFor,
+                         kfor,
                          kmcd);
 
     }

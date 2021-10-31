@@ -27,7 +27,6 @@ TEST(PlugFlowReactorBatch, single)
   std::string exec="../../example/TChem_PlugFlowReactor.x";
   std::string prefixPath="../../example/data/plug-flow-reactor/CH4-PTnogas/";
   std::string max_z_iterations="4";
-  std::string save="1";
   std::string use_prefixPath="false";
   std::string inputsPath = "../../example/runs/PlugFlowReactor/CH4-PTnogas_SA/inputs/";
 
@@ -48,22 +47,21 @@ TEST(PlugFlowReactorBatch, single)
   std::string tol_z="1e-8";
 
   std::string invoke=(exec +" "+
-           "--use_prefixPath=" + use_prefixPath +" "+
+           "--inputs-path="+ prefixPath +" "+
            "--chemfile=" + chemFile +" "+
  		       "--thermfile=" + thermFile +" "+
-           "--chemSurffile=" + chemSurfFile +" "+
-           "--thermSurffile=" + thermSurfFile +" "+
+           "--surf-chemfile=" + chemSurfFile +" "+
+           "--surf-thermfile=" + thermSurfFile +" "+
            "--samplefile=" + inputFile +" "+
-           "--inputSurffile=" + inputFileSurf +" "+
-           "--inputVelocityfile=" + inputFilevelocity +" "+
+           "--surf-inputfile=" + inputFileSurf +" "+
+           "--velocity-inputfile=" + inputFilevelocity +" "+
            "--max-z-iterations=" + max_z_iterations +" "+
            "--outputfile=" + outputFile +" "+
-           "--transient_initial_condition=" + transient_initial_condition +" "+
-           "--initial_condition="+ initial_condition +" "+
-           "--atol_newton=" + atol_newton +" "+
-           "--rtol_newton=" + rtol_newton +" "+
-           "--tol_z=" +tol_z +" "+
-           "--output_frequency=" + save);
+           "--transient-initial-condition=" + transient_initial_condition +" "+
+           "--initial-condition="+ initial_condition +" "+
+           "--atol-newton=" + atol_newton +" "+
+           "--rtol-newton=" + rtol_newton +" "+
+           "--tol-z=" +tol_z);
 
   const auto invoke_c_str = invoke.c_str();
   printf("testing : %s\n", invoke_c_str);

@@ -63,16 +63,14 @@ AtmosphericChemistry_TemplateRunModelVariation( /// required template arguments
         Kokkos::subview(state, i, Kokkos::ALL());
       const real_type_1d_view_type state_out_at_i =
         Kokkos::subview(state_out, i, Kokkos::ALL());
-      //
       const real_type_1d_view_type fac_at_i =
         Kokkos::subview(fac, i, Kokkos::ALL());
 
       const real_type_0d_view_type dt_out_at_i = Kokkos::subview(dt_out, i);
       Scratch<real_type_1d_view_type> work(member.team_scratch(level),
                                        per_team_extent);
-      //
       auto wptr = work.data();
-      const real_type_1d_view_type ww(wptr, work.extent(0) - (wptr - work.data()));
+      const real_type_1d_view_type ww(wptr, work.extent(0));
 
       Impl::StateVector<real_type_1d_view_type> sv_at_i(kmcd_at_i.nSpec, state_at_i);
       Impl::StateVector<real_type_1d_view_type> sv_out_at_i(kmcd_at_i.nSpec,
@@ -173,7 +171,7 @@ AtmosphericChemistry_TemplateRun( /// required template arguments
   Kokkos::Profiling::pushRegion(profile_name);
   using policy_type = PolicyType;
   Kokkos::View<KineticModelNCAR_ConstData<DeviceType>*,DeviceType>
-    kmcds(do_not_init_tag("IgnitionaZeroD::kmcds"), 1);
+    kmcds(do_not_init_tag("AtmosphericChemistry::kmcds"), 1);
   Kokkos::deep_copy(kmcds, kmcd);
 
   AtmosphericChemistry_TemplateRunModelVariation
@@ -450,7 +448,7 @@ AtmosphericChemistry::runHostBatch( /// thread block size
     const int n_spec_int = varnames.size();
     Kokkos::parallel_for(
       Kokkos::RangePolicy<host_exec_space>(0, nBatch * n_spec_int ),
-      KOKKOS_LAMBDA(const int &ij) {
+      [&](const ordinal_type& ij) {
       const int i = ij/n_spec_int, j = ij%n_spec_int; /// m is the dimension of R
       if (j==0) {
         //3.1 only populate one time temperature and pressure

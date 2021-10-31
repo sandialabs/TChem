@@ -1,0 +1,58 @@
+{
+  "camp-data" : [
+  {
+    "type" : "RELATIVE_TOLERANCE",
+    "value" : 1.0e-30
+  },
+  {
+    "name" : "A",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-30
+  },
+  {
+    "name" : "B",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-30
+  },
+  {
+    "name" : "C",
+    "type" : "CHEM_SPEC",
+    "absolute tolerance" : 1.0e-30
+  },
+  {
+    "name" : "CMAQ_OH_HNO3",
+    "type" : "MECHANISM",
+    "reactions" : [
+      {
+	"type" : "CMAQ_OH_HNO3",
+	"reactants" : {
+	  "A" : {}
+	},
+	"products" : {
+	  "B" : {}
+	},
+        "k3_A" : 4e-21
+      },
+      {
+	"type" : "CMAQ_OH_HNO3",
+	"reactants" : {
+	  "B" : {}
+	},
+	"products" : {
+	  "C" : {}
+	},
+	"k0_A" : 1476.0,
+	"k0_B" : 60,
+	"k0_C" : -398,
+	"k2_A" : 1350,
+	"k2_B" : 58,
+	"k2_C" : -450,
+	"k3_A" : 4e-20,
+	"k3_B" : 1.5,
+	"k3_C" : -2,
+	"time unit" : "MIN"
+      }
+    ]
+  }
+  ]
+}

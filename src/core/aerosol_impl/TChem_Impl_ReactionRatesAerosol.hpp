@@ -74,9 +74,10 @@ struct ReactionRatesAerosol
     // }
 
     using kForward_type = TChem::Impl::KForward<value_type, device_type >;
+    const ordinal_type n_active_vars = kmcd.nSpec - kmcd.nConstSpec;
 
     Kokkos::parallel_for(
-      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec), [&](const ordinal_type& i) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, n_active_vars), [&](const ordinal_type& i) {
       omega(i) = real_type(0);
     });
     member.team_barrier();
@@ -113,18 +114,25 @@ struct ReactionRatesAerosol
 
     auto rop = ropFor;
     Kokkos::parallel_for(
-      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac), [&](const ordinal_type& i) {
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac), [=](const ordinal_type& i) {
         const value_type rop_at_i = rop(i);
         for (ordinal_type j = 0; j < kmcd.reacNreac(i); ++j) {
           const ordinal_type kspec = kmcd.reacSidx(i, j);
-          const value_type val = kmcd.reacNuki(i, j) * rop_at_i;
-          Kokkos::atomic_add(&omega(kspec), val);
+          // do not compute const-tracer species
+          if (kspec < n_active_vars){
+            const value_type val = kmcd.reacNuki(i, j) * rop_at_i;
+            Kokkos::atomic_add(&omega(kspec), val);
+          }
+
         }
         const ordinal_type joff = kmcd.reacSidx.extent(1) / 2;
         for (ordinal_type j = 0; j < kmcd.reacNprod(i); ++j) {
           const ordinal_type kspec = kmcd.reacSidx(i, j + joff);
-          const value_type val = kmcd.reacNuki(i, j + joff) * rop_at_i;
-          Kokkos::atomic_add(&omega(kspec), val);
+          // do not compute const-tracer species
+          if (kspec < n_active_vars){
+            const value_type val = kmcd.reacNuki(i, j + joff) * rop_at_i;
+            Kokkos::atomic_add(&omega(kspec), val);
+          }
         }
       });
 
@@ -149,10 +157,10 @@ struct ReactionRatesAerosol
     /// const input from kinetic model
     const kinetic_model_type& kmcd)
     {
-
       auto w = (real_type*)work.data();
-      const ordinal_type len = value_type().length();
-      const ordinal_type sacadoStorageDimension = ats<value_type>::sacadoStorageDimension(t);
+      const ordinal_type len = ats<value_type>::sacadoStorageCapacity();
+      // do not use either t or p, because they are real_type
+      const ordinal_type sacadoStorageDimension = ats<value_type>::sacadoStorageDimension(X(0));
 
       auto ropFor = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
       w += kmcd.nReac*len;
@@ -171,7 +179,7 @@ struct ReactionRatesAerosol
       // constant variables
       Kokkos::parallel_for(
         Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nConstSpec),
-         [&](const ordinal_type& i) {
+         [=](const ordinal_type& i) {
         concX(i + n_active_vars) = const_X(i);
       });
       member.team_barrier();
@@ -204,8 +212,9 @@ struct ReactionRatesAerosol
     {
 
       auto w = (real_type*)work.data();
-      const ordinal_type len = value_type().length();
-      const ordinal_type sacadoStorageDimension = ats<value_type>::sacadoStorageDimension(t);
+      const ordinal_type len = ats<value_type>::sacadoStorageCapacity();
+      // do not use either t or p, because they are real_type
+      const ordinal_type sacadoStorageDimension = ats<value_type>::sacadoStorageDimension(X(0));
 
       auto ropFor = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
       w += kmcd.nReac*len;
@@ -223,6 +232,7 @@ struct ReactionRatesAerosol
                          kmcd);
 
     }
+
   template<typename MemberType>
   KOKKOS_INLINE_FUNCTION static void team_invoke(
     const MemberType& member,
@@ -253,13 +263,13 @@ struct ReactionRatesAerosol
       const ordinal_type n_active_vars = kmcd.nSpec-kmcd.nConstSpec;
 
       Kokkos::parallel_for(
-          Tines::RangeFactory<value_type>::TeamVectorRange(member, n_active_vars ),
+          Tines::RangeFactory<real_type>::TeamVectorRange(member, n_active_vars ),
           [&](const ordinal_type& i) {
             concX(i) = X(i);
       });
       // constant variables
       Kokkos::parallel_for(
-        Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nConstSpec),
+        Tines::RangeFactory<real_type>::TeamVectorRange(member, kmcd.nConstSpec),
           [=](const ordinal_type& i) {
             const ordinal_type idx(i + n_active_vars);
             concX(idx) = const_X(i);

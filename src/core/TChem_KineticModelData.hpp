@@ -236,6 +236,7 @@ namespace TChem {
     cmaq_h2o2_type_1d_dual_view CMAQ_H2O2Coef_;
     emission_source_type_1d_dual_view EmissionCoef_;
     ordinal_type  nConstSpec_;
+    real_type CONV_PPM_;
 
     void syncSurfToDevice();
     void allocateViewsSurf(FILE* errfile);

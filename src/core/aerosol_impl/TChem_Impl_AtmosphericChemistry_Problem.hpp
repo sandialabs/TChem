@@ -29,7 +29,7 @@ namespace Impl {
 
     real_type_1d_view_type _work;
     real_type_1d_view_type _fac;
-    real_type_1d_view_type _omega;
+    // real_type_1d_view_type _omega;
     real_type_1d_view_type _const_concentration;
     kinetic_model_type _kmcd;
     real_type _temperature;
@@ -109,13 +109,7 @@ namespace Impl {
 
       if (_kmcd.nConstSpec > 0 ) {
         Impl::ReactionRatesAerosol<real_type, device_type>
-        ::team_invoke(member, _temperature, _pressure, x, _const_concentration, _omega, _work,  _kmcd);
-        // copy only non const species
-        Kokkos::parallel_for(
-          Tines::RangeFactory<value_type>::TeamVectorRange(member, _kmcd.nSpec - _kmcd.nConstSpec),
-           [=](const ordinal_type& i) {
-          f(i) = _omega(i);
-        });
+        ::team_invoke(member, _temperature, _pressure, x, _const_concentration, f, _work,  _kmcd);
 
       } else {
         Impl::ReactionRatesAerosol<real_type, device_type>
@@ -133,10 +127,14 @@ namespace Impl {
 			       const value_type_1d_view_type& f) const
     {
     if (_kmcd.nConstSpec > 0 ) {
-      Kokkos::abort("Error Atmospheric Chemistry : sacado version does not work with tracer species.\n");
+      // Kokkos::abort("Error Atmospheric Chemistry : sacado version does not work with tracer species.\n");
+      Impl::ReactionRatesAerosol<value_type, device_type>
+      ::team_invoke_sacado(member, _temperature, _pressure, x, _const_concentration, f, _work,  _kmcd);
+    } else {
+      Impl::ReactionRatesAerosol<value_type, device_type>
+          ::team_invoke_sacado(member, _temperature, _pressure, x, f, _work,  _kmcd);
     }
-    Impl::ReactionRatesAerosol<value_type, device_type>
-        ::team_invoke_sacado(member, _temperature, _pressure, x, f, _work,  _kmcd);
+
     member.team_barrier();
     }
 

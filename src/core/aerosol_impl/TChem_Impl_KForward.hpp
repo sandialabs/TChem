@@ -53,7 +53,7 @@ struct KForward
     const value_type t_1 = real_type(1) / t;
     const value_type tln = ats<value_type>::log(t);
     const value_type one(1.0);
-    const value_type conv = CONV_PPM * p * t_1;
+    const value_type conv = kmcd.CONV_PPM * p * t_1;
 
     // aux factor
     const ordinal_type n_arrhenius_reac = kmcd.ArrheniusCoef.extent(0);

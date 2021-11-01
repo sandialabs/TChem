@@ -2187,6 +2187,8 @@ namespace TChem {
             "------------------------------------------------------------" \
             "-------------\n")
 
+    CONV_PPM_=CONV_PPM;        
+
     FILE *echofile;
     echofile = fopen("kmod.echo", "w");
 

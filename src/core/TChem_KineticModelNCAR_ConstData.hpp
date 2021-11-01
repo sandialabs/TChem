@@ -80,6 +80,7 @@ namespace TChem {
     kmcd_ordinal_type_1d_view reacPfal;
     kmcd_real_type_2d_view reacPpar;
     ordinal_type nConstSpec;
+    real_type CONV_PPM;
   };
 
   template<typename SpT>
@@ -104,6 +105,7 @@ namespace TChem {
     data.EmissionCoef = kmd.EmissionCoef_.template view<SpT>();
     // species that are assumed constant like tracers
     data.nConstSpec = kmd.nConstSpec_;
+    data.CONV_PPM = kmd.CONV_PPM_;
 
     return data;
   }

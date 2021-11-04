@@ -281,7 +281,7 @@ main(int argc, char* argv[])
       TChem::Test::printParametersModelVariation("Surface", kmcdSurf, kmcdSurfs, inputFile);
     }
 
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
 
     FILE* fout = fopen(outputFile.c_str(), "w");
 

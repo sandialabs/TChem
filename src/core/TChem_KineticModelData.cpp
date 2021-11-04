@@ -4792,7 +4792,7 @@ namespace TChem {
 
     real_type_3d_view_host factors(do_not_init_tag("factors"), n_model, n_reac_indices, 3);
     const real_type * val_factors = values.data() + n_reac_indices;
-    ordinal_type iter(0); /// iterator
+    ///ordinal_type iter(0); /// iterator /// not used
     for (ordinal_type imodel=0;imodel<n_model;++imodel)
       for (ordinal_type ireac=0;ireac<n_reac_indices;++ireac)
 	for (ordinal_type ia=0;ia<3;++ia) {

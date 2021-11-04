@@ -1,8 +1,12 @@
-# Kokkos requires 3.3
-CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
+# Kokkos requires 3.16
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 
 # Project TChem
 PROJECT(TChem)
+
+# Built-in modules
+INCLUDE(GNUInstallDirs)
+INCLUDE(CMakePackageConfigHelpers)
 
 # CMAKE setup
 SET(CMAKE_VERBOSE_MAKEFILE ON) # see all output

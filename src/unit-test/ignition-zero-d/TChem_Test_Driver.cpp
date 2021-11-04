@@ -20,9 +20,6 @@ Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
 #include <gtest/gtest.h>
 
-#include <Kokkos_Core.hpp>
-#include <impl/Kokkos_Timer.hpp>
-
 #include "TChem_Util.hpp"
 using ordinal_type = TChem::ordinal_type;
 using real_type = TChem::real_type;

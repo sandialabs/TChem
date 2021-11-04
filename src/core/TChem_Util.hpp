@@ -44,7 +44,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "Kokkos_Complex.hpp"
 #include "Kokkos_Core.hpp"
 #include "Kokkos_DualView.hpp"
-#include "impl/Kokkos_Timer.hpp"
+#include "Kokkos_Timer.hpp"
 
 /// blas
 #include "Tines.hpp"
@@ -693,8 +693,8 @@ struct FakeTeam
 {
   static Kokkos::Impl::HostThreadTeamMember<Kokkos::Serial> getMember()
   {
-    return Kokkos::Impl::HostThreadTeamMember<Kokkos::Serial>(
-      *Kokkos::Impl::serial_get_thread_team_data());
+    auto& data = Kokkos::Serial().impl_internal_space_instance()->m_thread_team_data;
+    return Kokkos::Impl::HostThreadTeamMember<Kokkos::Serial>(data);
   }
 };
 

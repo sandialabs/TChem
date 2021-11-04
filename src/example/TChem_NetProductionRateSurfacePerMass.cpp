@@ -134,7 +134,7 @@ main(int argc, char* argv[])
       TChem::Test::cloneView(zSurf_host);
     }
 
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
 
     timer.reset();
     Kokkos::deep_copy(state, state_host);

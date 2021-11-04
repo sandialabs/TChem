@@ -237,7 +237,7 @@ main(int argc, char* argv[])
         IgnDelayTimesT(i) = -1;
       });
 
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
 
     timer.reset();
     Kokkos::deep_copy(state, state_host);

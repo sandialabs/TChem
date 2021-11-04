@@ -202,7 +202,7 @@ main(int argc, char* argv[])
     real_type_2d_view state("StateVector ", nBatch, stateVecDim);
     real_type_2d_view fac("fac", nBatch, kmcdSurf.nSpec);
 
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
 
     //
     FILE* fout = fopen("SimpleSurface.dat", "w");

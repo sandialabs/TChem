@@ -251,7 +251,7 @@ main(int argc, char* argv[])
     real_type_2d_view siteFraction("SiteFraction", nBatch, kmcdSurf.nSpec);
     real_type_2d_view state("StateVector ", nBatch, stateVecDim);
 
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
 
     FILE* fout = fopen(outputFile.c_str(), "w");
 

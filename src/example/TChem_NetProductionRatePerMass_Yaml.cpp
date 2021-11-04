@@ -161,7 +161,7 @@ main(int argc, char* argv[])
     policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
 
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
 
     timer.reset();
     Kokkos::deep_copy(state, state_host);

@@ -130,7 +130,7 @@ main(int argc, char* argv[])
     real_type_1d_view InternalEnergyMixMass("InternalEnergyMass Mixture", nBatch);
 
     // compute heat capacity in mass base
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
 
     timer.reset();
     Kokkos::deep_copy(state, state_host);

@@ -42,7 +42,6 @@ INSTALL(EXPORT tchem-targets
   NAMESPACE TChem::
 )
 
-INCLUDE(CMakePackageConfigHelpers)
 CONFIGURE_PACKAGE_CONFIG_FILE("../cmake/TChemConfig.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/TChemConfig.cmake"
   INSTALL_DESTINATION "${TCHEM_INSTALL_LIB_PATH}/cmake/TChem"
 )

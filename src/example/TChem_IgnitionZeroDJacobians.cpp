@@ -157,7 +157,7 @@ main(int argc, char* argv[])
     real_type_2d_view state("StateVector Devices", nBatch, stateVecDim);
 
     using policy_type = typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
 
     timer.reset();
     Kokkos::deep_copy(state, state_host);

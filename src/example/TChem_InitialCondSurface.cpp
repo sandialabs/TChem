@@ -187,7 +187,7 @@ main(int argc, char* argv[])
 
     real_type_2d_view fac("fac", nBatch, kmcdSurf.nSpec);
 
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
     timer.reset();
     Kokkos::deep_copy(state, state_host);
     Kokkos::deep_copy(siteFraction, siteFraction_host);

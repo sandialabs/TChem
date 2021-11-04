@@ -245,7 +245,7 @@ main(int argc, char* argv[])
     real_type_2d_view state("StateVector ", nBatch, stateVecDim);
     real_type_1d_view velocity("Velocity", nBatch);
 
-    Kokkos::Impl::Timer timer;
+    Kokkos::Timer timer;
 
     FILE* fout = fopen(outputFile.c_str(), "w");
 

@@ -17,7 +17,8 @@ initial_state:
   ETHA: [4.1e-08]
   FORM: [4.9e-08]
   H2: [2.3e-05]
-  H2O: [7.7e+16]
+  #H2O: [7.7e+16]
+  H2O: [0.1278614863035299]
   H2O2: [4.5e-08]
   HCL: [2.9e-08]
   HNO3: [4.1e-08]
@@ -28,7 +29,7 @@ initial_state:
   NO: [4.1e-09]
   NO2: [4.1e-08]
   NTR: [4.1e-09]
-  O2: [8.6e+00]
+  O2: [8.56]
   O3: [2.0e-06]
   OLE: [9.4e-10]
   PAN: [3.3e-08]
@@ -2599,7 +2600,8 @@ species:
   H2:
     units: mol m-3
   H2O:
-    units: molecules cm-3
+    #units: molecules cm-3
+    units: mol m-3
   H2O2:
     units: mol m-3
   HCL:
@@ -2621,7 +2623,7 @@ species:
   NTR:
     units: mol m-3
   O2:
-    units: molecules cm-3
+    units: mol m-3
   O:
     units: mol m-3
   O3:

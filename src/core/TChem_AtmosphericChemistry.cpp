@@ -463,6 +463,11 @@ AtmosphericChemistry::runHostBatch( /// thread block size
         const real_type conv = CONV_PPM * pressure[i].as<real_type>() / temperature[i].as<real_type>() ; //D
         state_host(i, indx[j] + 3) =  initial_state[varnames[j]][i].as<real_type>()/conv; // molar concentration
 
+      } else if ( species[varnames[j]]["units"].as<std::string>() == "molecules cm-3")
+      {
+        // conversion from 1/m3 to 1/cm3
+        const real_type conv = CONV_PPM * pressure[i].as<real_type>() / temperature[i].as<real_type>() ; //D
+        state_host(i, indx[j] + 3) =  initial_state[varnames[j]][i].as<real_type>()/conv/real_type(1e6); // molar concentration
       }
       else if ( species[varnames[j]]["units"].as<std::string>() == "mol m-3") {
          state_host(i, indx[j] + 3) =  initial_state[varnames[j]][i].as<real_type>(); // molar concentration

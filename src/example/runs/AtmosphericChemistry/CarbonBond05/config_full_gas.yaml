@@ -9,36 +9,95 @@ environmental_conditions:
     initial_value: [298.15]
     units: K
 initial_state:
-  AACD: [8.2e-09]
-  ALD2: [4.1e-08]
-  CH4: [9.0e-05]
-  CO: [8.6e-06]
-  ETH: [8.2e-09]
-  ETHA: [4.1e-08]
-  FORM: [4.9e-08]
-  H2: [2.3e-05]
-  #H2O: [7.7e+16]
-  H2O: [0.1278614863035299]
-  H2O2: [4.5e-08]
-  HCL: [2.9e-08]
-  HNO3: [4.1e-08]
-  IOLE: [1.3e-11]
-  ISOP: [2.0e-07]
-  MEOH: [4.9e-09]
-  MEPX: [2.0e-08]
-  NO: [4.1e-09]
-  NO2: [4.1e-08]
-  NTR: [4.1e-09]
-  O2: [8.56]
-  O3: [2.0e-06]
-  OLE: [9.4e-10]
-  PAN: [3.3e-08]
-  PAR: [8.2e-08]
-  ROOH: [1.0e-09]
-  SO2: [3.3e-08]
-  TOL: [4.1e-09]
-  XYL: [4.1e-09]
-  M: [1] ## mol/mol
+  AACD:
+    initial_value: [8.2e-09]
+    units: mol m-3
+  ALD2:
+    initial_value: [4.1e-08]
+    units: mol m-3
+  CH4:
+    initial_value: [9.0e-05]
+    units: mol m-3
+  CO:
+    initial_value: [8.6e-06]
+    units: mol m-3
+  ETH:
+    initial_value: [8.2e-09]
+    units: mol m-3
+  ETHA:
+    initial_value: [4.1e-08]
+    units: mol m-3
+  FORM:
+    initial_value: [4.9e-08]
+    units: mol m-3
+  H2:
+    initial_value: [2.3e-05]
+    units: mol m-3
+  H2O:
+    #initial_value: [7.7e+16]
+    #units: molecules cm-3
+    initial_value: [0.1278614863035299]
+    units: mol m-3
+  H2O2:
+    initial_value: [4.5e-08]
+    units: mol m-3
+  HCL:
+    initial_value: [2.9e-08]
+    units: mol m-3
+  HNO3:
+    initial_value: [4.1e-08]
+    units: mol m-3
+  IOLE:
+    initial_value: [1.3e-11]
+    units: mol m-3
+  ISOP:
+    initial_value: [2.0e-07]
+    units: mol m-3
+  MEOH:
+    initial_value: [4.9e-09]
+    units: mol m-3
+  MEPX:
+    initial_value: [2.0e-08]
+    units: mol m-3
+  NO:
+    initial_value: [4.1e-09]
+    units: mol m-3
+  NO2:
+    initial_value: [4.1e-08]
+    units: mol m-3
+  NTR:
+    initial_value: [4.1e-09]
+    units: mol m-3
+  O2:
+    initial_value: [8.56e+00]
+    units: mol m-3
+  O3:
+    initial_value: [2.0e-06]
+    units: mol m-3
+  OLE:
+    initial_value: [9.4e-10]
+    units: mol m-3
+  PAN:
+    initial_value: [3.3e-08]
+    units: mol m-3
+  PAR:
+    initial_value: [8.2e-08]
+    units: mol m-3
+  ROOH:
+    initial_value: [1.0e-09]
+    units: mol m-3
+  SO2:
+    initial_value: [3.3e-08]
+    units: mol m-3
+  TOL:
+    initial_value: [4.1e-09]
+    units: mol m-3
+  XYL:
+    initial_value: [4.1e-09]
+    units: mol m-3
+  M:
+    initial_value: [40.87399840230441]
+    units: mol m-3
 model_info:
   chemistry_time_step:
     units: min
@@ -389,6 +448,7 @@ reactions:
 - coefficients:
     A: 2.4e-14
     C: 460.0
+  note: CMAQ_OH_HNO3
   products:
     NO3: 1.0
   reactants:
@@ -401,6 +461,7 @@ reactions:
     kinf_A: 2.7e-17
     kinf_C: 2199.0
     Fc : 1
+  note: CMAQ_OH_HNO3
   products:
     NO3: 1.0
   reactants:
@@ -2505,140 +2566,139 @@ sources:
     emission_rate: 6.03e-12
   species: ISOP
   type: EMISSION
+constant_species:
+- description: third body
+  name: M
 species:
-  M:
-    units: molecules m-3
-    type : tracer-CONSTANT
-  AACD:
-    units: mol m-3
-  O1D:
-    units: mol m-3
-  OH:
-    units: mol m-3
-  HO2:
-    units: mol m-3
-  N2O5:
-    units: mol m-3
-  HONO:
-    units: mol m-3
-  PNA:
-    units: mol m-3
-  XO2:
-    units: mol m-3
-  XO2N:
-    units: mol m-3
-  ALDX:
-    units: mol m-3
-  MEO2:
-    units: mol m-3
-  HCO3:
-    units: mol m-3
-  FACD:
-    units: mol m-3
-  C2O3:
-    units: mol m-3
-  PACD:
-    units: mol m-3
-  CXO3:
-    units: mol m-3
-  PANX:
-    units: mol m-3
-  ROR:
-    units: mol m-3
-  CRES:
-    units: mol m-3
-  TO2:
-    units: mol m-3
-  TOLRO2:
-    units: mol m-3
-  OPEN:
-    units: mol m-3
-  CRO:
-    units: mol m-3
-  MGLY:
-    units: mol m-3
-  XYLRO2:
-    units: mol m-3
-  ISPD:
-    units: mol m-3
-  TERP:
-    units: mol m-3
-  SULF:
-    units: mol m-3
-  ETOH:
-    units: mol m-3
-  CL2:
-    units: mol m-3
-  CL:
-    units: mol m-3
-  CLO:
-    units: mol m-3
-  HOCL:
-    units: mol m-3
-  FMCL:
-    units: mol m-3
-  BENZENE:
-    units: mol m-3
-  BENZRO2:
-    units: mol m-3
-  SESQ:
-    units: mol m-3
-  NO3:
-    units: mol m-3
-  ALD2:
-    units: mol m-3
-  CH4:
-    units: mol m-3
-  CO:
-    units: mol m-3
-  ETH:
-    units: mol m-3
-  ETHA:
-    units: mol m-3
-  FORM:
-    units: mol m-3
-  H2:
-    units: mol m-3
-  H2O:
-    #units: molecules cm-3
-    units: mol m-3
-  H2O2:
-    units: mol m-3
-  HCL:
-    units: mol m-3
-  HNO3:
-    units: mol m-3
-  IOLE:
-    units: mol m-3
-  ISOP:
-    units: mol m-3
-  MEOH:
-    units: mol m-3
-  MEPX:
-    units: mol m-3
-  NO:
-    units: mol m-3
-  NO2:
-    units: mol m-3
-  NTR:
-    units: mol m-3
-  O2:
-    units: mol m-3
-  O:
-    units: mol m-3
-  O3:
-    units: mol m-3
-  OLE:
-    units: mol m-3
-  PAN:
-    units: mol m-3
-  PAR:
-    units: mol m-3
-  ROOH:
-    units: mol m-3
-  SO2:
-    units: mol m-3
-  TOL:
-    units: mol m-3
-  XYL:
-    units: mol m-3
+- description: acetic and higher carboxylic acids
+  name: AACD
+- description: acetaldehyde
+  name: ALD2
+- description: propionaldehyde and higher aldehydes
+  name: ALDX
+- description: benzene
+  name: BENZENE
+- description: peroxy radical from benzene oxidation
+  name: BENZRO2
+- description: acetyl peroxy radical
+  name: C2O3
+- description: methane
+  name: CH4
+- description: chlorine radical
+  name: CL
+- description: molecular chlorine
+  name: CL2
+- description: chlorine monoxide
+  name: CLO
+- description: carbon monoxide
+  name: CO
+- description: cresol and higher molecular weight phenols
+  name: CRES
+- description: methylphenoxy radical
+  name: CRO
+- description: C3 and higher acylperoxy radicals
+  name: CXO3
+- description: ethene
+  name: ETH
+- description: ethane
+  name: ETHA
+- description: ethanol
+  name: ETOH
+- description: formic acid
+  name: FACD
+- description: formyl chloride (HC(O)Cl)
+  name: FMCL
+- description: formaldehyde
+  name: FORM
+- description: molecular hydrogen
+  name: H2
+- description: water
+  name: H2O
+- description: hydrogen peroxide
+  name: H2O2
+- description: hydrochlric acid
+  name: HCL
+- description: formyl peroxy radical
+  name: HCO3
+- description: nitric acid
+  name: HNO3
+- description: hydroperoxy radical
+  name: HO2
+- description: hypochlorous acid
+  name: HOCL
+- description: nitrous acid
+  name: HONO
+- description: internal olefin carbon bond (R-C=C)
+  name: IOLE
+- description: isoprene
+  name: ISOP
+- description: isoprene products (lumped methacrolein, methyl vinyl ketone, etc.)
+  name: ISPD
+- description: methyl peroxy radical
+  name: MEO2
+- description: methanol
+  name: MEOH
+- description: methylhydroperoxide
+  name: MEPX
+- description: methylglyoxal and other aromatic products
+  name: MGLY
+- description: dinitrogen pentoxide
+  name: N2O5
+- description: nitric oxide
+  name: NO
+- description: nitrogen dioxide
+  name: NO2
+- description: nitrate radical
+  name: NO3
+- description: organic nitrates (RNO3)
+  name: NTR
+- description: oxygen atom in the O3P electronic state
+  name: O
+- description: oxygen atom in the O1D electronic state
+  name: O1D
+- description: ozone
+  name: O3
+- description: hydroxyl radical
+  name: OH
+- description: molecular oxygen
+  name: O2
+- description: terminal olefin carbon bond (R-C=C)
+  name: OLE
+- description: aromatic ring opening products
+  name: OPEN
+- description: peroxyacetic and higher peroxycarboxylic acids
+  name: PACD
+- description: peroxyacetyl nitrate
+  name: PAN
+- description: C3 and higher peroxyacyl nitrates
+  name: PANX
+- description: paraffin carbon bond (C-C)
+  name: PAR
+- description: peroxynitric acid (HNO4)
+  name: PNA
+- description: higher organic peroxides
+  name: ROOH
+- description: secondary alkoxy radical
+  name: ROR
+- description: sesquiterpene
+  name: SESQ
+- description: sulfur dioxide
+  name: SO2
+- description: sulfuric acid (gaseous)
+  name: SULF
+- description: terpenes
+  name: TERP
+- description: toluene-hydroxyl radical aduct
+  name: TO2
+- description: toluene
+  name: TOL
+- description: first generation product from TOL oxidation
+  name: TOLRO2
+- description: NO to NO2 conversion from alkylperoxy (RO2) radical
+  name: XO2
+- description: NO to organic nitrate conversion from alkylperoxy (RO2) radical
+  name: XO2N
+- description: xylene and other polyalkyl aromatics
+  name: XYL
+- description: first generation product from XYL oxidation
+  name: XYLRO2

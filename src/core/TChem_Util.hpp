@@ -73,7 +73,11 @@ struct UseThisTeamPolicy
 };
 
 /// type defs
+#if defined(TCHEM_ENABLE_REAL_TYPE_SINGLE_PRECISION)
+using real_type = float;
+#elif defined(TCHEM_ENABLE_REAL_TYPE_DOUBLE_PRECISION)
 using real_type = double;
+#endif
 using ordinal_type = int;
 using size_type = size_t;
 

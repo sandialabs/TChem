@@ -9,13 +9,27 @@ environmental_conditions:
     initial_value: [206.6374207]
     units: K
 initial_state:
-  Ar: [0.0334]
-  CO2: [0.00146]
-  H2O: [1.19e-05]
-  N2: [2.8]
-  O2: [0.75]
-  O3: [8.1e-06]
-  M: [1] ## mol/mol
+  Ar: 
+    initial_value: [0.0334]
+    units: mol m-3
+  CO2: 
+    initial_value: [0.00146]
+    units: mol m-3
+  H2O: 
+    initial_value:  [1.19e-05]
+    units: mol m-3
+  N2: 
+    initial_value:  [2.8]
+    units: mol m-3
+  O2: 
+    initial_value: [0.75]
+    units: mol m-3
+  O3: 
+    initial_value: [8.1e-06]
+    units: mol m-3
+  M: 
+    initial_value:  [1] ## mol/mol
+    units: molecules m-3
 model_info:
   chemistry_time_step:
     units: sec
@@ -93,23 +107,23 @@ reactions:
     O2: 1.0
     O: 1.0
   type: ARRHENIUS
+constant_species:
+- description: "Third-body molecule. This is any molecule present in the system."
+  name: M
 species:
-  M:
-    units: molecules m-3
-    type : tracer-CONSTANT  
-  Ar:
-    units: mol m-3
-  CO2:
-    units: mol m-3
-  H2O:
-    units: mol m-3
-  N2:
-    units: mol m-3
-  O1D:
-    units: mol m-3
-  O:
-    units: mol m-3
-  O2:
-    units: mol m-3
-  O3:
-    units: mol m-3
+- description: Ar
+  name: Ar
+- description: CO2
+  name: CO2
+- description: H2O
+  name: H2O
+- description: N2
+  name: N2
+- description: O1D
+  name: O1D
+- description: O
+  name: O
+- description: O2
+  name: O2
+- description: O3
+  name: O3

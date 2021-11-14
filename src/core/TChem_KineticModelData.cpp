@@ -2187,7 +2187,7 @@ namespace TChem {
             "------------------------------------------------------------" \
             "-------------\n")
 
-    CONV_PPM_=CONV_PPM;        
+    CONV_PPM_=CONV_PPM;
 
     FILE *echofile;
     echofile = fopen("kmod.echo", "w");
@@ -2195,7 +2195,16 @@ namespace TChem {
     auto species_names  = root["species"];
     auto reactions = root["reactions"];
 
-    nSpec_ = species_names.size();
+    YAML::Node const_species_names;
+    nConstSpec_=0;
+    if (root["constant_species"])
+    {
+      const_species_names = root["constant_species"];
+      nConstSpec_ = const_species_names.size();
+    }
+    // total number of species includes constant species
+    // constant species are tracers
+    nSpec_ = species_names.size() + nConstSpec_;
     nReac_ = reactions.size();
 
     /* Species' name */
@@ -2208,38 +2217,26 @@ namespace TChem {
     int sp_i(0);
     // non constant species
     for (auto const& sp : species_names) {
-      if (sp.second["type"]){
-	// do not add this species in this position
-      } else {
-	std::string sp_name = sp.first.as<std::string>();
-	// std::transform(sp_name.begin(),
-	// sp_name.end(),sp_name.begin(), ::toupper);
-	species_indx.insert(std::pair<std::string, int>(sp_name, sp_i));
-
-	char* specNm= &*sp_name.begin();
-	strncat(&sNamesHost(sp_i, 0), specNm, LENGTHOFSPECNAME);
-	sp_i ++;
-      }
-
+	     std::string sp_name = sp["name"].as<std::string>();
+	     // std::transform(sp_name.begin(),
+	     // sp_name.end(),sp_name.begin(), ::toupper);
+	     species_indx.insert(std::pair<std::string, int>(sp_name, sp_i));
+	     char* specNm= &*sp_name.begin();
+	     strncat(&sNamesHost(sp_i, 0), specNm, LENGTHOFSPECNAME);
+	      sp_i ++;
     }
-    // look for species with constant values
-    nConstSpec_ = ordinal_type(0);
-    for (auto const& sp : species_names) {
+    // do not reset sp_i, add const species at end of species list
+    //
+    // constant species
+    for (auto const& sp : const_species_names) {
 
-      if (sp.second["type"]) {
-	if (sp.second["type"].as<std::string>() == "tracer-CONSTANT") {
-	  std::string sp_name = sp.first.as<std::string>();
-	  std::transform(sp_name.begin(),
-			 sp_name.end(),sp_name.begin(), ::toupper);
-	  species_indx.insert(std::pair<std::string, int>(sp_name, sp_i));
-
-	  char* specNm= &*sp_name.begin();
-	  strncat(&sNamesHost(sp_i, 0), specNm, LENGTHOFSPECNAME);
-	  sp_i ++;
-	  nConstSpec_++;
-	}
-
-      }
+      std::string sp_name = sp["name"].as<std::string>();
+	    // std::transform(sp_name.begin(),
+			// sp_name.end(),sp_name.begin(), ::toupper);
+	    species_indx.insert(std::pair<std::string, int>(sp_name, sp_i));
+	    char* specNm= &*sp_name.begin();
+	    strncat(&sNamesHost(sp_i, 0), specNm, LENGTHOFSPECNAME);
+	    sp_i ++;
     }
 
     fprintf(
@@ -2312,14 +2309,15 @@ namespace TChem {
 		else
 		  {
 		    printf("Yaml : Error when interpreting kinetic model  !!!");
-		    printf("species does not exit %s\n", reac.first.as<std::string>().c_str() );
+        printf("species does not exit %s in reactants of reaction No %d\n", reac.first.as<std::string>().c_str(), countReac );
 		    exit(1);
 		  }
 	      }
 	  }
 	else
 	  {
-	    printf("error in reactants\n");
+      printf("Yaml : Error when interpreting kinetic model  !!!");
+	    printf("Reactions No %d does not have reactants\n", countReac);
 	    exit(1);
 	  }
 
@@ -2340,7 +2338,7 @@ namespace TChem {
 		else
 		  {
 		    printf("Yaml : Error when interpreting kinetic model  !!!");
-		    printf("species does not exit %s\n", prod.first.as<std::string>().c_str() );
+		    printf("species does not exit %s in products of reaction No %d\n", prod.first.as<std::string>().c_str(), countReac );
 		    exit(1);
 		  }
 	      }
@@ -2348,7 +2346,8 @@ namespace TChem {
 	  }
 	else
 	  {
-	    printf("error in products\n");
+      printf("Yaml : Error when interpreting kinetic model  !!!");
+	    printf("Reactions No %d does not have products\n", countReac);
 	    exit(1);
 	  }
 
@@ -2373,21 +2372,27 @@ namespace TChem {
 	auto reaction_type = reaction["type"].as<std::string>();
 
 	if ( reaction_type == "ARRHENIUS")
-	  {
-	    countArrheniusReac++;
-	  }
-	if (reaction_type == "TROE")
-	  {
-	    nFallReac_++;
-
-	  }
-  if (reaction_type == "CMAQ_H2O2")
-    {
+  {
+    countArrheniusReac++;
+  }
+  else if (reaction_type == "TROE")
+  {
+    nFallReac_++;
+  }
+	else if (reaction_type == "CMAQ_H2O2")
+  {
     countCMAQ_H2O2Reac++;
+  }
+  else
+  {
+    printf("Error: reaction type does not exit \n " );
+    printf("Reaction No: %d type %s \n",countReac,reaction_type.c_str());
+    exit(1);
+
   }
 
 	   countReac++;
-    }
+  }
 
     //twice because we only consider max (products, reactants)
     maxSpecInReac_ *=2;
@@ -2691,8 +2696,16 @@ namespace TChem {
   for (auto const& source : root["sources"])
   {
     if (source["type"].as<std::string>() == "EMISSION")
+    {
       countEmissionSources++;
-  }
+    }
+    else
+    {
+        printf("Error: source type does not exit \n " );
+        printf("Source No: %d type %s \n",countEmissionSources,source["type"].as<std::string>().c_str());
+        exit(1);
+    }
+  } // end source terms
 
   if (countEmissionSources > 0 ) {
     EmissionCoef_ = emission_source_type_1d_dual_view(do_not_init_tag("KMD::EmissionCoefHost_"), countEmissionSources);
@@ -2738,11 +2751,8 @@ namespace TChem {
   } // end sources
 
   fprintf( echofile,
-        "kmod.list :  # of Troe type reactions                         : %d\n",
-        nFallReac_);
-
-
-
+        "kmod.list :  # sources e.g., EMISSION                         : %d\n",
+        countEmissionSources);
 
 
 

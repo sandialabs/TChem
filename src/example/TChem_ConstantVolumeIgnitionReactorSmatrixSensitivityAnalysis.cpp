@@ -60,8 +60,8 @@ main(int argc, char* argv[])
     ///
 
     /// scalar type and ordinal type
-    using real_type = double;
-    using ordinal_type = int;
+    using TChem::real_type;
+    using TChem::ordinal_type;
 
     /// Kokkos environments - host device type and multi dimensional arrays
     /// note that the 2d view use row major layout while most matrix format uses column major layout.

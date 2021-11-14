@@ -34,6 +34,7 @@ SET(TCHEM_INSTALL_EXAMPLE_PATH example)
 # Options : use TCHEM prefix
 #
 OPTION(TCHEM_ENABLE_TEST "Flag to enable unit tests" OFF)
+OPTION(TCHEM_ENABLE_REAL_TYPE "Flag to determine working precision; float, double(default)" "double")
 OPTION(TCHEM_ENABLE_EXAMPLE "Flag to enable unit examples" ON)
 OPTION(TCHEM_ENABLE_VERBOSE "Flag to enable TChem verbose flag" OFF)
 OPTION(TCHEM_ENABLE_DEBUG "Flag to enable TChem debug flag" OFF)
@@ -58,6 +59,15 @@ OPTION(TINES_INSTALL_PATH "Path to Tines installation")
 OPTION(GTEST_INSTALL_PATH "Path to gtest installation")
 
 INCLUDE_DIRECTORIES(${TChem_BINARY_DIR})
+
+# Working precision
+IF (TCHEM_ENABLE_REAL_TYPE STREQUAL "float")
+  SET(TCHEM_ENABLE_REAL_TYPE_SINGLE_PRECISION ON)
+  MESSAGE(STATUS "TChem uses real type SINGLE PRECISION")
+ELSE()
+  SET(TCHEM_ENABLE_REAL_TYPE_DOUBLE_PRECISION ON)
+  MESSAGE(STATUS "TChem uses real type DOUBLE PRECISION")  
+ENDIF()
 
 # Fortran
 IF (TCHEM_ENABLE_FORTRAN)

@@ -9,9 +9,15 @@ environmental_conditions:
     initial_value: [272.5, 248.3, 301.3, 276.0, 245.1]
     units: K
 initial_state:
-  D: [1.2, 17.0, 13.0, 9.0, 4.0]
-  A: [1.0, 2.0, 3.0, 4.0, 5.0]
-  B: [0.0, 0.0, 0.0, 0.0, 0.0]
+  D: 
+    initial_value: [1.2, 17.0, 13.0, 9.0, 4.0]
+    units: molecules m-3
+  A: 
+    initial_value: [1.0, 2.0, 3.0, 4.0, 5.0]
+    units: mol m-3
+  B: 
+    initial_value: [0.0, 0.0, 0.0, 0.0, 0.0]
+    units: mol m-3
 model_info:
   chemistry_time_step:
     units: sec
@@ -56,13 +62,13 @@ reactions:
   reactants:
     B: 1.0
   type: ARRHENIUS
+constant_species:
+- description: tracer-CONSTANT
+  name: D
 species:
-  A:
-    units: mol m-3
-  D:
-    units: molecules m-3
-    type : tracer-CONSTANT  
-  B:
-    units: mol m-3
-  C:
-    units: mol m-3
+- description: A 
+  name: A
+- description: B 
+  name: B
+- description: C 
+  name: C

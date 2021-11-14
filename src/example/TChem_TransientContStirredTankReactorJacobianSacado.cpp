@@ -12,13 +12,13 @@ main(int argc, char* argv[])
 {
 
   /// default inputs
-  std::string prefixPath("data/");
-  std::string chemFile(prefixPath + "chem.inp");
-  std::string thermFile(prefixPath + "therm.dat");
-  std::string inputFile(prefixPath + "sample.dat");
-  std::string chemSurfFile("chemSurf.inp");
-  std::string thermSurfFile("thermSurf.dat");
-  std::string inputFileSurf( "inputSurf.dat");
+  std::string prefixPath("runs/T-CSTR/CH4_PT_Quinceno2006/inputs/");
+  std::string chemFile(prefixPath + "chemgri30.inp");
+  std::string thermFile(prefixPath + "thermgri30.dat");
+  std::string inputFile(prefixPath + "sample_phi1.dat");
+  std::string chemSurfFile(prefixPath +"chemSurf.inp");
+  std::string thermSurfFile(prefixPath +"thermSurf.dat");
+  std::string inputFileSurf( prefixPath +"inputSurf.dat");
 
   bool verbose(true);
 
@@ -58,8 +58,8 @@ main(int argc, char* argv[])
 
   Kokkos::initialize(argc, argv);
   {
-    using real_type = double;
-    using ordinal_type = int;
+    using TChem::real_type;
+    using TChem::ordinal_type;
     using fad_type = Sacado::Fad::SLFad<real_type,100>;
 
     using ats = Tines::ats<real_type>;
@@ -122,7 +122,7 @@ main(int argc, char* argv[])
 
     }
 
-    real_type mdotIn(3.596978981250784e-06);
+    real_type mdotIn(1e-1);
     real_type Vol(0.00013470);
     real_type Acat (0.0013074);
 

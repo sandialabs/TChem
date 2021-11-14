@@ -9,9 +9,15 @@ environmental_conditions:
     initial_value: [272.5]
     units: K
 initial_state:
-  A: [1.0]
-  B: [0.0]
-  C: [0.0]
+  A: 
+    initial_value: [1.0]
+    units: mol m-3
+  B:
+    initial_value: [0.0]
+    units: mol m-3
+  C: 
+    initial_value: [0.0]
+    units: mol m-3
 model_info:
   chemistry_time_step:
     units: sec
@@ -47,9 +53,9 @@ reactions:
   type: CMAQ_H2O2 
   time_unit: min
 species:
-  A:
-    units: mol m-3
-  B:
-    units: mol m-3
-  C:
-    units: mol m-3
+- description: A 
+  name: A
+- description: B 
+  name: B
+- description: C 
+  name: C

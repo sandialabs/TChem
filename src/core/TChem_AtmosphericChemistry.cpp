@@ -457,24 +457,24 @@ AtmosphericChemistry::runHostBatch( /// thread block size
         // printf(" batch No %d i temp %e pressure %e \n", i, state_host(i, 2), state_host(i, 1) );
       }
       //3.2 apply unit factor
-      if ( species[varnames[j]]["units"].as<std::string>() == "molecules m-3")
+      if ( initial_state[varnames[j]]["units"].as<std::string>() == "molecules m-3")
       {
             // unit conversion fractor
         const real_type conv = CONV_PPM * pressure[i].as<real_type>() / temperature[i].as<real_type>() ; //D
-        state_host(i, indx[j] + 3) =  initial_state[varnames[j]][i].as<real_type>()/conv; // molar concentration
+        state_host(i, indx[j] + 3) =  initial_state[varnames[j]]["initial_value"][i].as<real_type>()/conv; // molar concentration
 
-      } else if ( species[varnames[j]]["units"].as<std::string>() == "molecules cm-3")
+      } else if ( initial_state[varnames[j]]["units"].as<std::string>() == "molecules cm-3")
       {
         // conversion from 1/m3 to 1/cm3
         const real_type conv = CONV_PPM * pressure[i].as<real_type>() / temperature[i].as<real_type>() ; //D
-        state_host(i, indx[j] + 3) =  initial_state[varnames[j]][i].as<real_type>()/conv/real_type(1e6); // molar concentration
+        state_host(i, indx[j] + 3) =  initial_state[varnames[j]]["initial_value"][i].as<real_type>()/conv/real_type(1e6); // molar concentration
       }
-      else if ( species[varnames[j]]["units"].as<std::string>() == "mol m-3") {
-         state_host(i, indx[j] + 3) =  initial_state[varnames[j]][i].as<real_type>(); // molar concentration
+      else if ( initial_state[varnames[j]]["units"].as<std::string>() == "mol m-3") {
+         state_host(i, indx[j] + 3) =  initial_state[varnames[j]]["initial_value"][i].as<real_type>(); // molar concentration
       }
       else
       {
-            printf("unit type does not exit %s \n", species[varnames[j]]["units"].as<std::string>().c_str());
+            printf("unit type does not exit %s \n", initial_state[varnames[j]]["units"].as<std::string>().c_str());
             exit(1);
       }
       // printf(" batch No %d j %d species name %s val %e\n", i, j, varnames[j].c_str(), state_host(i, indx[j] + 3) );

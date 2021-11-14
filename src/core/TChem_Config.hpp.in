@@ -4,6 +4,8 @@
 #include "Tines_Config.hpp"
 
 /// tchem control
+#cmakedefine TCHEM_ENABLE_REAL_TYPE_SINGLE_PRECISION
+#cmakedefine TCHEM_ENABLE_REAL_TYPE_DOUBLE_PRECISION
 #cmakedefine TCHEM_ENABLE_VERBOSE
 #cmakedefine TCHEM_ENABLE_DEBUG
 #cmakedefine TCHEM_ENABLE_PROBLEMS_NUMERICAL_JACOBIAN

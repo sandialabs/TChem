@@ -57,8 +57,8 @@ main(int argc, char* argv[])
     ///
 
     /// scalar type and ordinal type
-    using real_type = double;
-    using ordinal_type = int;
+    using TChem::real_type;
+    using TChem::ordinal_type;
     using value_type = Sacado::Fad::SLFad<real_type,100>;
 
     /// Kokkos environments - host device type and multi dimensional arrays

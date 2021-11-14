@@ -59,8 +59,8 @@ main(int argc, char* argv[])
 
   Kokkos::initialize(argc, argv);
   {
-    using real_type = double;
-    using ordinal_type = int;
+    using real_type = TChem::real_type;
+    using ordinal_type = TChem::ordinal_type;
     using fad_type = Sacado::Fad::SLFad<real_type,100>;
 
     using ats = Tines::ats<real_type>;

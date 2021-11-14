@@ -11,8 +11,12 @@ environmental_conditions:
   air_concetration:
     initial_value: 1.0
 initial_state:
-  A: [1.0]
-  B: [1.0]
+  A: 
+    initial_value: [1.0]
+    units: mol m-3
+  B: 
+    initial_value: [1.0]
+    units: mol m-3
 model_info:
   chemistry_time_step:
     units: sec
@@ -36,7 +40,7 @@ sources:
   species: B 
   type: EMISSION
 species:
-  A:
-    units: mol m-3
-  B:
-    units: mol m-3
+- description: A 
+  name: A
+- description: B 
+  name: B

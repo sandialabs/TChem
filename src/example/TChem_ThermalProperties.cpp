@@ -275,31 +275,45 @@ main(int argc, char* argv[])
     if (verbose) {
       auto CpMixMass_host = Kokkos::create_mirror_view(CpMixMass);
       Kokkos::deep_copy(CpMixMass_host, CpMixMass);
-
       TChem::Test::write1DVector("CpMixMass.dat", CpMixMass_host);
+
+      auto CpMass_host = Kokkos::create_mirror_view(CpMass);
+      Kokkos::deep_copy(CpMass_host, CpMass);
+      TChem::Test::write2DMatrix("CpMass.dat", nBatch, kmcd.nSpec, CpMass_host);
 
       auto CvMixMass_host = Kokkos::create_mirror_view(CvMixMass);
       Kokkos::deep_copy(CvMixMass_host, CvMixMass);
-
       TChem::Test::write1DVector("CvMixMass.dat", CvMixMass_host);
 
-      //
       auto EnthalpyMixMass_host = Kokkos::create_mirror_view(EnthalpyMixMass);
       Kokkos::deep_copy(EnthalpyMixMass_host, EnthalpyMixMass);
-
       TChem::Test::write1DVector("EnthalpyMixMass.dat", EnthalpyMixMass_host);
 
+      auto EnthalpyMass_host = Kokkos::create_mirror_view(EnthalpyMass);
+      Kokkos::deep_copy(EnthalpyMass_host, EnthalpyMass);
+      TChem::Test::write2DMatrix("EnthalpyMass.dat", nBatch, kmcd.nSpec, EnthalpyMass_host);
 
       auto EntropyMixMass_host = Kokkos::create_mirror_view(EntropyMixMass);
       Kokkos::deep_copy(EntropyMixMass_host, EntropyMixMass);
-
       TChem::Test::write1DVector("EntropyMixMass.dat", EntropyMixMass_host);
+
+      auto EntropyMass_host = Kokkos::create_mirror_view(EntropyMass);
+      Kokkos::deep_copy(EntropyMass_host, EntropyMass);
+      TChem::Test::write2DMatrix("EntropyMass.dat", nBatch, kmcd.nSpec, EntropyMass_host);
 
       auto InternalEnergyMixMass_host = Kokkos::create_mirror_view(InternalEnergyMixMass);
       Kokkos::deep_copy(InternalEnergyMixMass_host, InternalEnergyMixMass);
-
       TChem::Test::write1DVector("InternalEnergyMixMass.dat", InternalEnergyMixMass_host);
+
+      auto InternalEnergyMass_host = Kokkos::create_mirror_view(InternalEnergyMass);
+      Kokkos::deep_copy(InternalEnergyMass_host, InternalEnergyMass);
+      TChem::Test::write2DMatrix("InternalEnergyMass.dat", nBatch, kmcd.nSpec, InternalEnergyMass_host);
+
+
+
     }
+
+
   }
   Kokkos::finalize();
 

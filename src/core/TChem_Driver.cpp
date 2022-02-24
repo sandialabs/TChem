@@ -203,10 +203,12 @@ namespace TChem {
     if (isGasKineticModelCreated()) {
       _kmcd_device = TChem::createGasKineticModelConstData<interf_device_type>(_kmd);
       _kmcd_host = TChem::createGasKineticModelConstData<interf_host_device_type>(_kmd);
-      if (isGasKineticModelCloned()) {
-	       _kmcds_device = TChem::createGasKineticModelConstData<interf_device_type>(_kmds);
-	       _kmcds_host   = TChem::createGasKineticModelConstData<interf_host_device_type>(_kmds);
-      }
+
+      if (!isGasKineticModelCloned()) 
+	cloneGasKineticModel();	
+
+      _kmcds_device = TChem::createGasKineticModelConstData<interf_device_type>(_kmds);
+      _kmcds_host   = TChem::createGasKineticModelConstData<interf_host_device_type>(_kmds);
     }
     _is_gasphase_kmcd_created = true;
   }
@@ -699,8 +701,6 @@ namespace TChem {
   Driver::
   computeGasNetProductionRatePerMassDevice() {
     TCHEM_CHECK_ERROR(!isStateVectorCreated(), "state vector is not created");
-    TCHEM_CHECK_ERROR(isGasKineticModelCloned(),
-		      "this function does not work with cloned kinetic models");
     _state.sync_device();
 
     if (!isGasNetProductionRatePerMassCreated())
@@ -888,22 +888,13 @@ namespace TChem {
     _t.sync_device();
     _dt.sync_device();
 
-    if (isGasKineticModelCloned()) {
-      TChem::IgnitionZeroD::runDeviceBatch(_policy,
-					   _tol_newton, _tol_time, _fac,
-					   _tadv,
-					   _state.view_device(),
-					   _t.view_device(), _dt.view_device(),
-					   _state.view_device(),
-					   _kmcds_device);
-    } else {
-      TChem::IgnitionZeroD::runDeviceBatch(_policy,
-					   _tol_newton, _tol_time, _fac, _tadv,
-					   _state.view_device(),
-					   _t.view_device(), _dt.view_device(),
-					   _state.view_device(),
-					   _kmcd_device);
-    }
+    TChem::IgnitionZeroD::runDeviceBatch(_policy,
+					 _tol_newton, _tol_time, _fac,
+					 _tadv,
+					 _state.view_device(),
+					 _t.view_device(), _dt.view_device(),
+					 _state.view_device(),
+					 _kmcds_device);
     Kokkos::fence();
 
     _state.modify_device();

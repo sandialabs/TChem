@@ -65,7 +65,7 @@ main(int argc, char* argv[])
   #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
   /// default inputs
   std::string prefixPath("data/ignition-zero-d/CO/");
-  int nBatch(1), team_size(-1), vector_size(-1);
+  int nBatch(1), team_size(-1), vector_size(-1), imodel(1);
   bool verbose(true);
 
   std::string chemFile("chem.inp");
@@ -88,18 +88,20 @@ main(int argc, char* argv[])
   opts.set_option<std::string>
   ("samplefile", "Input state file name e.g.,input.dat", &inputFile);
   opts.set_option<std::string>
-  ("inputFileParamModifiers", "Input state file name e.g.,input.dat", &inputFileParamModifiers);
+  ("input-file-param-modifiers", "Input state file name e.g.,input.dat", &inputFileParamModifiers);
 
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
-
-  //
   opts.set_option<std::string>
-  ("chemSurffile","Chem file name e.g., chemSurf.inp",
+  ("surf-chemfile","Chem file name e.g., chemSurf.inp",
    &chemSurfFile);
+  //
+  opts.set_option<int>
+  ("imodel","print factor for model No imodel e.g., 1",
+   &imodel);
 
   opts.set_option<std::string>
-  ("thermSurffile", "Therm file name e.g.,thermSurf.dat",
+  ("surf-thermfile", "Therm file name e.g.,thermSurf.dat",
   &thermSurfFile);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
@@ -153,6 +155,12 @@ main(int argc, char* argv[])
 
     real_type_2d_view state("StateVector Devices", nBatch, stateVecDim);
     Kokkos::deep_copy(state, state_host);
+
+    if (nBatch -1 < imodel) {
+      printf("imodel cannot be bigger than number of samples: nBatch %d imodel %d\n", nBatch, imodel );
+      imodel = nBatch -1 ;
+      printf("Setting imodel equal to nBatch\n");
+    }
 
 
     real_type_2d_view kFor("kfor gas ", nBatch, kmcdSurf.nReac);
@@ -292,10 +300,18 @@ main(int argc, char* argv[])
     Kokkos::Profiling::popRegion();
 
 
-    auto kFor_host = Kokkos::create_mirror_view(kFor);
-    Kokkos::deep_copy(kFor_host, kFor);
+    // auto kFor_host = Kokkos::create_mirror_view(kFor);
+    //wo-mod
+    const auto kFor_at_0 = Kokkos::subview(kFor, 0, Kokkos::ALL());
+    auto kFor_host_at_0 = Kokkos::create_mirror_view(kFor_at_0);
+    Kokkos::deep_copy(kFor_host_at_0, kFor_at_0);
+    // w-mod
+    const auto kFor_at_imodel = Kokkos::subview(kFor, imodel, Kokkos::ALL());
+    auto kFor_host_at_imodel = Kokkos::create_mirror_view(kFor_at_imodel);
+    Kokkos::deep_copy(kFor_host_at_imodel, kFor_host_at_imodel);
+
     for (ordinal_type i = 0; i < kFor.extent(1); i++) {
-      printf(" Kfor: Reac No %d,  wo mod. %e, w mod. %e, ratio %e\n", i , kFor_host(0,i), kFor_host(1,i), kFor_host(1,i)/kFor_host(0,i));
+      printf(" Kfor: Reac No %d,  wo-mod. %e, w-mod. %e, ratio (w-mod/wo-mod) %e\n", i , kFor_host_at_0(i), kFor_host_at_imodel(i), kFor_host_at_imodel(i)/kFor_host_at_0(i));
     }
 
 

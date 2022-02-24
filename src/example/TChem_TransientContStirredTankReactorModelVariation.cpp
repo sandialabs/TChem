@@ -23,6 +23,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_Util.hpp"
 #include "TChem_EnthalpyMass.hpp"
 #include "TChem_TransientContStirredTankReactor.hpp"
+#include "TChem_IsothermalTransientContStirredTankReactor.hpp"
 
 using ordinal_type = TChem::ordinal_type;
 using real_type = TChem::real_type;
@@ -81,16 +82,19 @@ main(int argc, char* argv[])
   bool verbose(true);
 
   bool use_prefixPath(true);
-  bool isoThermic(false);
+  bool isothermal(false);
   bool saveInitialCondition(true);
 
   bool transient_initial_condition(false);
   bool initial_condition(false);
   int number_of_algebraic_constraints(0);
+  int poisoning_species_idx(-1);
+  bool run_scaled_sensitivity_analysis(false);
+
   /// parse command line arguments
   TChem::CommandLineParser opts(
-    "This example computes Temperature, density, mass fraction and site "
-    "fraction for a plug flow reactor");
+    "This example computes temperature, mass fraction, and site "
+    "fraction for a Transient continuous stirred tank reactor");
   opts.set_option<std::string>(
     "inputs-path", "prefixPath e.g.,inputs/", &prefixPath);
   opts.set_option<bool>(
@@ -98,7 +102,7 @@ main(int argc, char* argv[])
   opts.set_option<real_type>("catalytic-area", "Catalytic area [m2]", &Acat);
   opts.set_option<real_type>("reactor-volume", "Reactor Volumen [m3]", &Vol);
   opts.set_option<real_type>("inlet-mass-flow", "Inlet mass flow rate [kg/s]", &mdotIn);
-  opts.set_option<bool>("isothermic", "if True, reaction is isotermic", &isoThermic);
+  opts.set_option<bool>("isothermal", "if True, reaction is isotermic", &isothermal);
   opts.set_option<bool>("save-initial-condition", "if True, solution containts"
                         "initial condition", &saveInitialCondition);
   opts.set_option<bool>(
@@ -134,13 +138,13 @@ main(int argc, char* argv[])
   opts.set_option<real_type>("dtmin", "Minimum time step size", &dtmin);
   opts.set_option<real_type>("dtmax", "Maximum time step size", &dtmax);
   opts.set_option<real_type>(
-    "atol-newton", "Absolute tolerence used in newton solver", &atol_newton);
+    "atol-newton", "Absolute tolerance used in newton solver", &atol_newton);
   opts.set_option<real_type>(
-    "rtol-newton", "Relative tolerence used in newton solver", &rtol_newton);
+    "rtol-newton", "Relative tolerance used in newton solver", &rtol_newton);
   opts.set_option<real_type>(
     "tol-time", "Tolerence used for adaptive time stepping", &rtol_time);
   opts.set_option<real_type>(
-    "atol-time", "Absolute tolerence used for adaptive time stepping", &atol_time);
+    "atol-time", "Absolute tolerance used for adaptive time stepping", &atol_time);
   opts.set_option<int>("time-iterations-per-interval",
                        "Number of time iterations per interval to store qoi",
                        &num_time_iterations_per_interval);
@@ -162,9 +166,13 @@ main(int argc, char* argv[])
     "verbose", "If true, printout the first Jacobian values", &verbose);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
+  opts.set_option<int>("index-poisoning-species",
+                       "catalysis deactivation, index for species",
+                       &poisoning_species_idx);
   opts.set_option<std::string>("outputfile",
   "Output file name e.g., CSTRSolution.dat", &outputFile);
-
+  opts.set_option<bool>(
+    "run-scaled-sensitivity-analysis", "If true, run simple sensivity analysis", &run_scaled_sensitivity_analysis);
 
   const bool r_parse = opts.parse(argc, argv);
   if (r_parse)
@@ -184,9 +192,6 @@ main(int argc, char* argv[])
     printf("Using a prefix path %s \n",prefixPath.c_str() );
   }
 
-  printf("Inlet mass faction %e\n", mdotIn );
-  printf("Catalytic Area %e\n",Acat);
-  printf("Vol %e\n",Vol );
 
   Kokkos::initialize(argc, argv);
   {
@@ -195,7 +200,14 @@ main(int argc, char* argv[])
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
 
+    if (verbose) {
+      printf("Inlet mass flow %e kg/s \n", mdotIn );
+      printf("Catalytic Area %e m2 \n",Acat);
+      printf("Vol %e m3 \n",Vol );
+    }
+
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+    using host_device_type      = typename Tines::UseThisDevice<host_exec_space>::type;
 
     const auto exec_space_instance = TChem::exec_space();
     using policy_type =
@@ -208,29 +220,25 @@ main(int argc, char* argv[])
     const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
     const auto kmcdSurf =
       TChem::createSurfaceKineticModelConstData<device_type>(kmd); // data struc with
+    //
+    const auto kmcd_host = TChem::createGasKineticModelConstData<host_device_type>(kmd);
+    const auto kmcdSurf_host =
+      TChem::createSurfaceKineticModelConstData<host_device_type>(kmd);
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
 
     real_type_2d_view_host state_host;
     real_type_2d_view_host siteFraction_host;
-    real_type_1d_view_host velocity_host;
 
-    const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
-    Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
-
-    // get names of species on host
-    const auto SurfSpeciesNamesHost =
-      Kokkos::create_mirror_view(kmcdSurf.speciesNames);
-    Kokkos::deep_copy(SurfSpeciesNamesHost, kmcdSurf.speciesNames);
+    auto speciesNamesHost = kmcd_host.speciesNames;
+    auto SurfSpeciesNamesHost = kmcdSurf_host.speciesNames;
 
     {
       // get names of species on host
 
       // get species molecular weigths
-      const auto SpeciesMolecularWeights =
-        Kokkos::create_mirror_view(kmcd.sMass);
-      Kokkos::deep_copy(SpeciesMolecularWeights, kmcd.sMass);
+      auto SpeciesMolecularWeights =kmcd_host.sMass;
 
       TChem::Test::readSample(inputFile,
                               speciesNamesHost,
@@ -293,6 +301,17 @@ main(int argc, char* argv[])
     Kokkos::Timer timer;
 
     FILE* fout = fopen(outputFile.c_str(), "w");
+    FILE* fout_mass_flow = fopen(("outlet_mass_flow_"+outputFile).c_str(), "w");
+    fprintf(fout_mass_flow, "{\n");
+
+    FILE* fout_scaled_sa = fopen(("scaled_sensitivity_analysis_"+outputFile).c_str(), "w");
+    fprintf(fout_scaled_sa, "{\n");
+
+    real_type_2d_view_host scaled_sensitivity_host;
+    if (run_scaled_sensitivity_analysis) {
+      scaled_sensitivity_host= real_type_2d_view_host("scaled sensivity analysis", nBatch -1, kmcdSurf.nSpec );
+    }
+
     auto writeState =
       [](const ordinal_type iter,
          const real_type_1d_view_host _t,
@@ -315,6 +334,35 @@ main(int argc, char* argv[])
         }
 
       };
+
+    auto writeOutletMassFlowRate =
+      [] (const ordinal_type iter,
+          const real_type_1d_view_host _t,
+          const real_type_1d_view_host _dt,
+          const real_type_1d_view_host _outlet_mass_flow,
+          FILE* fout)
+          {
+            for (size_t sp = 0; sp < _t.extent(0); sp++)
+              fprintf(fout, " \"nBacth_%d_iter_%d\":[%15.10e,  %15.10e, %15.10e],\n", sp, iter, _t(sp), _dt(sp), _outlet_mass_flow(sp));
+          };
+
+    //
+    auto writeScaledSensitivityAnalysis =
+      [] (const ordinal_type iter,
+          const real_type_1d_view_host _t,
+          const real_type_1d_view_host _dt,
+          const real_type_2d_view_host _scaled_sensitivity,
+          FILE* fout)
+          {
+            for (ordinal_type sp = 0; sp < _scaled_sensitivity.extent(0); sp++){
+              fprintf(fout, " \"nBacth_%d_iter_%d\":[%15.10e,  %15.10e", sp, iter, _t(sp), _dt(sp));
+              for (size_t ivar = 0; ivar < _scaled_sensitivity.extent(1); ivar++)
+                fprintf(fout, ", %15.10e",_scaled_sensitivity(sp,ivar));
+              fprintf(fout, "],\n");
+            }
+
+          };
+
 
 
     auto printState = [](const time_advance_type _tadv,
@@ -485,8 +533,8 @@ main(int argc, char* argv[])
         cstr.Vol    = Vol; // volumen of reactor m3
         cstr.Acat   = Acat; // Catalytic area m2: chemical active area
         cstr.pressure = state_host(0, 1);
-        cstr.isoThermic = 1;
-        if (isoThermic) cstr.isoThermic = 0; // 0 constant temperature
+        cstr.isothermal = 1;
+        if (isothermal) cstr.isothermal = 0; // 0 constant temperature
         // cstr.temperature = state_host(0, 2);
         if (number_of_algebraic_constraints > kmcdSurf.nSpec) {
           number_of_algebraic_constraints = kmcdSurf.nSpec;
@@ -504,6 +552,7 @@ main(int argc, char* argv[])
 
         cstr.Yi = real_type_1d_view("Mass fraction at inlet", kmcd.nSpec);
         printf("Reactor residence time [s] %e\n", state_host(0, 0)*cstr.Vol/cstr.mdotIn);
+        cstr.poisoning_species_idx=poisoning_species_idx;
 
         // work batch = 1
         Kokkos::parallel_for(
@@ -555,6 +604,8 @@ main(int argc, char* argv[])
 
         real_type_2d_view fac(
           "fac", nBatch, problem_type::getNumberOfEquations(kmcd, kmcdSurf));
+        real_type_1d_view outlet_mass_flow("outlet mass flow", nBatch);
+        auto outlet_mass_flow_host = Kokkos::create_mirror_view(outlet_mass_flow);
 
         /// tune tolerence
         {
@@ -666,7 +717,29 @@ main(int argc, char* argv[])
         real_type tsum(0);
         for (; iter < max_num_time_iterations && tsum <= tend*0.9999; ++iter) {
 
-          TChem::TransientContStirredTankReactor::runDeviceBatch(policy,
+          if (isothermal)
+          {
+            TChem::IsothermalTransientContStirredTankReactor::runDeviceBatch(policy,
+                                                   tol_newton,
+                                                   tol_time,
+                                                   fac,
+                                                   tadv,
+                                                   // input
+                                                   state,
+                                                   siteFraction,
+                                                   // output
+                                                   t,
+                                                   dt,
+                                                   state,
+                                                   siteFraction,
+                                                   outlet_mass_flow,
+                                                   // kinetic info
+                                                   kmcds,
+                                                   kmcdSurfs,
+                                                   cstr);
+          } else
+          {
+            TChem::TransientContStirredTankReactor::runDeviceBatch(policy,
                                                  tol_newton,
                                                  tol_time,
                                                  fac,
@@ -684,6 +757,7 @@ main(int argc, char* argv[])
                                                  kmcdSurfs,
                                                  cstr);
           //
+        }
 
           /// print of store QOI for the first sample
 #if defined(TCHEM_EXAMPLE_SimpleSurface_QOI_PRINT)
@@ -718,6 +792,31 @@ main(int argc, char* argv[])
                        state_host,
                        siteFraction_host,
                        fout);
+            if (isothermal)
+            {
+              Kokkos::deep_copy(outlet_mass_flow_host, outlet_mass_flow);
+              writeOutletMassFlowRate(iter,t_host,dt_host,outlet_mass_flow_host,fout_mass_flow);
+            }
+
+
+
+            if (run_scaled_sensitivity_analysis)
+            {
+              // 0 is reference sample
+              Kokkos::parallel_for(
+                Kokkos::RangePolicy<TChem::host_exec_space>(1, nBatch),
+                KOKKOS_LAMBDA(const ordinal_type& isample) {
+                  for (ordinal_type ivar = 0; ivar < kmcdSurf.nSpec; ivar++)
+                  {
+                    scaled_sensitivity_host(isample-1,ivar) = (siteFraction_host(0, ivar)
+                   - siteFraction_host(isample, ivar))/
+                   (siteFraction_host(0, ivar) + 1e-23);
+                  }
+
+              });
+              writeScaledSensitivityAnalysis(iter, t_host, dt_host, scaled_sensitivity_host, fout_scaled_sa);
+            }
+
           }
 
           /// carry over time and dt computed in this step
@@ -742,6 +841,11 @@ main(int argc, char* argv[])
            t_device_batch / real_type(nBatch));
 
     fclose(fout);
+    fprintf(fout_mass_flow, "\"dummy\":{} \n }\n");
+    fclose(fout_mass_flow);
+
+    fprintf(fout_scaled_sa, "\"dummy\":{} \n }\n");
+    fclose(fout_scaled_sa);
   }
   Kokkos::finalize();
 #else

@@ -4747,7 +4747,7 @@ namespace TChem {
 		const real_type factor = factors(p, ireac, ia);
 		if (factor != one) {
 		  const real_type reference = kmd.getArrheniusForwardParameterPLOG(j,ia+1);
-		  kmd.modifyArrheniusForwardParameterPLOG(j, ia, reference*factor);
+		  kmd.modifyArrheniusForwardParameterPLOG(j, ia+1, reference*factor);
 		}
 	      }
 	    }// end plog-intervale's loop

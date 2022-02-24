@@ -23,6 +23,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_Util.hpp"
 #include "TChem_EnthalpyMass.hpp"
 #include "TChem_TransientContStirredTankReactor.hpp"
+#include "TChem_IsothermalTransientContStirredTankReactor.hpp"
 
 using ordinal_type = TChem::ordinal_type;
 using real_type = TChem::real_type;
@@ -81,12 +82,13 @@ main(int argc, char* argv[])
   bool verbose(true);
 
   bool use_prefixPath(false);
-  bool isoThermic(false);
+  bool isothermal(false);
   bool saveInitialCondition(true);
 
   bool transient_initial_condition(false);
   bool initial_condition(false);
   int number_of_algebraic_constraints(0);
+  int poisoning_species_idx(-1);
 
   TChem::CommandLineParser opts(
     "This example computes temperature, mass fraction, and site "
@@ -98,7 +100,7 @@ main(int argc, char* argv[])
   opts.set_option<real_type>("catalytic-area", "Catalytic area [m2]", &Acat);
   opts.set_option<real_type>("reactor-volume", "Reactor Volumen [m3]", &Vol);
   opts.set_option<real_type>("inlet-mass-flow", "Inlet mass flow rate [kg/s]", &mdotIn);
-  opts.set_option<bool>("isothermic", "if True, reaction is isotermic", &isoThermic);
+  opts.set_option<bool>("isothermal", "if True, reaction is isotermic", &isothermal);
   opts.set_option<bool>("save-initial-condition", "if True, solution containts"
                         "initial condition", &saveInitialCondition);
   opts.set_option<bool>(
@@ -157,6 +159,10 @@ main(int argc, char* argv[])
     "verbose", "If true, printout the first Jacobian values", &verbose);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
+  opts.set_option<int>("index-poisoning-species",
+                       "catalysis deactivation, index for species",
+                       &poisoning_species_idx);
+
   opts.set_option<std::string>("outputfile",
   "Output file name e.g., CSTRSolution.dat", &outputFile);
 
@@ -254,6 +260,8 @@ main(int argc, char* argv[])
     Kokkos::Timer timer;
 
     FILE* fout = fopen(outputFile.c_str(), "w");
+    FILE* fout_mass_flow = fopen(("outlet_mass_flow_"+outputFile).c_str(), "w");
+    fprintf(fout_mass_flow, "{\n");
 
     auto writeState =
       [](const ordinal_type iter,
@@ -277,6 +285,18 @@ main(int argc, char* argv[])
         }
 
       };
+
+    auto writeOutletMassFlowRate =
+      [] (const ordinal_type iter,
+          const real_type_1d_view_host _t,
+          const real_type_1d_view_host _dt,
+          const real_type_1d_view_host _outlet_mass_flow,
+          FILE* fout)
+          {
+            for (size_t sp = 0; sp < _t.extent(0); sp++)
+              fprintf(fout, " \"nBacth_%d_iter_%d\":[%15.10e,  %15.10e, %15.10e],\n", sp, iter, _t(sp), _dt(sp), _outlet_mass_flow(sp));
+          };
+
 
 
     auto printState = [](const time_advance_type _tadv,
@@ -449,8 +469,8 @@ main(int argc, char* argv[])
         cstr.Vol    = Vol; // volumen of reactor m3
         cstr.Acat   = Acat; // Catalytic area m2: chemical active area
         cstr.pressure = state_host(0, 1);
-        cstr.isoThermic = 1;
-        if (isoThermic) cstr.isoThermic = 0; // 0 constant temperature
+        cstr.isothermal = 1;
+        if (isothermal) cstr.isothermal = 0; // 0 constant temperature
         // cstr.temperature = state_host(0, 2);
         if (number_of_algebraic_constraints > kmcdSurf.nSpec) {
           number_of_algebraic_constraints = kmcdSurf.nSpec;
@@ -468,6 +488,7 @@ main(int argc, char* argv[])
 
         cstr.Yi = real_type_1d_view("Mass fraction at inlet", kmcd.nSpec);
         printf("Reactor residence time [s] %e\n", state_host(0, 0)*cstr.Vol/cstr.mdotIn);
+        cstr.poisoning_species_idx=poisoning_species_idx;
 
         // work batch = 1
         Kokkos::parallel_for(
@@ -502,6 +523,9 @@ main(int argc, char* argv[])
 
         real_type_2d_view fac(
           "fac", nBatch, problem_type::getNumberOfEquations(kmcd, kmcdSurf));
+        //
+        real_type_1d_view outlet_mass_flow("outlet mass flow", nBatch);
+        auto outlet_mass_flow_host = Kokkos::create_mirror_view(outlet_mass_flow);
 
         /// tune tolerence
         {
@@ -632,23 +656,49 @@ main(int argc, char* argv[])
         real_type tsum(0);
         for (; iter < max_num_time_iterations && tsum <= tend*0.9999; ++iter) {
 
-          TChem::TransientContStirredTankReactor::runDeviceBatch(policy,
-                                                 tol_newton,
-                                                 tol_time,
-                                                 fac,
-                                                 tadv,
-                                                 // input
-                                                 state,
-                                                 siteFraction,
-                                                 // output
-                                                 t,
-                                                 dt,
-                                                 state,
-                                                 siteFraction,
-                                                 // kinetic info
-                                                 kmcd,
-                                                 kmcdSurf,
-                                                 cstr);
+          if (isothermal)
+          {
+            TChem::IsothermalTransientContStirredTankReactor::runDeviceBatch(policy,
+                                                   tol_newton,
+                                                   tol_time,
+                                                   fac,
+                                                   tadv,
+                                                   // input
+                                                   state,
+                                                   siteFraction,
+                                                   // output
+                                                   t,
+                                                   dt,
+                                                   state,
+                                                   siteFraction,
+                                                   outlet_mass_flow,
+                                                   // kinetic info
+                                                   kmcd,
+                                                   kmcdSurf,
+                                                   cstr);
+          } else
+          {
+            TChem::TransientContStirredTankReactor::runDeviceBatch(policy,
+                                                   tol_newton,
+                                                   tol_time,
+                                                   fac,
+                                                   tadv,
+                                                   // input
+                                                   state,
+                                                   siteFraction,
+                                                   // output
+                                                   t,
+                                                   dt,
+                                                   state,
+                                                   siteFraction,
+                                                   // kinetic info
+                                                   kmcd,
+                                                   kmcdSurf,
+                                                   cstr);
+
+          }
+
+
           //
 
 
@@ -685,6 +735,12 @@ main(int argc, char* argv[])
                        state_host,
                        siteFraction_host,
                        fout);
+            //
+            if (isothermal)
+            {
+              Kokkos::deep_copy(outlet_mass_flow_host, outlet_mass_flow);
+              writeOutletMassFlowRate(iter,t_host,dt_host,outlet_mass_flow_host,fout_mass_flow);
+            }
           }
 
           /// carry over time and dt computed in this step
@@ -709,6 +765,8 @@ main(int argc, char* argv[])
            t_device_batch / real_type(nBatch));
 
     fclose(fout);
+    fprintf(fout_mass_flow, "\"dummy\":{} \n }\n");
+    fclose(fout_mass_flow);
   }
   Kokkos::finalize();
 

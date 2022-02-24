@@ -18,6 +18,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
+
+#define TCHEM_ETI_FAD_SIZE @SLFAD_SIZE@ 
 #include "TChem_IgnitionZeroD_Internal.hpp"
 
 /// tadv - an input structure for time marching
@@ -29,7 +31,7 @@ Sandia National Laboratories, Livermore, CA, USA
 /// kmcd - const data for kinetic model
 
 namespace TChem {
-  #define TCHEM_ETI_FAD_SIZE @SLFAD_SIZE@ 
+
   constexpr bool is_scalar = @SLFAD_SIZE@ == 0;
   using value_type = typename std::conditional<is_scalar,
 					       real_type,
@@ -39,7 +41,7 @@ namespace TChem {
   using device_type = typename Tines::UseThisDevice<@EXEC_SPACE@>::type;
   template
   void
-  IgnitionZeroD_TemplateRunModelVariation<policy_type,value_type,device_type>
+  IgnitionZeroD_TemplateRun<policy_type,value_type,device_type>
   ( /// required template arguments
    const std::string& profile_name,
    const value_type& dummyValueType,
@@ -57,27 +59,6 @@ namespace TChem {
    const Tines::value_type_1d_view<real_type, device_type>& dt_out,
    const Tines::value_type_2d_view<real_type, device_type>& state_out,
    /// const data from kinetic model
-   const Kokkos::View<KineticModelConstData<device_type >*,device_type>& kmcds);
-
-  template
-  void
-  IgnitionZeroD_TemplateRun( /// required template arguments
-                            const std::string& profile_name,
-                            const value_type& dummyValueType,
-                            /// team size setting
-                            const policy_type& policy,
-
-                            /// input
-                            const Tines::value_type_1d_view<real_type, device_type>& tol_newton,
-                            const Tines::value_type_2d_view<real_type, device_type>& tol_time,
-                            const Tines::value_type_2d_view<real_type, device_type>& fac,
-                            const Tines::value_type_1d_view<time_advance_type, device_type>& tadv,
-                            const Tines::value_type_2d_view<real_type, device_type>& state,
-                            /// output
-                            const Tines::value_type_1d_view<real_type, device_type>& t_out,
-                            const Tines::value_type_1d_view<real_type, device_type>& dt_out,
-                            const Tines::value_type_2d_view<real_type, device_type>& state_out,
-                            /// const data from kinetic model
-                            const KineticModelConstData<device_type>& kmcd);
+   const Tines::value_type_1d_view<KineticModelConstData<device_type>,device_type>& kmcds);
 
 } // namespace TChem

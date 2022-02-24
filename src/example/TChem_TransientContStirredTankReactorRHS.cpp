@@ -33,7 +33,7 @@ main(int argc, char* argv[])
   real_type mdotIn(3.596978981250784e-06);
   real_type Vol(0.00013470);
   real_type Acat (0.0013074);
-  bool isoThermic(false);
+  bool isothermal(false);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
@@ -59,7 +59,7 @@ main(int argc, char* argv[])
   opts.set_option<real_type>("Acat", "Catalytic area [m2]", &Acat);
   opts.set_option<real_type>("Vol", "Reactor Volumen [m3]", &Vol);
   opts.set_option<real_type>("mdotIn", "Inlet mass flow rate [kg/s]", &mdotIn);
-  opts.set_option<bool>("isoThermic", "if True, reaction is isotermic", &isoThermic);
+  opts.set_option<bool>("isothermal", "if True, reaction is isotermic", &isothermal);
   opts.set_option<int>(
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
@@ -131,8 +131,8 @@ main(int argc, char* argv[])
     cstr.Vol    = Vol; // volumen of reactor m3
     cstr.Acat   = Acat; // Catalytic area m2: chemical active area
     cstr.pressure = state_host(0, 1);
-    cstr.isoThermic = 1;
-    if (isoThermic) cstr.isoThermic = 0; // 0 constant temperature
+    cstr.isothermal = 1;
+    if (isothermal) cstr.isothermal = 0; // 0 constant temperature
 
     cstr.Yi = real_type_1d_view("Mass fraction at inlet", kmcd.nSpec);
     printf("Reactor residence time [s] %e\n", state_host(0, 0)*cstr.Vol/cstr.mdotIn);

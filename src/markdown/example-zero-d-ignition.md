@@ -282,10 +282,10 @@ By default, the homogeneous batch reactor uses the hand-derived Jacobian impleme
 
 
 ## Running the 0D Ignition Utility
-The executable to run this example is installed at "${TCHEM_INSTALL_PATH}/example/",  and the input parameters are (./TChem_IgnitionZeroDSA.x --help) :
+The executable to run this example is installed at "${TCHEM_INSTALL_PATH}/example/",  and the input parameters are (./TChem_IgnitionZeroD.x --help) :
 <!-- [comment]: # (KK: can we change OnlyComputeIgnDelayTime to only-compute-ignition-delay-time as similar to others ? the same for T_threshold -> temperature-threshold. Also in the help document of the command line option, consider to use the full word e.g., Temp threshold -> Temperature threshold) done... -->
 ```
-Usage: ./TChem_IgnitionZeroDSA.x [options]
+Usage: ./TChem_IgnitionZeroD.x [options]
   options:
 --atol-newton                 double    Absolute tolerance used in newton solver
                                         (default: --atol-newton=1.0e-10)
@@ -351,7 +351,7 @@ The following example bash script runs an ignition problem with the [GRIMech 3.0
 
 
 ```
-exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroDSA.x
+exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroD.x
 
 inputs=$TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0
 
@@ -392,7 +392,7 @@ where SPECIES1 represents the mass fraction of species \#1, and so forth. Finall
 
 * **GRIMech 3.0 Results**
 
-The results presented below are obtained by running "TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroDSA.x" with an initial temperature of $1000$K, pressure of $1$atm and a stoichiometric equivalence ratio ($\phi$) for methane/air mixtures. The input files are located at "TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0/" and selected parameters were presented above. The outputs of the simulation were saved every iteration in "IgnSolution.dat". Time profiles for temperature and mass fractions for selected species are presented the following figures.
+The results presented below are obtained by running "TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroD.x" with an initial temperature of $1000$K, pressure of $1$atm and a stoichiometric equivalence ratio ($\phi$) for methane/air mixtures. The input files are located at "TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0/" and selected parameters were presented above. The outputs of the simulation were saved every iteration in "IgnSolution.dat". Time profiles for temperature and mass fractions for selected species are presented the following figures.
 
 
 ![Temperature and $CH_4$, $O_2$, $CO$ mass fraction](Figures/gri3.0_OneSample/TempMassFraction2.jpg)

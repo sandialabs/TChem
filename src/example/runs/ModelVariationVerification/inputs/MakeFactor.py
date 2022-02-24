@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cbook as cbook
 import sys
-dirwork ='/Users/odiazib/csp_clang_bld_develop/TChem++/master/src/example/runs/scripts/'
+dirwork ='TCHEM_INSTALL_PATH/example/runs/scripts/'
 sys.path.append(dirwork)
 import pmixSample
 

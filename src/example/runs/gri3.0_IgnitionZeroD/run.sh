@@ -1,4 +1,4 @@
-exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroDSA.x
+exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroD.x
 inputs=$TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0
 
 this="$exec --chemfile=$inputs/chem.inp \

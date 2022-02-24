@@ -484,9 +484,9 @@ main(int argc, char* argv[])
     {
 
       {
-        PlugFlowReactorData pfrd;
-        pfrd.Area = Area; // m2
-        pfrd.Pcat = Pcat; //
+        // PlugFlowReactorData pfrd;
+        // pfrd.Area = Area; // m2
+        // pfrd.Pcat = Pcat; //
 
         real_type_1d_view t("position", nBatch);
         Kokkos::deep_copy(t, tbeg);

@@ -24,7 +24,7 @@ Sandia National Laboratories, Livermore, CA, USA
 
 TEST(IgnitionZeroD, single)
 {
-  std::string exec="../../example/TChem_IgnitionZeroDSA.x";
+  std::string exec="../../example/TChem_IgnitionZeroD.x";
   std::string prefixPath="../../example/data/ignition-zero-d/gri3.0/";
   std::string max_time_iterations="4";
   std::string atol_newton="1e-18";

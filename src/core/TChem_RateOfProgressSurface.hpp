@@ -23,6 +23,7 @@ Sandia National Laboratories, Livermore, CA, USA
 
 #include "TChem_KineticModelData.hpp"
 #include "TChem_Util.hpp"
+#include "TChem_Impl_RhoMixMs.hpp"
 
 namespace TChem {
 
@@ -53,6 +54,18 @@ struct RateOfProgressSurface
 
   static void runDeviceBatch( /// input
     const ordinal_type nBatch,
+    const real_type_2d_view_type& state,
+    const real_type_2d_view_type& site_fraction,
+    /// output
+    const real_type_2d_view_type& RoPFor,
+    const real_type_2d_view_type& RoPRev,
+    /// const data from kinetic model
+    const kinetic_model_type& kmcd,
+    /// const data from kinetic model surface
+    const kinetic_surf_model_type& kmcdSurf);
+  //
+  static void runDeviceBatch( /// input
+    typename UseThisTeamPolicy<exec_space>::type& policy,
     const real_type_2d_view_type& state,
     const real_type_2d_view_type& site_fraction,
     /// output

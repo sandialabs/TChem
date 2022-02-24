@@ -76,8 +76,14 @@ namespace TChem {
         {
           const real_type t = sv_at_i.Temperature();
           const real_type p = sv_at_i.Pressure();
-          const real_type density = sv_at_i.Density();
           const real_type_1d_view_type Ys = sv_at_i.MassFractions();
+          // when density is lower than zero, tchem will compute it. 
+          const real_type density = sv_at_i.Density() > 0 ? sv_at_i.Density() :
+                            Impl::RhoMixMs<real_type,device_type>
+                                ::team_invoke(member,  sv_at_i.Temperature(),
+                                sv_at_i.Pressure(),
+                                sv_at_i.MassFractions(), kmcd);
+          member.team_barrier();
 
           Impl::RateOfProgressSurfaceInd<real_type, device_type> ::team_invoke(member,
                                                        t,
@@ -120,6 +126,36 @@ RateOfProgressSurface::runDeviceBatch( /// input
   policy_type policy(nBatch, Kokkos::AUTO()); // fine
   // policy_type policy(nBatch, Kokkos::AUTO(), Kokkos::AUTO()); // error
   policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+
+  RateOfProgressSurface_TemplateRun( /// input
+    "TChem::RateOfProgressSurface::runDeviceBatch",
+    /// team size setting
+    policy,
+    state,
+    site_fraction,
+    /// output
+    RoPFor,
+    RoPRev,
+    /// const data from kinetic model
+    kmcd,
+    /// const data from kinetic model surface
+    kmcdSurf);
+
+}
+
+void
+RateOfProgressSurface::runDeviceBatch( /// input
+  typename UseThisTeamPolicy<exec_space>::type& policy,
+  const real_type_2d_view_type& state,
+  const real_type_2d_view_type& site_fraction,
+  /// output
+  const real_type_2d_view_type& RoPFor,
+  const real_type_2d_view_type& RoPRev,
+  /// const data from kinetic model
+  const kinetic_model_type& kmcd,
+  /// const data from kinetic model surface
+  const kinetic_surf_model_type& kmcdSurf)
+{
 
   RateOfProgressSurface_TemplateRun( /// input
     "TChem::RateOfProgressSurface::runDeviceBatch",

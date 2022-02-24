@@ -19,6 +19,7 @@ We present the setup for canonical examples that are available through TChem. Al
 !INCLUDE "example-constant-volume-ignition.md", 2
 !INCLUDE "example-plug-flow-reactor.md", 2
 !INCLUDE "example-transient-continuous-stirred-tank-reactor.md", 2
+!INCLUDE "example-check-plog.md", 2
 
 ## Application Programming Interface
 !INCLUDE "cxx-interface.md", 2

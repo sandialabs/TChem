@@ -22,7 +22,7 @@ main(int argc, char* argv[])
 
   bool verbose(true);
 
-  int nBatch(1), team_size(-1), vector_size(-1);
+  int nBatch(1);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
@@ -48,7 +48,6 @@ main(int argc, char* argv[])
     &nBatch);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
-  opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
   opts.set_option<bool>(
     "verbose", "If true, printout the first Jacobian values", &verbose);
 

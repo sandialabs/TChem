@@ -1,4 +1,0 @@
-rm -rf kmod*
-rm -rf math*
-rm -rf *team_invoke*
-rm -rf omega*

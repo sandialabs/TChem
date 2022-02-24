@@ -68,10 +68,12 @@ namespace TChem {
           const real_type t = sv_at_i.Temperature();
           const real_type p = sv_at_i.Pressure();
           const real_type_1d_view_type Ys = sv_at_i.MassFractions();
-
-          const real_type density = sv_at_i.Density() <= 0 ?
-          Impl::RhoMixMs<real_type,DeviceType>
-               ::team_invoke(member, t, p, Ys, kmcd) : sv_at_i.Density();
+          // when density is lower than zero, tchem will compute it.
+          const real_type density = sv_at_i.Density() > 0 ? sv_at_i.Density() :
+                            Impl::RhoMixMs<real_type,device_type>
+                                ::team_invoke(member,  sv_at_i.Temperature(),
+                                sv_at_i.Pressure(),
+                                sv_at_i.MassFractions(), kmcd);
           member.team_barrier();
 
           Impl::RateOfProgressInd<real_type, device_type> ::team_invoke(

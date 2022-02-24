@@ -275,7 +275,7 @@ namespace TChem {
 #if !defined (__CUDA_ARCH__)
     Kokkos::parallel_for
       (Kokkos::RangePolicy<host_exec_space>(0, kmds.extent(0)),
-       KOKKOS_LAMBDA(const int i) {
+       [=](const int i) {
 	r_val_host(i) = createGasKineticModelConstData<DT>(kmds(i));
       });
     Kokkos::deep_copy(r_val, r_val_host);

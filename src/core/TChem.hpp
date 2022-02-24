@@ -63,6 +63,10 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_TransientContStirredTankReactorRHS.hpp"
 #include "TChem_TransientContStirredTankReactorSacadoJacobian.hpp"
 #include "TChem_TransientContStirredTankReactorSmatrix.hpp"
+#include "TChem_IsothermalTransientContStirredTankReactorSacadoJacobian.hpp"
+#include "TChem_IsothermalTransientContStirredTankReactorRHS.hpp"
+#include "TChem_IsothermalTransientContStirredTankReactorSmatrix.hpp"
+#include "TChem_IsothermalTransientContStirredTankReactorNumJacobian.hpp"
 
 
 #endif

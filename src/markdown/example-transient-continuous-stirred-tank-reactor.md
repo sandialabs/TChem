@@ -87,8 +87,8 @@ Usage: ./TChem_TransientContStirredTankReactor.x [options]
                                           (default: --inlet-mass-flow=1.000000000000000e-02)
   --inputs-path                 string    prefixPath e.g.,inputs/
                                           (default: --inputs-path=runs/T-CSTR/CH4_PT_Quinceno2006/inputs/)
-  --isothermic                  bool      if True, reaction is isotermic
-                                          (default: --isothermic=false)
+  --isothermal                  bool      if True, reaction is isotermic
+                                          (default: --isothermal=false)
   --jacobian-interval           int       Jacobians are evaluated in this interval during Newton solve
                                           (default: --jacobian-interval=1)
   --max-newton-iterations       int       Maximum number of newton iterations

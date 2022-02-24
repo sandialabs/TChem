@@ -8,8 +8,8 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_GkSurfGas.cpp
   TChem_IgnitionZeroD_ModelVariation.cpp
   TChem_IgnitionZeroD_SourceTermJacobian.cpp
-  TChem_IgnitionZeroDJacobians.cpp
-  TChem_IgnitionZeroDSA.cpp
+  TChem_IgnitionZeroD_Jacobians.cpp
+  TChem_IgnitionZeroD.cpp
   TChem_InitialCondSurface.cpp
   TChem_Jacobian.cpp
   TChem_JacobianSacado.cpp
@@ -37,6 +37,8 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_TransientContStirredTankReactorJacobianSacado.cpp
   TChem_TransientContStirredTankReactorModelVariation.cpp
   TChem_TransientContStirredTankReactorRHS.cpp
+  TChem_CheckPLOGreactions.cpp
+  TChem_IsothermalTransientContStirredTankReactorRHS.cpp
 )
 
 

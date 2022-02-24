@@ -162,7 +162,7 @@ constexpr ordinal_type NTHRDBMAX = 20;
  * \def NPLOGMAX
  * Maximum number of interpolation ranges for PLOG
  */
-static constexpr ordinal_type NPLOGMAX = 10;
+static constexpr ordinal_type NPLOGMAX = 30;
 
 /**
  * \def NTH9RNGMAX
@@ -386,8 +386,9 @@ struct TransientContStirredTankReactorData
   real_type Acat; // Catalytic area m2: chemical active area
   real_type pressure;
   real_type EnthalpyIn;
-  real_type isoThermic{1}; // 0 is isoThermic 1 is not isoThermic
+  real_type isothermal{1}; // 0 is isothermal 1 is not isothermal
   ordinal_type number_of_algebraic_constraints{0};
+  ordinal_type poisoning_species_idx{-1};
 };
 
 /// utility function
@@ -1170,6 +1171,24 @@ readStateVector(const std::string& filename,
     }
   } else {
     std::logic_error("Error: stateVector is not valid");
+  }
+}
+
+template<typename RealType1DViewHostType>
+static inline void
+readVector(const std::string& filename,
+                const ordinal_type& nVariables,
+                const RealType1DViewHostType& vector)
+{
+  std::ifstream file(filename);
+  if (file.is_open()) {
+    for (ordinal_type i = 0; i < nVariables; ++i){
+      file >> vector(i);
+    }
+  } else {
+    std::stringstream ss;
+    ss << "Error: filename (" << filename << ") is not open\n";
+    std::logic_error(ss.str());
   }
 }
 

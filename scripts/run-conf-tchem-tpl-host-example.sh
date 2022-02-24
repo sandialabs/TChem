@@ -1,11 +1,11 @@
 rm -f CMakeCache.txt;
 rm -rf CMakeFiles
 
-TCHEM_INSTALL_PATH=/Users/odiazib/CODE/TChem++/install
-TCHEM_SRC_PATH=/Users/odiazib/CODE/TChem++/src
-KOKKOS_INSTALL_PATH=/Users/odiazib/csp_gnu_bld/kokkos/install
-MATHUTILS_INSTALL_PATH=/Users/odiazib/csp_gnu_bld/mathutils/install
-GTEST_INSTALL_PATH=/Users/odiazib/csp_gnu_bld/gtest/install
+TCHEM_INSTALL_PATH=
+TCHEM_SRC_PATH=
+KOKKOS_INSTALL_PATH=
+MATHUTILS_INSTALL_PATH=
+GTEST_INSTALL_PATH=
 
 cmake \
     -D CMAKE_INSTALL_PREFIX=${TCHEM_INSTALL_PATH} \

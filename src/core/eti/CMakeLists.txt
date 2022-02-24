@@ -1,10 +1,12 @@
 SET(TCHEM_SLFAD_ETI_FILE TChem_IgnitionZeroD_SacadoJacobian;
                          TChem_TransientContStirredTankReactorSacadoJacobian;
+                         TChem_IsothermalTransientContStirredTankReactorSacadoJacobian;
                          TChem_PlugFlowReactorSacadoJacobian;
                          TChem_IgnitionZeroD
 )
 
 SET(TCHEM_SCALAR_ETI_FILE TChem_IgnitionZeroD
+                          TChem_IgnitionZeroD_CVODE
 )
 
 IF (Kokkos_ENABLE_CUDA)
@@ -37,7 +39,7 @@ FOREACH(ETI_FILE IN LISTS TCHEM_SLFAD_ETI_FILE)
     FOREACH(SLFAD_SIZE IN LISTS TCHEM_SLFAD_SIZE)
       SET(VALUE_TYPE_NAME SLFad_${SLFAD_SIZE})
       MESSAGE(STATUS "Generating ETI: ${ETI_FILE}_${EXEC_SPACE_NAME}_${VALUE_TYPE_NAME}.cpp")
-      CONFIGURE_FILE(${ETI_FILE}_ETI.in 
+      CONFIGURE_FILE(${ETI_FILE}_ETI.in
                      ${ETI_FILE}_${EXEC_SPACE_NAME}_${VALUE_TYPE_NAME}.cpp)
     ENDFOREACH()
   ENDFOREACH()
@@ -55,7 +57,7 @@ FOREACH(ETI_FILE IN LISTS TCHEM_SCALAR_ETI_FILE)
     SET(SLFAD_SIZE 0)
     SET(VALUE_TYPE_NAME Scalar)
     MESSAGE(STATUS "Generating ETI: ${ETI_FILE}_${EXEC_SPACE_NAME}_${VALUE_TYPE_NAME}.cpp")
-    CONFIGURE_FILE(${ETI_FILE}_ETI.in 
+    CONFIGURE_FILE(${ETI_FILE}_ETI.in
                    ${ETI_FILE}_${EXEC_SPACE_NAME}_${VALUE_TYPE_NAME}.cpp)
   ENDFOREACH()
 ENDFOREACH()

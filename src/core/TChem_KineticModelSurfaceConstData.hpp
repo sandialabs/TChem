@@ -97,7 +97,7 @@ namespace TChem {
   template<typename DT>
   KineticModelSurfaceConstData<DT> createSurfaceKineticModelConstData(const KineticModelData & kmd) {
     KineticModelSurfaceConstData<DT> data;
-    
+
     data.speciesNames = kmd.TCsurf_sNames_.template view<DT>();
     data.nSpec = kmd.TCsurf_Nspec_; //
     data.nReac = kmd.TCsurf_Nreac_;
@@ -136,7 +136,7 @@ namespace TChem {
 
     return data;
   }
-  
+
   template<typename DT>
   static inline
   Kokkos::View<KineticModelSurfaceConstData<DT>*,DT>
@@ -147,7 +147,7 @@ namespace TChem {
     auto r_val_host = Kokkos::create_mirror_view(r_val);
     Kokkos::parallel_for
       (Kokkos::RangePolicy<host_exec_space>(0, kmds.extent(0)),
-       KOKKOS_LAMBDA(const int i) {
+       [=](const int i) {
 	r_val_host(i) = createSurfaceKineticModelConstData<DT>(kmds(i));
       });
     Kokkos::deep_copy(r_val, r_val_host);
@@ -158,6 +158,6 @@ namespace TChem {
   template<typename DT>
   using KineticSurfModelConstData = KineticModelSurfaceConstData<DT>;
 
-  
+
 } // namespace TChem
 #endif

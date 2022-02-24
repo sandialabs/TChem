@@ -267,7 +267,7 @@ struct TransientContStirredTankReactorRHS
 
     // energy equation
     dT(0) = (- sum_hkdYkdt / cpmix +  (cstr.mdotIn * (cstr.EnthalpyIn -  enthapyMix ) - enthapyMix*sumSkWk*cstr.Acat ) /
-                                     ( cpmix * density * cstr.Vol) )*cstr.isoThermic ;
+                                     ( cpmix * density * cstr.Vol) )*cstr.isothermal ;
 
 #if !defined (TCHEM_CSTR_ALLOW_NEGATIVE_MASS_FLOW_OUTLET)
     //

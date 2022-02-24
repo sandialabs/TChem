@@ -29,7 +29,7 @@ The default value of this flag is "OFF", which means by default the numerical Ja
 
 ## Running the Constant Volume Ignition Utility
 
-The executable for this example is installed at ``TCHEM_INSTALL_PATH/example/``,  and the input parameters are given by (./TChem_IgnitionZeroDSA.x --help) :
+The executable for this example is installed at ``TCHEM_INSTALL_PATH/example/``,  and the input parameters are given by (./TChem_IgnitionZeroD.x --help) :
 
 ```
 options:
@@ -90,14 +90,14 @@ options:
 Description:
 This example computes the solution of a gas ignition 0D - problem
 ```
-Note that we implement the [Homogeneous Constant-Pressure Batch Reactors](#homogeneousconstant-pressurebatchreactors) and Homogeneous Constant-Volume Batch Reactors in the same example code, TChem_IgnitionZeroDSA.cpp. We use the flag ``run-constant-pressure`` to choose which reactor to run. If this flag is set to ``true``, the program will integrate the Constant Pressure Homogeneous Batch Reactors. If this flag is set to ``false`` the Constant Volume Homogeneous Batch Reactors will be executed.
+Note that we implement the [Homogeneous Constant-Pressure Batch Reactors](#homogeneousconstant-pressurebatchreactors) and Homogeneous Constant-Volume Batch Reactors in the same example code, TChem_IgnitionZeroD.cpp. We use the flag ``run-constant-pressure`` to choose which reactor to run. If this flag is set to ``true``, the program will integrate the Constant Pressure Homogeneous Batch Reactors. If this flag is set to ``false`` the Constant Volume Homogeneous Batch Reactors will be executed.
 
 * ***GRIMech 3.0 Model***
 
 We can create a bash scripts to provide inputs to TChem. For example the following script runs a constant-volume ignition problem with the GRIMech 3.0 model:
 
 ```
-exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroDSA.x
+exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroD.x
 inputs=$TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0
 
 export OMP_PROC_BIND=spread
@@ -125,7 +125,7 @@ eval $this
 
 * **GRIMech 3.0 Results**
 
-The results presented below are obtained by running ``TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroDSA.x`` with an initial temperature of $1000$K, pressure of $1$ atm, and stoichiometric conditions (equivalence ratio $\phi=1$) for methane/air mixtures. The input files are located at "TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0" and selected parameters were presented above. The inputs files and conditions are the same that we used in example of the [Homogeneous Constant-Pressure Batch Reactors](#homogeneousconstant-pressurebatchreactors).
+The results presented below are obtained by running ``TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroD.x`` with an initial temperature of $1000$K, pressure of $1$ atm, and stoichiometric conditions (equivalence ratio $\phi=1$) for methane/air mixtures. The input files are located at "TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0" and selected parameters were presented above. The inputs files and conditions are the same that we used in example of the [Homogeneous Constant-Pressure Batch Reactors](#homogeneousconstant-pressurebatchreactors).
  The simulation output was saved every iteration in "ConstVolumeIgnSolution.dat". Time profiles for temperature and mass fractions for selected species are presented in the figures below. To produce these results, we used a numerical Jacobian for the ODE solver.
 
 

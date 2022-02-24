@@ -65,7 +65,7 @@ main(int argc, char* argv[])
     &nBatch);
   //
   opts.set_option<bool>(
-    "use_sample_format", "If true, input file does not have header or format", &use_sample_format);
+    "use_sample_format", "If true, input file has  header or format", &use_sample_format);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
 

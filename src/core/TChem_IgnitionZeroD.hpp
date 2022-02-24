@@ -36,7 +36,7 @@ struct IgnitionZeroD
   {
     using device_type = DeviceType;
     using problem_type = Impl::IgnitionZeroD_Problem<real_type, device_type>;
-    const ordinal_type m = problem_type::getNumberOfEquations(kmcd);
+    const ordinal_type m = problem_type::getNumberOfEquations(kmcd) + ordinal_type(1);
 
     ordinal_type work_size(0);
 #if defined(TCHEM_ENABLE_SACADO_JACOBIAN_IGNITION_ZERO_D_REACTOR)
@@ -73,44 +73,12 @@ struct IgnitionZeroD
     return work_size + m;
   }
 
-  static void runDeviceBatch( /// thread block size
-    typename UseThisTeamPolicy<exec_space>::type& policy,
-    /// global tolerence parameters that governs all samples
-    const real_type_1d_view& tol_newton,
-    const real_type_2d_view& tol_time,
-    /// sample specific input
-    const real_type_2d_view& fac,
-    const time_advance_type_1d_view& tadv,
-    const real_type_2d_view& state,
-    /// output
-    const real_type_1d_view& t_out,
-    const real_type_1d_view& dt_out,
-    const real_type_2d_view& state_out,
-    /// const data from kinetic model
-    const KineticModelConstData<interf_device_type >& kmcd);
-
   /// tadv - an input structure for time marching
   /// state (nSpec+3) - initial condition of the state vector
   /// work - work space sized by getWorkSpaceSize
   /// t_out - time when this code exits
   /// state_out - final condition of the state vector (the same input state can
   /// be overwritten) kmcd - const data for kinetic model
-  static void runHostBatch( /// input
-    typename UseThisTeamPolicy<host_exec_space>::type& policy,
-    /// global tolerence parameters that governs all samples
-    const real_type_1d_view_host& tol_newton,
-    const real_type_2d_view_host& tol_time,
-    /// sample specific input
-    const real_type_2d_view_host& fac,
-    const time_advance_type_1d_view_host& tadv,
-    const real_type_2d_view_host& state,
-    /// output
-    const real_type_1d_view_host& t_out,
-    const real_type_1d_view_host& dt_out,
-    const real_type_2d_view_host& state_out,
-    /// const data from kinetic model
-    const KineticModelConstData<interf_host_device_type>& kmcd);
-
   static void runDeviceBatch( /// thread block size
     typename UseThisTeamPolicy<exec_space>::type& policy,
     /// global tolerence parameters that governs all samples
@@ -125,7 +93,7 @@ struct IgnitionZeroD
     const real_type_1d_view& dt_out,
     const real_type_2d_view& state_out,
     /// const data from kinetic model
-    const Kokkos::View<KineticModelConstData<interf_device_type>*,interf_device_type>& kmcds);
+    const Tines::value_type_1d_view<KineticModelConstData<interf_device_type>,interf_device_type>& kmcds);
 
   static void runHostBatch( /// input
     typename UseThisTeamPolicy<host_exec_space>::type& policy,
@@ -141,7 +109,23 @@ struct IgnitionZeroD
     const real_type_1d_view_host& dt_out,
     const real_type_2d_view_host& state_out,
     /// const data from kinetic model
-    const Kokkos::View<KineticModelConstData<interf_host_device_type>*,interf_host_device_type>& kmcds);
+    const Tines::value_type_1d_view<KineticModelConstData<interf_host_device_type>,interf_host_device_type>& kmcds);
+
+  static void runHostBatchCVODE( /// input
+    typename UseThisTeamPolicy<host_exec_space>::type& policy,
+    /// global tolerence parameters that governs all samples
+    const real_type_2d_view_host& tol_time,
+    /// sample specific input
+    const real_type_2d_view_host& fac,
+    const time_advance_type_1d_view_host& tadv,
+    const real_type_2d_view_host& state,
+    /// output
+    const real_type_1d_view_host& t_out,
+    const real_type_1d_view_host& dt_out,
+    const real_type_2d_view_host& state_out,
+    /// const data from kinetic model
+    const Tines::value_type_1d_view<KineticModelConstData<interf_host_device_type>,interf_host_device_type>& kmcds,
+    const Tines::value_type_1d_view<Tines::TimeIntegratorCVODE<real_type,interf_host_device_type>,interf_host_device_type>& cvodes);
 
 };
 

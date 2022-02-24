@@ -1,0 +1,26 @@
+#include "TChem_IsothermalTransientContStirredTankReactorSacadoJacobianInternal.hpp"
+
+namespace TChem {
+  constexpr bool is_scalar = @SLFAD_SIZE@ == 0;
+  using value_type = typename std::conditional<is_scalar,
+					       real_type,
+                                               Sacado::Fad::SLFad<real_type,@SLFAD_SIZE@> >::type;
+  using policy_type = typename UseThisTeamPolicy<@EXEC_SPACE@>::type;
+  using device_type = typename Tines::UseThisDevice<@EXEC_SPACE@>::type;
+  template
+  void
+  IsothermalTransientContStirredTankReactorSacadoJacobian_TemplateRun<policy_type,value_type,device_type>
+  ( /// input
+   const std::string& profile_name,
+   const value_type& dummyValueType,
+   /// team size setting
+   const policy_type& policy,
+
+   const Tines::value_type_2d_view<real_type,device_type>& state,
+   const Tines::value_type_2d_view<real_type,device_type> & site_fraction,
+   const Tines::value_type_3d_view<real_type,device_type>& Jacobian,
+   const Tines::value_type_2d_view<real_type,device_type> & rhs,
+   const KineticModelConstData<device_type>& kmcd,
+   const KineticSurfModelConstData<device_type>& kmcdSurf,
+   const TransientContStirredTankReactorData<device_type>& cstr);
+} // namespace TChem

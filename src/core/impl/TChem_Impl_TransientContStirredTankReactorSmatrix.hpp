@@ -141,7 +141,7 @@ struct TransientContStirredTankReactorSmatrix
         },
         sumEnerP);
 
-      Smat(0, i) = (sumEnerP + sumEnerR) * ConEnergy * cstr.isoThermic ;
+      Smat(0, i) = (sumEnerP + sumEnerR) * ConEnergy * cstr.isothermal ;
 
 
       // species equations
@@ -246,7 +246,7 @@ struct TransientContStirredTankReactorSmatrix
         // energy
         //hA\sum_sk W/cp rho V => AH/cp/rho V Wvki
         Ssmat(0, i) = ( (sumWkVkiR + sumWkVkiP) * ConEnergySurf
-        + (sumWkVkiPh+sumWkVkiRh)* ConEnergySurf/enthapyMix ) * cstr.isoThermic ;
+        + (sumWkVkiPh+sumWkVkiRh)* ConEnergySurf/enthapyMix ) * cstr.isothermal ;
 
 
     } /* done loop over all reactions */
@@ -300,7 +300,7 @@ struct TransientContStirredTankReactorSmatrix
 
                            },sumhkYkvik);
     //sum_{k=1}^{kg} (hk*Yk*A*sk*wk) //
-    real_type val = cstr.isoThermic * sumhkYkvik/cpmix;
+    real_type val = cstr.isothermal * sumhkYkvik/cpmix;
     Kokkos::atomic_fetch_add(&Ssmat(0, i), val);
 
     }

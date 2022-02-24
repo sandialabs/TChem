@@ -1,7 +1,7 @@
-exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroDSA.x
+exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroD.x
 mech=$TCHEM_INSTALL_PATH/example/data/ignition-zero-d/gri3.0
 
-export OMP_PROC_BIND=spread 
+export OMP_PROC_BIND=spread
 this="$exec --chemfile=$mech/chem.inp \
             --thermfile=$mech/therm.dat \
             --samplefile=inputs/sample.dat \

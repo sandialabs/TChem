@@ -4,7 +4,7 @@
 #SBATCH -J isoOctane
 ##SBATCH --output=test-tchem.out
 
-exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroDSA.x
+exec=$TCHEM_INSTALL_PATH/example/TChem_IgnitionZeroD.x
 
 module purge
 module load devpack/20190329/openmpi/4.0.1/intel/19.3.199

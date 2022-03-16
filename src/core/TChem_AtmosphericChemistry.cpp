@@ -422,7 +422,7 @@ AtmosphericChemistry::runHostBatch( /// thread block size
     auto species = root["species"];
     // 1. get number of batches or cells
     nBatch = pressure.size();
-    printf("Number of cells %d \n",nBatch );
+    // printf("Number of cells %d \n",nBatch );
     // 2. find species names
     std::vector<std::string> varnames;
     for (auto const& sp_cond : initial_state) {
@@ -436,7 +436,7 @@ AtmosphericChemistry::runHostBatch( /// thread block size
         if (strncmp(&speciesNamesHost(i, 0), (varnames[sp]).c_str(),
           LENGTHOFSPECNAME) == 0) {
           indx.push_back(i);
-          printf("species %s index %d \n", &speciesNamesHost(i, 0), i);
+          // printf("species %s index %d \n", &speciesNamesHost(i, 0), i);
           break;
         }
       }

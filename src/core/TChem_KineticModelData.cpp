@@ -2168,7 +2168,9 @@ namespace TChem {
       }
 
     } else if (doc["NCAR-version" ] ){
-      printf("Using parser for NCAR atmospheric chemistry\n");
+      if(verboseEnabled) {
+        printf("Using parser for NCAR atmospheric chemistry\n");
+      }
       initChemNCAR(doc);
     } else {
       printf("we do not have a parser for this file\n");

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Building TChem &mdash; TChem 2.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Nomenclature" href="nomenclature.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> TChem
+          </a>
+              <div class="version">
+                2.0.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nomenclature.html">Nomenclature</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Building TChem</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#download-libraries">Download Libraries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-libraries-and-tchem">Building Libraries and TChem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kokkos">Kokkos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tines">Tines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gtest">GTEST</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tchem">TChem</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">TChem</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Building TChem</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/building-tchem.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="building-tchem">
+<h1>Building TChem<a class="headerlink" href="#building-tchem" title="Permalink to this headline"></a></h1>
+<p>TChem is designed and implemented using Kokkos (a performance portable parallel programming model). The code relines on <strong>Tines</strong> for SACADO automatic derivative (AD) types and time integration. Optionally, it uses CVODE library from SUNDIALS. The GTEST framework is used for unit tests.</p>
+<p>For convenience, we explain how to build the TChem code using the following environment variable that a user can modify according to their working environments.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># repositories</span>
+<span class="nb">export</span> <span class="nv">TCHEM_REPOSITORY_PATH</span><span class="o">=</span>/where/you/clone/tchem/git/repo
+<span class="nb">export</span> <span class="nv">KOKKOS_REPOSITORY_PATH</span><span class="o">=</span>/where/you/clone/kokkos/git/repo
+<span class="nb">export</span> <span class="nv">TINES_REPOSITORY_PATH</span><span class="o">=</span>/where/you/clone/tines/git/repo
+<span class="nb">export</span> <span class="nv">GTEST_REPOSITORY_PATH</span><span class="o">=</span>/where/you/clone/gtest/git/repo
+
+<span class="c1"># build directories</span>
+<span class="nb">export</span> <span class="nv">TCHEM_BUILD_PATH</span><span class="o">=</span>/where/you/build/tchem
+<span class="nb">export</span> <span class="nv">KOKKOS_BUILD_PATH</span><span class="o">=</span>/where/you/build/kokkos
+<span class="nb">export</span> <span class="nv">TINES_REPOSITORY_PATH</span><span class="o">=</span>/where/you/clone/tines/git/repo
+<span class="nb">export</span> <span class="nv">GTEST_BUILD_PATH</span><span class="o">=</span>/where/you/build/gtest
+
+<span class="c1"># install directories</span>
+<span class="nb">export</span> <span class="nv">TCHEM_INSTALL_PATH</span><span class="o">=</span>/where/you/install/tchem
+<span class="nb">export</span> <span class="nv">KOKKOS_INSTALL_PATH</span><span class="o">=</span>/where/you/install/kokkos
+<span class="nb">export</span> <span class="nv">TINES_INSTALL_PATH</span><span class="o">=</span>/where/you/install/tines
+<span class="nb">export</span> <span class="nv">GTEST_INSTALL_PATH</span><span class="o">=</span>/where/you/install/gtest
+</pre></div>
+</div>
+<section id="download-libraries">
+<h2>Download Libraries<a class="headerlink" href="#download-libraries" title="Permalink to this headline"></a></h2>
+<p>Clone Kokkos, Tines, GTEST and TChem repositories.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/kokkos/kokkos.git <span class="si">${</span><span class="nv">KOKKOS_REPOSITORY_PATH</span><span class="si">}</span><span class="p">;</span>
+git clone https://github.com/sandialabs/Tines.git <span class="si">${</span><span class="nv">TINES_REPOSITORY_PATH</span><span class="si">}</span><span class="p">;</span>
+git clone https://github.com/google/googletest.git <span class="si">${</span><span class="nv">GTEST_REPOSITORY_PATH</span><span class="si">}</span>
+git clone https://github.com/sandialabs/TChem.git <span class="si">${</span><span class="nv">TCHEM_REPOSITORY_PATH</span><span class="si">}</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Here, we assume standard third party libraries (TPLs) e.g., BLAS and LAPACK are installed separately.</p>
+</section>
+<section id="building-libraries-and-tchem">
+<h2>Building Libraries and TChem<a class="headerlink" href="#building-libraries-and-tchem" title="Permalink to this headline"></a></h2>
+<section id="kokkos">
+<h3>Kokkos<a class="headerlink" href="#kokkos" title="Permalink to this headline"></a></h3>
+<p>This example build Kokkos on Intel Sandybridge architectures and install it to <code class="docutils literal notranslate"><span class="pre">${KOKKOS_INSTALL_PATH}</span></code>. For more details, see [Kokkos github pages](<a class="reference external" href="https://github.com/kokkos/kokkos">https://github.com/kokkos/kokkos</a>).</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span> <span class="nb">cd</span> <span class="si">${</span><span class="nv">KOKKOS_BUILD_PATH</span><span class="si">}</span>
+ cmake <span class="se">\</span>
+   -D <span class="nv">CMAKE_INSTALL_PREFIX</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">KOKKOS_INSTALL_PATH</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+    -D <span class="nv">CMAKE_CXX_COMPILER</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">CXX</span><span class="si">}</span><span class="s2">&quot;</span>  <span class="se">\</span>
+    -D <span class="nv">Kokkos_ENABLE_SERIAL</span><span class="o">=</span>ON <span class="se">\</span>
+    -D <span class="nv">Kokkos_ENABLE_OPENMP</span><span class="o">=</span>ON <span class="se">\</span>
+    -D <span class="nv">Kokkos_ENABLE_DEPRECATED_CODE</span><span class="o">=</span>OFF <span class="se">\</span>
+    -D <span class="nv">Kokkos_ARCH_SNB</span><span class="o">=</span>ON <span class="se">\</span>
+    <span class="si">${</span><span class="nv">KOKKOS_REPOSITORY_PATH</span><span class="si">}</span>
+make -j install
+</pre></div>
+</div>
+<p>To compile for NVIDIA GPUs, one can customize the following cmake script. Note that we use Kokkos nvcc_wrapper as its compiler. The architecture flag indicates that the host architecture is Intel SandyBridge and the GPU architecture is Volta 70 generation. With Kokkko 3.1, the CUDA architecture flag is optional (the script automatically detects a correct CUDA arch flag).</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span> <span class="nb">cd</span> <span class="si">${</span><span class="nv">KOKKOS_BUILD_PATH</span><span class="si">}</span>
+ cmake <span class="se">\</span>
+   -D <span class="nv">CMAKE_INSTALL_PREFIX</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">KOKKOS_INSTALL_PATH</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+    -D <span class="nv">CMAKE_CXX_COMPILER</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">KOKKOS_REPOSITORY_PATH</span><span class="si">}</span><span class="s2">/bin/nvcc_wrapper&quot;</span>  <span class="se">\</span>
+    -D <span class="nv">Kokkos_ENABLE_SERIAL</span><span class="o">=</span>ON <span class="se">\</span>
+    -D <span class="nv">Kokkos_ENABLE_OPENMP</span><span class="o">=</span>ON <span class="se">\</span>
+    -D Kokkos_ENABLE_CUDA:BOOL<span class="o">=</span>ON <span class="se">\</span>
+    -D Kokkos_ENABLE_CUDA_UVM:BOOL<span class="o">=</span>OFF <span class="se">\</span>
+    -D Kokkos_ENABLE_CUDA_LAMBDA:BOOL<span class="o">=</span>ON <span class="se">\</span>
+    -D <span class="nv">Kokkos_ENABLE_DEPRECATED_CODE</span><span class="o">=</span>OFF <span class="se">\</span>
+    -D <span class="nv">Kokkos_ARCH_VOLTA70</span><span class="o">=</span>ON <span class="se">\</span>
+    -D <span class="nv">Kokkos_ARCH_SNB</span><span class="o">=</span>ON <span class="se">\</span>
+    <span class="si">${</span><span class="nv">KOKKOS_REPOSITORY_PATH</span><span class="si">}</span>
+make -j install
+</pre></div>
+</div>
+</section>
+<section id="tines">
+<h3>Tines<a class="headerlink" href="#tines" title="Permalink to this headline"></a></h3>
+<p>Tines provides batched implicit time integration solver for stiff ODE and DAE problems.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake <span class="se">\</span>
+  -D <span class="nv">CMAKE_INSTALL_PREFIX</span><span class="o">=</span><span class="si">${</span><span class="nv">TINES_INSTALL_PATH</span><span class="si">}</span> <span class="se">\</span>
+  -D <span class="nv">CMAKE_C_COMPILER</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">CC</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+  -D <span class="nv">CMAKE_CXX_COMPILER</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">CXX</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+  -D <span class="nv">CMAKE_BUILD_TYPE</span><span class="o">=</span>RELEASE <span class="se">\</span>
+  -D <span class="nv">TINES_ENABLE_DEBUG</span><span class="o">=</span>OFF <span class="se">\</span>
+  -D <span class="nv">TINES_ENABLE_VERBOSE</span><span class="o">=</span>OFF <span class="se">\</span>
+  -D <span class="nv">KOKKOS_INSTALL_PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">KOKKOS_INSTALL_PATH</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+  -D <span class="nv">OPENBLAS_INSTALL_PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">OPENBLAS_INSTALL_PATH</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+ <span class="si">${</span><span class="nv">TINES_SRC_PATH</span><span class="si">}</span>
+make -j install
+</pre></div>
+</div>
+<p>Optionally, Tines can interface to CVODE by adding <code class="docutils literal notranslate"><span class="pre">-D</span> <span class="pre">SUNDIALS_INSTALL_PATH=${SUNDIALS_INSTALL_PATH}</span></code>. The code interfaces to SUNDIALS version 6.1.0 and higher.</p>
+</section>
+<section id="gtest">
+<h3>GTEST<a class="headerlink" href="#gtest" title="Permalink to this headline"></a></h3>
+<p>We use GTEST as our testing infrastructure. With the following cmake script, the GTEST can be compiled and installed.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">GTEST_BUILD_PATH</span><span class="si">}</span>
+cmake <span class="se">\</span>
+  -D <span class="nv">CMAKE_INSTALL_PREFIX</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">GTEST_INSTALL_PATH</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+  -D <span class="nv">CMAKE_CXX_COMPILER</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">CXX</span><span class="si">}</span><span class="s2">&quot;</span>  <span class="se">\</span>
+  <span class="si">${</span><span class="nv">GTEST_REPOSITORY_PATH</span><span class="si">}</span>
+make -j install
+</pre></div>
+</div>
+</section>
+<section id="tchem">
+<h3>TChem<a class="headerlink" href="#tchem" title="Permalink to this headline"></a></h3>
+<p>The following example cmake script compiles TChem on host linking with the libraries described in the above e.g., kokkos, tines, and gtest. For NVIDIA GPUs, we can use the above cmake script replacing the compiler with Kokkos nvcc_wrapper by adding <code class="docutils literal notranslate"><span class="pre">-D</span> <span class="pre">CMAKE_CXX_COMPILER=&quot;${KOKKOS_INSTALL_PATH}/bin/nvcc_wrapper&quot;</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> <span class="si">${</span><span class="nv">TCHEM_BUILD_PATH</span><span class="si">}</span>
+cmake <span class="se">\</span>
+  -D <span class="nv">CMAKE_INSTALL_PREFIX</span><span class="o">=</span><span class="si">${</span><span class="nv">TCHEM_INSTALL_PATH</span><span class="si">}</span> <span class="se">\</span>
+  -D <span class="nv">CMAKE_CXX_COMPILER</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">CXX</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+  -D <span class="nv">CMAKE_BUILD_TYPE</span><span class="o">=</span>RELEASE <span class="se">\</span>
+  -D <span class="nv">TCHEM_ENABLE_REAL_TYPE</span><span class="o">=</span><span class="s2">&quot;double&quot;</span> <span class="se">\</span>
+  -D <span class="nv">TCHEM_ENABLE_PYTHON</span><span class="o">=</span>ON <span class="se">\</span>
+  -D <span class="nv">TCHEM_ENABLE_DEBUG</span><span class="o">=</span>OFF <span class="se">\</span>
+  -D <span class="nv">TCHEM_ENABLE_VERBOSE</span><span class="o">=</span>OFF <span class="se">\</span>
+  -D <span class="nv">TCHEM_ENABLE_TEST</span><span class="o">=</span>OFF <span class="se">\</span>
+  -D <span class="nv">TCHEM_ENABLE_EXAMPLE</span><span class="o">=</span>ON <span class="se">\</span>
+  -D <span class="nv">TCHEM_ENABLE_SACADO_JACOBIAN_IGNITION_ZERO_D_REACTOR</span><span class="o">=</span>ON <span class="se">\</span>
+  -D <span class="nv">TCHEM_ENABLE_SACADO_JACOBIAN_CONSTANT_VOLUME_IGNITION_REACTOR</span><span class="o">=</span>ON <span class="se">\</span>
+  -D <span class="nv">KOKKOS_INSTALL_PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">KOKKOS_INSTALL_PATH</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+  -D <span class="nv">TINES_INSTALL_PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">TINES_INSTALL_PATH</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+  -D <span class="nv">GTEST_INSTALL_PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">GTEST_INSTALL_PATH</span><span class="si">}</span><span class="s2">&quot;</span> <span class="se">\</span>
+<span class="si">${</span><span class="nv">TCHEM_SRC_PATH</span><span class="si">}</span>
+make -j install
+</pre></div>
+</div>
+<p>TChem support both analytic and numerical Jacobians for canonical reactor models. The Jacobian types are selected in the configure time and the following options are available.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Available options are</span>
+<span class="c1">#   &quot;ANALYTIC&quot; - hand derived analytic Jacobian when available</span>
+<span class="c1">#   &quot;NUMERICAL&quot; - numerical Jacobian computed via difference method</span>
+<span class="c1">#   &quot;SACADO&quot; -  analytic Jacobian computed via SACADO AD type</span>
+-D <span class="nv">TCHEM_ENABLE_JACOBIAN_ATMOSPHERIC_CHEMISTRY</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">OPTION</span><span class="si">}</span><span class="s2">&quot;</span>
+-D <span class="nv">TCHEM_ENABLE_JACOBIAN_CONSTANT_PRESSURE_IGNITION_REACTOR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">OPTION</span><span class="si">}</span><span class="s2">&quot;</span>
+-D <span class="nv">TCHEM_ENABLE_JACOBIAN_CONSTANT_VOLUME_IGNITION_REACTOR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">OPTION</span><span class="si">}</span><span class="s2">&quot;</span>
+-D <span class="nv">TCHEM_ENABLE_JACOBIAN_PLUG_FLOW_REACTOR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">OPTION</span><span class="si">}</span><span class="s2">&quot;</span>
+-D <span class="nv">TCHEM_ENABLE_JACOBIAN_TRANSIENT_CONT_STIRRED_TANK_REACTOR</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">OPTION</span><span class="si">}</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p>TODO - this does not match to current code but we need to reduce complexity. Too many options with inconsistent names.</p>
+<p>A successful installation creates following directory structure in <code class="docutils literal notranslate"><span class="pre">${TCHEM_INSTALL_PATH}</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>- bin
+  - tchem.x
+  - tchem-json-test.x
+- example
+  - example executables
+  - data
+  - runs
+- include
+  - tchem
+    - header files
+- lib <span class="o">(</span>or lib64<span class="o">)</span>
+  - cmake
+  - libtchem.a
+  - pytchem.***.so
+</pre></div>
+</div>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+</tbody>
+</table>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="nomenclature.html" class="btn btn-neutral float-left" title="Nomenclature" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Sandia National Labs.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

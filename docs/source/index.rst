@@ -5,8 +5,6 @@ Contents
 --------
 
 .. toctree::
-
-   includeme
    intro
    nomenclature
    building-tchem

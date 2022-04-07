@@ -1,0 +1,23 @@
+Introduction
+============
+
+**TChem** is an open source software library for solving complex computational chemistry problems and analyzing detailed chemical kinetic models. The software provides support for
+* the support of complex kinetic models for gas-phase and surface chemistry,
+* thermodynamic properties based on NASA polynomials,
+* species production/consumption rates,
+* stable time integrator for solving stiff time ordinary differential equations,
+* reactor models such as homogenous gas-phase ignition (with analytical Jacobians), continuously stirred tank reactor, plug-flow reactor.
+
+This toolkit builds upon earlier versions that were written in C and featured tools for gas-phase chemistry only. The current version of the software was completely refactored in C++, uses an object-oriented programming model, and adopts [Kokkos](https://github.com/kokkos) as its portability layer to make it ready for the next generation computing architectures i.e., multi/many core computing platforms with GPU accelerators. We have expanded the range of kinetic models to include surface chemistry and have added examples pertaining to Continuously Stirred Tank Reactors (CSTR) and Plug Flow Reactor (PFR) models to complement the homogenous ignition examples present in the earlier versions. To exploit the massive parallelism available from modern computing platforms, the current software interface is designed to evaluate samples in parallel, which enables large scale parametric studies, e.g. for sensitivity analysis and model calibration.
+
+Citing
+------
+
+.. [tchem-sand-report] Kyungjoo Kim, Oscar Diaz-Ibarra, Cosmin Safta, and Habib Najm, TChem v2.0 - A Software Toolkit for the Analysis of Complex Kinetic Models, Sandia National Laboratories, SAND 2020-10762, 2020.*
+
+
+.. autosummary::
+   :toctree: generated
+
+   tchem
+

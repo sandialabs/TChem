@@ -1,0 +1,12 @@
+#!/bin/sh
+
+
+for FILE in $(git diff --cached --name-only | grep -E '\.(h|hpp|c|cpp)$')
+do
+    if test -f "$FILE"; then
+	echo "clang format $FILE"
+	clang-format -style=file -i $FILE
+	git add $FILE
+    fi
+done
+       

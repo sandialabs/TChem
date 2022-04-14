@@ -1,4 +1,4 @@
-/* =====================================================================================
+  /* =====================================================================================
 TChem version 2.0
 Copyright (2020) NTESS
 https://github.com/sandialabs/TChem
@@ -201,6 +201,9 @@ namespace TChem {
       reacArhenFor_ =
 	real_type_2d_dual_view(do_not_init_tag("KMD::reacArhenFor"), nReac_, 3);
       isDup_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::isDup"), nReac_);
+
+      // initialize with zeros
+      reactionType_ = ordinal_type_1d_dual_view("KMD::reaction type", nReac_);
 
     }
 
@@ -537,6 +540,8 @@ namespace TChem {
     sigRealNu_.sync_device();
     RealNuIJ_.sync_device();
     kc_coeff_.sync_device();
+
+    reactionType_.sync_device();
   }
 
 
@@ -582,6 +587,8 @@ namespace TChem {
     char charvar4[4];
 
     FILE *chemfile, *echofile, *errfile;
+
+    Chebyshev_max_nrows_ = 0;
 
     /* zero-out variables */
     isInit_ = 0;
@@ -857,6 +864,8 @@ namespace TChem {
     auto kc_coeffHost = kc_coeff_.view_host();
 
     auto stoiCoefMatrixHost = stoiCoefMatrix_.view_host();
+
+    auto reactionTypeHost = reactionType_.view_host();
 
     {
       // Elements
@@ -1200,7 +1209,7 @@ namespace TChem {
 
 
       if (verboseEnabled)
-	printf("KineticModelData::initChem() : Done reading pressure-dependent "
+	      printf("KineticModelData::initChem() : Done reading pressure-dependent "
 	       "reaction data\n");
 
       /* Third-body reactions */
@@ -1247,7 +1256,7 @@ namespace TChem {
 	DASHLINE(echofile);
       }
       if (verboseEnabled)
-	printf("KineticModelData::initChem() : Done reading third-body data\n");
+	      printf("KineticModelData::initChem() : Done reading third-body data\n");
 
       /* Arbitrary reaction orders */
       if (nOrdReac_ > 0) {
@@ -1323,6 +1332,8 @@ namespace TChem {
 	  fscanf(chemfile, "%d", &(reacPlogPnoHost(i + 1)));
 	  reacPlogPnoHost(i + 1) += reacPlogPnoHost(i);
 
+    // save reaction type
+    reactionTypeHost(reacPlogIdxHost(i)) = 1; //
 	}
 
 	/* Plog parameters */
@@ -1501,6 +1512,7 @@ namespace TChem {
       kc_coeff_.modify_host();
       stoiCoefMatrix_.modify_host();
 
+      reactionType_.modify_host();
       /// Sync to device
       syncToDevice();
 
@@ -2260,6 +2272,8 @@ namespace TChem {
     DASHLINE(echofile);
     // fflush(echofile);
 
+
+
     /* reaction info */
     if (nReac_ > 0) {
       isRev_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::isRev"), nReac_);
@@ -2269,6 +2283,7 @@ namespace TChem {
 	ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
       reacNprod_ =
 	ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
+      convExponent_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::convExponent"), nReac_);
       // reacArhenFor_ =
       //   real_type_2d_dual_view(do_not_init_tag("KMD::reacArhenFor"), nReac_, 3);
       // isDup_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::isDup"), nReac_)
@@ -2752,6 +2767,18 @@ namespace TChem {
     }// end source type emission
   } // end sources
 
+
+  auto convExponentHost = convExponent_.view_host();
+
+  for (ordinal_type i = 0; i < nReac_; i++) {
+    ordinal_type nu_sum = 0;
+    for (ordinal_type j = 0; j < reacNreacHost(i); ++j) {
+      nu_sum += ats<ordinal_type>::abs(reacNukiHost(i, j));
+    }
+    convExponentHost(i) = nu_sum - ordinal_type(1);
+  }
+
+
   fprintf( echofile,
         "kmod.list :  # sources e.g., EMISSION                         : %d\n",
         countEmissionSources);
@@ -2814,6 +2841,8 @@ namespace TChem {
     reacPfal_.modify_host();
     reacPpar_.modify_host();
 
+    convExponent_.modify_host();
+
     /* Species' name and weights */
     sNames_.sync_device();
     isRev_.sync_device();
@@ -2828,6 +2857,7 @@ namespace TChem {
     EmissionCoef_.sync_device();
     reacPfal_.sync_device();
     reacPpar_.sync_device();
+    convExponent_.sync_device();
 
     return (0);
 
@@ -3575,7 +3605,8 @@ namespace TChem {
 
     auto units = doc["units"];
 
-    std::cout << "phase name: " << phaseName << "\n";
+    if (verboseEnabled)
+      std::cout << "KineticModelData::initChemYaml() : phase name: " << phaseName << "\n";
 
     auto species_name  = doc["phases"][gasPhaseIndex]["species"];
     auto elements_name = doc["phases"][gasPhaseIndex]["elements"];
@@ -3834,6 +3865,9 @@ namespace TChem {
 
     }
 
+    if (verboseEnabled)
+	    printf("KineticModelData::initChemYaml() : Done reading element names \n");
+
 
     /* reaction info */
     if (nReac_ > 0) {
@@ -3845,8 +3879,8 @@ namespace TChem {
       reacNprod_ =
 	ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_);
       isDup_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::isDup"), nReac_);
-
-
+      // initialize with zeros
+      reactionType_ = ordinal_type_1d_dual_view("KMD::reaction type", nReac_);
     }
 
 
@@ -3856,6 +3890,7 @@ namespace TChem {
     auto reacNreacHost = reacNreac_.view_host();
     auto reacNprodHost = reacNprod_.view_host();
     auto isDupHost = isDup_.view_host();
+    auto reactionTypeHost = reactionType_.view_host();
 
 
 
@@ -3893,6 +3928,9 @@ namespace TChem {
     }
     //twice because we only consider max (products, reactants)
     maxSpecInReac_ *=2;
+
+    if (verboseEnabled)
+      printf("KineticModelData::initChemYaml() : Done reading number of reactants and products \n");
 
 
     fprintf(
@@ -3967,6 +4005,12 @@ namespace TChem {
 
     }/* end Stoichiometric coefficients */
 
+
+    if (verboseEnabled)
+      printf("KineticModelData::initChemYaml() : Done reading stoichiometric coefficients\n");
+
+
+
     /* Arrhenius parameters */
     auto reacArhenForHost = reacArhenFor_.view_host();
 
@@ -3974,9 +4018,11 @@ namespace TChem {
     nFallPar_ = 3; //default value is 3
     const double unitFactor =
       TCMI_unitFactorActivationEnergies(units["activation-energy"].as<std::string>());
-
+    ordinal_type nChebyshev (0);
+    ordinal_type Chebyshev_data_size_max(0);
+    Chebyshev_max_nrows_ = 0;
     for (auto const& reaction : gas_reactions)
-      {
+    {
 	std::string rate_constant_string("rate-constant");
 
 	auto type = reaction["type"];
@@ -3984,27 +4030,42 @@ namespace TChem {
 	  {
 	    std::string reaction_type = reaction["type"].as<std::string>();
 	    if (reaction_type == "falloff")
-	      {
+	    {
 		rate_constant_string = "high-P-rate-constant";
 		nFallReac_++;
 		nThbReac_++;
 	      }
-
-	    if (reaction_type == "three-body")
-	      {
+	    else if (reaction_type == "three-body")
+	    {
 		nThbReac_++;
 	      }
+	    else if (reaction_type == "pressure-dependent-Arrhenius")
+	    {
+		    nPlogReac_++;
+        reactionTypeHost(i) = 1; //
+      } else if (reaction_type == "Chebyshev") {
+        ordinal_type data_size = reaction["data"].size() * reaction["data"][0].size();
+        Chebyshev_data_size_max = Chebyshev_data_size_max > data_size ?
+                                  Chebyshev_data_size_max : data_size ;
+        Chebyshev_max_nrows_ =  Chebyshev_max_nrows_ > reaction["data"].size() ?
+                                Chebyshev_max_nrows_ : reaction["data"].size()  ;
+        // std::cout <<"rows: "<< reaction["data"].size() <<" columns: "<<reaction["data"][0].size()  << '\n';
+        // printf("This is Chebyshev\n");
+        nChebyshev++;
+        reactionTypeHost(i) = 2;
+      }
+      else {
+       printf("Reaction type: %s  is not implemented in TChem !!!\n", reaction_type.c_str() );
+       exit(1);
+      }
 
-	    if (reaction_type == "pressure-dependent-Arrhenius")
-	      {
-		nPlogReac_++;
-	      }
-
-	    if (reaction["Troe"]){
+	    if (reaction["Troe"])
+      {
 	      nFallPar_ = std::max(nFallPar_,7);
 	    }
 
-	    if (reaction["SRI"]){
+	    if (reaction["SRI"])
+      {
 	      nFallPar_ = std::max(nFallPar_,8);
 	    }
 	    //check number of third-body efficiencies in a reaction
@@ -4015,6 +4076,8 @@ namespace TChem {
 	      }
 
 	  } /*end type */
+
+
 
 
 
@@ -4041,8 +4104,9 @@ namespace TChem {
 
 	i++;
       } /* gas reactions */
-
     /* Reactions with reversible Arrhenius parameters given */
+
+
 
     fprintf(
 	    echofile,
@@ -4052,6 +4116,11 @@ namespace TChem {
 	    echofile,
 	    "kmod.list : # of pressure-dependent reactions                 : %d\n",
 	    nFallReac_);
+    //
+    fprintf(
+	    echofile,
+	    "kmod.list : # of Chebyshev reactions                          : %d\n",
+	    nChebyshev);
 
     fprintf(
 	    echofile,
@@ -4212,10 +4281,11 @@ namespace TChem {
       else
         fprintf(echofile, "\n");
 
-      if (verboseEnabled)
-
-	printf("KineticModelData::initChem() : Done reading reaction data\n");
     }
+
+    if (verboseEnabled)
+      printf("KineticModelData::initChemYaml() : Done reading reactions\n");
+
 
     /* Pressure-dependent reactions */
     if (nFallReac_ > 0) {
@@ -4355,7 +4425,7 @@ namespace TChem {
     }
 
     if (verboseEnabled)
-      printf("KineticModelData::initChem() : Done reading third-body data\n");
+      printf("KineticModelData::initChemYaml() : Done reading third-body data\n");
 
     /* Reactions with PLOG formulation */
     if (nPlogReac_ > 0) {
@@ -4449,6 +4519,109 @@ namespace TChem {
 
     }
 
+    if (verboseEnabled)
+      printf("KineticModelData::initChemYaml() : Done reading plog data\n");
+
+    auto Chebyshev_get_pressure_ranges = [] (std::string& string, //input
+                                             real_type & value ) // output
+    {
+      // parse a lower/higher pressure range from a Chebyshev type reaction
+      // lower range : 1.0e-03 atm
+      // string - in - lower range convert to string
+      // units - out - units of pressure
+      // value - out - value of pressure in this units
+
+      // remove spaces
+      string.erase(remove_if(string.begin(),
+      string.end(), isspace), string.end());
+      // get start position units
+      size_t i = string.length() - 1;
+      for ( ; i > 0 ; i-- ){ if ( isdigit(string[i]) ) break; }
+      // get units
+      std::string units = string.substr(i+1  , string.length() - i+1);
+      // get value and convert string to real_type
+      value = std::stod(string.substr(0,i+1));
+
+      std::transform(units.begin(),
+      units.end(),units.begin(), ::toupper);
+      // convert pressure to pascals
+      if (units =="ATM") {
+        value *= real_type(101325);
+      } else {
+        printf("Unit type: %s  is not implemented in TChem !!!\n", units.c_str() );
+        exit(1);
+      }
+
+    };
+
+    /* Chebyshev reaction type */
+    if ( nChebyshev > 0 ) {
+
+      ChebyshevCoef_ = chebyshev_reaction_type_1d_dual_view(do_not_init_tag("KMD::auxnChebyshev"), nChebyshev);
+      Chebyshev_data_ = real_type_2d_dual_view(do_not_init_tag("KMD::coefChebyshev"), nChebyshev, Chebyshev_data_size_max);
+
+      auto ChebyshevCoefHost = ChebyshevCoef_.view_host();
+      auto Chebyshev_dataHost =  Chebyshev_data_.view_host();
+
+
+      ordinal_type ireac(0);
+      ordinal_type count_chebyshev(0);
+      for (auto const& reaction : gas_reactions)
+      {
+        auto type = reaction["type"];
+  	    if (type) {
+          std::string reaction_type = reaction["type"].as<std::string>();
+	        if (reaction_type == "Chebyshev")
+		      {
+            auto temperature_range = reaction["temperature-range"];
+            auto pressure_range =reaction["pressure-range"];
+            auto data = reaction["data"];
+            const ordinal_type ncols = data[0].size();
+            const ordinal_type nrows = data.size();
+
+            const real_type temperature_min_inv = real_type(1.0) / temperature_range[0].as<real_type>();
+            const real_type temperature_max_inv = real_type(1.0) / temperature_range[1].as<real_type>();
+
+            real_type pressure_min(0);
+            auto pressure_min_string = pressure_range[0].as<std::string>();
+            Chebyshev_get_pressure_ranges(pressure_min_string, pressure_min);
+
+            real_type pressure_max(0);
+            auto pressure_max_string = pressure_range[1].as<std::string>();
+            Chebyshev_get_pressure_ranges(pressure_max_string, pressure_max);
+
+            const real_type pressure_min_log = ats<real_type>::log10(pressure_min);
+            const real_type pressure_max_log = ats<real_type>::log10(pressure_max);
+
+            ChebyshevReactionType chebyshev_reaction;
+            chebyshev_reaction._temperature_num = - temperature_min_inv - temperature_max_inv;
+            chebyshev_reaction._temperature_den = real_type(1.0) / (temperature_max_inv - temperature_min_inv);
+            chebyshev_reaction._pressure_num = -pressure_min_log - pressure_max_log;
+            chebyshev_reaction._pressure_den  = real_type(1.0) / (pressure_max_log - pressure_min_log);
+            chebyshev_reaction._reaction_index = ireac;
+            chebyshev_reaction._ncols = ncols;
+            chebyshev_reaction._nrows = nrows;
+            ChebyshevCoefHost(count_chebyshev) = chebyshev_reaction;
+
+            // coeff
+            for (size_t j = 0; j < ncols; j++) {
+              for (size_t i = 0; i < nrows; i++) {
+                // printf("data(%d, %d)= %e\n",i,j,data[i][j].as<real_type>() );
+                Chebyshev_dataHost(count_chebyshev, j * nrows + i ) = data[i][j].as<real_type>();
+              }
+            }
+
+	          count_chebyshev++;
+
+          } // end Chebyshev
+
+        } // end type
+        ireac++;
+      } // end reactions
+    } //  end Chebyshev reaction type
+
+    if (verboseEnabled)
+      printf("KineticModelData::initChemYaml() : Done reading Chebyshev data\n");
 
     fclose(errfile);
 
@@ -4661,6 +4834,14 @@ namespace TChem {
     RealNuIJ_.modify_host();
     kc_coeff_.modify_host();
     stoiCoefMatrix_.modify_host();
+    ChebyshevCoef_.modify_host();
+
+    Chebyshev_data_.modify_host();
+
+    reactionType_.modify_host();
+
+    ChebyshevCoef_.sync_device();
+    Chebyshev_data_.sync_device();
 
     /// Sync to device
     syncToDevice();

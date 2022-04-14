@@ -58,7 +58,10 @@ struct RateOfProgressInd
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
     const kinetic_model_type& kmcd)
   {
-    return (4 * kmcd.nSpec + 6 * kmcd.nReac);
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+
+    return (4 * kmcd.nSpec + 6 * kmcd.nReac + work_kfor_rev_size);
   }
 
   template<typename MemberType>
@@ -82,6 +85,7 @@ struct RateOfProgressInd
     const value_type_1d_view_type& krev,
     const value_type_1d_view_type& Crnd,
     const ordinary_type_1d_view_type& iter,
+    const value_type_1d_view_type& work_kfor_rev,
     /// const input from kinetic model
     const kinetic_model_type& kmcd)
   {
@@ -111,6 +115,7 @@ struct RateOfProgressInd
                                   kfor,
                                   krev, /// output
                                   iter,
+                                  work_kfor_rev,
                                   kmcd);
 
     ///
@@ -192,8 +197,6 @@ struct RateOfProgressInd
     const real_type_1d_view_type& ropRev,
     /// workspace
     const WorkViewType& work,
-    /// kmcd.nSpec(4) : concX,gk,hks,cpks,
-    /// kmcd.nReac(5) : concM,kfor,krev,rop,Crnd
     /// const input from kinetic model
     const kinetic_model_type& kmcd)
   {
@@ -225,6 +228,12 @@ struct RateOfProgressInd
     auto iter = ordinary_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+
+    auto work_kfor_rev= real_type_1d_view_type(w, work_kfor_rev_size);
+    w += work_kfor_rev_size;
+
     team_invoke_detail(member,
                        t,
                        p,
@@ -241,6 +250,7 @@ struct RateOfProgressInd
                        krev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
   template<typename MemberType,
@@ -293,6 +303,12 @@ struct RateOfProgressInd
     auto iter = ordinary_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+
+    auto work_chebyshev = value_type_1d_view_type(w, work_kfor_rev_size, sacadoStorageDimension);
+    w += work_kfor_rev_size*len;
+
     team_invoke_detail(member,
                        t,
                        p,
@@ -309,6 +325,7 @@ struct RateOfProgressInd
                        krev,
                        Crnd,
                        iter,
+                       work_chebyshev,
                        kmcd);
   }
 };

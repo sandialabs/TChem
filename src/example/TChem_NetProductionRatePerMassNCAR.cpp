@@ -20,9 +20,9 @@ Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
 #include "TChem_Impl_KForward.hpp"
 #include "TChem_CommandLineParser.hpp"
-#include "TChem_KineticModelData.hpp"
-#include "TChem_Util.hpp"
+#include "TChem.hpp"
 #include "TChem_Impl_ReactionRatesAerosol.hpp"
+#include "TChem_AtmosphericChemistry.hpp"
 
 using ordinal_type = TChem::ordinal_type;
 using real_type = TChem::real_type;
@@ -80,12 +80,17 @@ main(int argc, char* argv[])
 
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
+
     using host_device_type      = typename Tines::UseThisDevice<host_exec_space>::type;
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd = TChem::KineticModelData(chemFile);
     const auto kmcd = TChem::createNCAR_KineticModelConstData<host_device_type>(kmd);
     const auto member = Tines::HostSerialTeamMember();
+
+    const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
+    Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
+
 
     // forward constant
     using kForward_type = TChem::Impl::KForward<real_type, host_device_type >;
@@ -99,61 +104,76 @@ main(int argc, char* argv[])
 
     value_type_1d_view_type work("work", 3*kmcd.nReac);
 
-    // arrhenius test
-    if(test=="arrhenius"){
+    // read scenario condition from yaml file
+    real_type_2d_view_host state_host;
+    TChem::AtmChemistry
+         ::setScenarioConditions(chemFile, speciesNamesHost,
+                                 kmcd.nSpec, state_host, nBatch );
 
-      printf("Testing arrhenius type\n");
-      const real_type t(272.5);
-      const real_type p(101253.3);
+    const auto t = state_host(0,2);
+    const auto p = state_host(0,1);
 
-      kForward_type::team_invoke( member, t, p, kfor,  kmcd);
+    kForward_type::team_invoke(member, t, p, kfor, kmcd);
 
-      for (size_t i = 0; i < kmcd.nReac; i++) {
-        printf(" kfor %e\n",kfor(i) );
-      }
-      value_type_1d_view_type state("state", kmcd.nSpec-kmcd.nConstSpec);
-      state(0)= real_type(1.0); // A
-      state(1)= real_type(1e-60); // B
-      state(2)= real_type(1e-60); // C
+    TChem::Test::writeReactionRates(outputFile, kmcd.nReac, kfor);
 
 
-      value_type_1d_view_type const_state("const state", kmcd.nConstSpec);
 
-      const real_type conv = CONV_PPM * p /t ; //D
-      state(0)= real_type(1.2)/conv; // D
-
-      reaction_rates_type::team_invoke(member, t,  p, state, const_state, omega, work,  kmcd);
-
-      for (size_t i = 0; i < kmcd.nSpec; i++) {
-        printf(" omega %e\n",omega(i) );
-      }
-    } else if(test=="troe")
-    //troe test
-    {
-      printf("Testing troe type\n");
-
-      const real_type t(272.5);
-      const real_type p(101253.3);
-
-      kForward_type::team_invoke( member, t, p, kfor, kmcd);
-
-      for (size_t i = 0; i < kmcd.nReac; i++) {
-        printf(" kfor %e\n",kfor(i) );
-      }
-      value_type_1d_view_type state("state", kmcd.nSpec-kmcd.nConstSpec);
-      state(0)= real_type(0.5); // A
-      state(1)= real_type(0.6); // B
-      state(2)= real_type(0.3); // C
-
-      value_type_1d_view_type const_state("const state", kmcd.nConstSpec);
-
-      reaction_rates_type::team_invoke(member, t,  p, state, const_state, omega, work,  kmcd);
-
-      for (size_t i = 0; i < kmcd.nSpec; i++) {
-        printf(" omega %e\n",omega(i) );
-      }
-
-    }
+    // // arrhenius test
+    // if(test=="arrhenius"){
+    //
+    //   printf("Testing arrhenius type\n");
+    //   const real_type t(272.5);
+    //   const real_type p(101253.3);
+    //
+    //   kForward_type::team_invoke( member, t, p, kfor,  kmcd);
+    //
+    //   for (size_t i = 0; i < kmcd.nReac; i++) {
+    //     printf(" kfor %e\n",kfor(i) );
+    //   }
+    //   value_type_1d_view_type state("state", kmcd.nSpec-kmcd.nConstSpec);
+    //   state(0)= real_type(1.0); // A
+    //   state(1)= real_type(1e-60); // B
+    //   state(2)= real_type(1e-60); // C
+    //
+    //
+    //   value_type_1d_view_type const_state("const state", kmcd.nConstSpec);
+    //
+    //   const real_type conv = CONV_PPM * p /t ; //D
+    //   state(0)= real_type(1.2)/conv; // D
+    //
+    //   reaction_rates_type::team_invoke(member, t,  p, state, const_state, omega, work,  kmcd);
+    //
+    //   for (size_t i = 0; i < kmcd.nSpec; i++) {
+    //     printf(" omega %e\n",omega(i) );
+    //   }
+    // } else if(test=="troe")
+    // //troe test
+    // {
+    //   printf("Testing troe type\n");
+    //
+    //   const real_type t(272.5);
+    //   const real_type p(101253.3);
+    //
+    //   kForward_type::team_invoke( member, t, p, kfor, kmcd);
+    //
+    //   for (size_t i = 0; i < kmcd.nReac; i++) {
+    //     printf(" kfor %e\n",kfor(i) );
+    //   }
+    //   value_type_1d_view_type state("state", kmcd.nSpec-kmcd.nConstSpec);
+    //   state(0)= real_type(0.5); // A
+    //   state(1)= real_type(0.6); // B
+    //   state(2)= real_type(0.3); // C
+    //
+    //   value_type_1d_view_type const_state("const state", kmcd.nConstSpec);
+    //
+    //   reaction_rates_type::team_invoke(member, t,  p, state, const_state, omega, work,  kmcd);
+    //
+    //   for (size_t i = 0; i < kmcd.nSpec; i++) {
+    //     printf(" omega %e\n",omega(i) );
+    //   }
+    //
+    // }
 
 
 

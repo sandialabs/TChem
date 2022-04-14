@@ -55,7 +55,10 @@ struct TransientContStirredTankReactorRHS
     const kinetic_model_type& kmcd,
     const kinetic_surf_model_type& kmcdSurf)
   {
-    return (6*kmcd.nSpec + 8*kmcd.nReac + 5*kmcdSurf.nSpec + 5*kmcdSurf.nReac);
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+
+    return (6*kmcd.nSpec + 8*kmcd.nReac + 5*kmcdSurf.nSpec + 5*kmcdSurf.nReac + work_kfor_rev_size);
   }
 
   template<typename MemberType>
@@ -89,6 +92,7 @@ struct TransientContStirredTankReactorRHS
     const value_type_1d_view_type& ropRev,
     const value_type_1d_view_type& Crnd,
     const ordinal_type_1d_view_type& iter,
+    const value_type_1d_view_type& work_kfor_rev,
     // surface species
     const value_type_1d_view_type& Surf_gk,
     const value_type_1d_view_type& Surf_hks,
@@ -134,6 +138,7 @@ struct TransientContStirredTankReactorRHS
                                        ropRev,
                                        Crnd,
                                        iter,
+                                       work_kfor_rev,
                                        kmcd);
 
     // compute mix enthalpy
@@ -423,6 +428,11 @@ struct TransientContStirredTankReactorRHS
     auto CoverageFactor = real_type_1d_view_type(w, kmcdSurf.nReac);
     w += kmcdSurf.nReac;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = real_type_1d_view_type(w, work_kfor_rev_size);
+    w += work_kfor_rev_size;
+
 
     using ordinal_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
 
@@ -458,6 +468,7 @@ struct TransientContStirredTankReactorRHS
                        ropRev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        // surface species
                        Surf_gk,
                        Surf_hks,
@@ -548,6 +559,11 @@ struct TransientContStirredTankReactorRHS
        auto CoverageFactor = value_type_1d_view_type(w, kmcdSurf.nReac, sacadoStorageDimension);
        w += kmcdSurf.nReac*len;
 
+       const ordinal_type work_kfor_rev_size =
+       Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+       auto work_kfor_rev = value_type_1d_view_type(w, work_kfor_rev_size, sacadoStorageDimension);
+       w += work_kfor_rev_size*len;
+
 
        using ordinal_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
        auto iter = ordinal_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
@@ -583,6 +599,7 @@ struct TransientContStirredTankReactorRHS
                           ropRev,
                           Crnd,
                           iter,
+                          work_kfor_rev,
                           // surface species
                           Surf_gk,
                           Surf_hks,

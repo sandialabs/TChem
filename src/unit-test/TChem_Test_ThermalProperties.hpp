@@ -33,7 +33,7 @@ TEST(ThermalProperties, single)
 		      "--chemfile="+chemFile+" "+
 		      "--thermfile="+thermFile+" "+
 		      "--inputfile="+inputFile+" "+
-		      "--batchsize=1 verbose=true");
+		      "--use-sample-format=true --verbose=true");
   const auto invoke_c_str = invoke.c_str();
   printf("testing : %s\n", invoke_c_str);
   std::system(invoke_c_str);

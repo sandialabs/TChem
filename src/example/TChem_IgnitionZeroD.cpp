@@ -46,8 +46,7 @@ using time_advance_type_1d_view_host = TChem::time_advance_type_1d_view_host;
 // #define TCHEM_EXAMPLE_IGNITIONZEROD_QOI_PRINT
 
 int
-main(int argc, char* argv[])
-{
+main(int argc, char* argv[]) {
 
   /// default inputs
   std::string prefixPath("data/ignition-zero-d/gri3.0/");
@@ -57,12 +56,20 @@ main(int argc, char* argv[])
   real_type dtmin(1e-8), dtmax(1e-1);
   real_type rtol_time(1e-4), atol_newton(1e-10), rtol_newton(1e-6);
   real_type atol_time(1e-12);
-  int num_time_iterations_per_interval(1e1), max_num_time_iterations(1e3),
-    max_num_newton_iterations(100), jacobian_interval(1);
+  int
+    num_time_iterations_per_interval(1e1),
+    num_outer_time_iterations_per_interval(1),
+    max_num_time_iterations(1e3),
+    max_num_newton_iterations(100),
+    jacobian_interval(1);
 
   real_type T_threshold(1500);
+  bool useYaml(false);
 
   int team_size(-1), vector_size(-1);
+
+  bool solve_tla(false);
+  real_type theta_tla(0);
 
   bool verbose(true);
   bool OnlyComputeIgnDelayTime(false);
@@ -113,8 +120,11 @@ main(int argc, char* argv[])
   opts.set_option<real_type>("atol-time", "Absolute tolerance used for adaptive time stepping", &atol_time);
 
   opts.set_option<int>("time-iterations-per-interval",
-                       "Number of time iterations per interval to store qoi",
+                       "Number of time iterations per interval; total time steps is this*outer loop",
                        &num_time_iterations_per_interval);
+  opts.set_option<int>("time-outer-iterations-per-interval",
+                       "Number of outer time iterations per interval to evaluate TLA",
+                       &num_outer_time_iterations_per_interval);
   opts.set_option<int>("max-time-iterations",
                        "Maximum number of time iterations",
                        &max_num_time_iterations);
@@ -125,6 +135,10 @@ main(int argc, char* argv[])
                        "Maximum number of newton iterations",
                        &max_num_newton_iterations);
   // described in statefile is cloned", &nBatch);
+  opts.set_option<bool>(
+    "useYaml", "If true, use yaml to parse input file", &useYaml);
+  opts.set_option<bool>("solve-tla", "If true, it solves TLA system", &solve_tla);
+  opts.set_option<real_type>("theta-tla", "0 - backward euler, 0.5 - crank nicolson, 1 - forward euler", &theta_tla);
   opts.set_option<bool>("verbose", "If true, printout the first Jacobian values", &verbose);
   opts.set_option<real_type>("threshold-temperature", "threshold temperature in ignition delay time", &T_threshold);
 
@@ -167,6 +181,9 @@ main(int argc, char* argv[])
 
     } else {
       printf("   TChem is running Constant Volume Ignition Reactor \n");
+      if (solve_tla) {
+        printf("   TChem is running TLA \n");
+      }
 
     }
 
@@ -189,10 +206,17 @@ main(int argc, char* argv[])
     using host_device_type      = typename Tines::UseThisDevice<host_exec_space>::type;
 
     /// construct kmd and use the view for testing
-    TChem::KineticModelData kmd(chemFile, thermFile);
+    TChem::KineticModelData kmd;
+    if (useYaml) {
+      kmd = TChem::KineticModelData(chemFile);
+    } else {
+      kmd = TChem::KineticModelData(chemFile, thermFile);
+    }
     const TChem::KineticModelConstData<device_type> kmcd =
       TChem::createGasKineticModelConstData<device_type>(kmd);
     const auto kmcd_host = TChem::createGasKineticModelConstData<host_device_type>(kmd);
+
+
 
     const ordinal_type stateVecDim =
       TChem::Impl::getStateVectorSize(kmcd.nSpec);
@@ -223,6 +247,17 @@ main(int argc, char* argv[])
                               nBatch);
     }
     real_type_2d_view state("StateVector Devices", nBatch, stateVecDim);
+
+
+    real_type_3d_view state_z;
+    real_type_3d_view_host state_z_host;
+    FILE* foutTLA;
+
+    if (solve_tla && !run_ignition_zero_d){
+       foutTLA = fopen(("TLA_"+outputFile).c_str(), "w");
+       state_z = real_type_3d_view("state_z", nBatch, kmcd_host.nSpec + 1, kmcd_host.nReac);
+       state_z_host = real_type_3d_view_host("state_z", nBatch, kmcd_host.nSpec + 1, kmcd_host.nReac);
+    }
 
     // #endif
     // Temperature at iter and iter-1 for each sample, row: sample, colum iter
@@ -305,7 +340,24 @@ main(int argc, char* argv[])
 
         fprintf(fout, "\n");
       }
+    };
 
+    auto writeTLA = [](  const ordinal_type iter,
+                         const real_type_1d_view_host _t,
+                         const real_type_1d_view_host _dt,
+                         const real_type_3d_view_host state_z_host,
+                         FILE* fout) {
+
+      for (ordinal_type sp = 0; sp < state_z_host.extent(0); sp++) {
+        // save iteration, time , and dt
+        fprintf(fout, "%d \t %15.10e \t  %15.10e \t ", iter, _t(sp), _dt(sp));
+        // save state_z
+        for (ordinal_type i = 0; i < state_z_host.extent(1); i++) {
+          for (ordinal_type j = 0; j < state_z_host.extent(2); j++)
+            fprintf(fout, "%15.10e \t", state_z_host(sp, i, j));
+        }
+        fprintf(fout, "\n");
+      }
     };
 
     auto printState = [](const time_advance_type _tadv,
@@ -358,7 +410,7 @@ main(int argc, char* argv[])
         per_team_extent = TChem::IgnitionZeroD::getWorkSpaceSize(kmcd);
 #endif
       } else {
-        per_team_extent = TChem::ConstantVolumeIgnitionReactor::getWorkSpaceSize(kmcd);
+        per_team_extent = TChem::ConstantVolumeIgnitionReactor::getWorkSpaceSize(solve_tla, kmcd);
       }
 
       const ordinal_type per_team_scratch =
@@ -408,8 +460,8 @@ main(int argc, char* argv[])
         tadv_default._dtmin = dtmin;
         tadv_default._dtmax = dtmax;
         tadv_default._max_num_newton_iterations = max_num_newton_iterations;
-        tadv_default._num_time_iterations_per_interval =
-          num_time_iterations_per_interval;
+        tadv_default._num_time_iterations_per_interval = num_time_iterations_per_interval;
+	      tadv_default._num_outer_time_iterations_per_interval = num_outer_time_iterations_per_interval;
         tadv_default._jacobian_interval = jacobian_interval;
 
         time_advance_type_1d_view tadv("tadv", nBatch);
@@ -455,6 +507,11 @@ main(int argc, char* argv[])
           fprintf(fout, "\n");
           // save initial condition
           writeState(-1, t_host, dt_host, state_host, fout);
+
+        }
+
+        if (solve_tla && !run_ignition_zero_d) {
+          writeTLA(-1, t_host, dt_host, state_z_host, foutTLA);
         }
 
         real_type tsum(0);
@@ -475,7 +532,7 @@ main(int argc, char* argv[])
 #endif
           } else {
 	    ConstantVolumeIgnitionReactor::runDeviceBatch
-	      (policy, tol_newton, tol_time, fac, tadv, state, t, dt, state, kmcd);
+	      (policy, solve_tla, theta_tla, tol_newton, tol_time, fac, tadv, state, state_z, t, dt, state, state_z, kmcds);
           }
 
           /// print of store QOI for the first sample
@@ -548,7 +605,23 @@ main(int argc, char* argv[])
             Kokkos::deep_copy(state_host, state);
 
             writeState(iter, t_host, dt_host, state_host, fout);
+
           }
+
+          // write tla solution: constant pressure does not have TLA
+          if (solve_tla && !run_ignition_zero_d) {
+            if (OnlyComputeIgnDelayTime) {
+              printf("saving at iteration %d \n", iter);
+              Kokkos::deep_copy(dt_host, dt);
+              Kokkos::deep_copy(t_host, t);
+              Kokkos::deep_copy(state_host, state);
+            }
+            Kokkos::deep_copy(state_z_host, state_z);
+            writeTLA(iter, t_host, dt_host,  state_z_host, foutTLA);
+          }
+
+
+
 
           /// carry over time and dt computed in this step
           tsum = zero;
@@ -599,6 +672,10 @@ main(int argc, char* argv[])
 
     if (!OnlyComputeIgnDelayTime) {
       fclose(fout);
+    }
+
+    if (solve_tla && !run_ignition_zero_d){
+      fclose(foutTLA);
     }
 
   }

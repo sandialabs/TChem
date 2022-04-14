@@ -1,0 +1,89 @@
+{
+    "tchem": {
+	"unit" : {
+	    "mass" : "kilogram",
+	    "volume" : "meter", 
+	    "pressure" : "pascal",
+	    "temperature" : "kelvin",
+	    "time" : "second",
+	},
+	"number of samples" : "auto",
+	"run" : {
+	    "team size" : "auto", /* "auto" or specific integer values */
+	    "vector size" : "auto"
+	},
+	"gas kinetic model" : {
+	    "name" : "my name is famous",
+	    "type" : "chemkin",
+	    /* 
+	       "chemkin", "cantera-yaml"
+	       "chemkin" type requires kinetic model input and thermo data files
+	       "cantera-yaml" type requires yaml input"
+	    */
+	    "input file name" : "${TCHEM_INSTALL_PATH}/example/data/H2/chem_w_n2.inp",
+	    "thermo file name" : "${TCHEM_INSTALL_PATH}/example/data/H2/therm.dat"
+	},
+	"surface kinetic model" : {
+	    /* requires for surface chemistry t-cstr and pfr reactors */
+	    "name" : "my name is more famous",
+	    "type" : "chemkin",
+	    "input file name" : "${TCHEM_INSTALL_PATH}/input.inp",
+	    "thermo file name" : "${TCHEM_INSTALL_PATH}/thermo.dat"
+	},
+	"reactor" : {
+	    "type" : "constant volume homogeneous batch reactor"
+	    /* 
+	       constant pressure homogeneous batch reactor
+	       constant volume homogeneous batch reactor
+	       transient continuous stirred tank reactor
+	       plug flow reactor
+	    */	    
+	},
+	"sensitivity to ignition delay time" : {
+	    "type" : "tangent linear approximation", /* "tangent linear approximation", "SENKIN", "disabled" */
+	    "theta" : 0.5
+	},
+	"time integrator" : {
+	    "type" : "TrBDF2", /* "TrBDF2", "CVODE" if available */
+	    "newton solver" : {
+		"absolute tolerance" : 1.0e-18,
+		"relative tolerance" : 1.0e-8,
+		"jacobian evaluation interval" : 5,
+		"max number of newton iterations" : 20
+	    },
+	    "time" : {
+		"time begin" : 0,
+		"time end" : 1,
+		"min time step size" : 1.0e-20,
+		"max time step size" : 1.0e-3,
+		"absolute tolerance" : 1.0e-18,
+		"relative tolerance" : 1.0e-8,
+		/* 
+		   total number of time iterations per kernel launch is # internal x # outer
+		   sensitivity is computed for the # outer iterations while
+		   the reactor advances for # internal iterations per outer iteration
+		*/
+		"max number of kernel launch" : 100000,
+		"number of internal time iterations" : 100,
+		"number of outer time iterations" : 1
+	    }
+	},
+	"input" : {
+	    "state vector" : {
+		"file name" : "sample.json"
+	    }
+	},
+	"output" : {
+	    "state vector" : {
+		"file name" : "tchem-reactor-state-vector.json"
+	    },
+	    "ignition delay time" : {
+		"threshold temperature" : 1500,
+		"file name" : "tchem-reactor-ignition-delay-time.json",
+	    },
+	    "sensitivity to ignition delay time" : {
+		"file name" : "tchem-reactor-sensitivity-to-ignition-delay-time.json"
+	    }
+	}
+    }	    
+}

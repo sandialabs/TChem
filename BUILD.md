@@ -124,6 +124,10 @@ make -j install
 ```
 Optionally, a user can enable the Python interface with ``-D TCHEM_ENABLE_PYTHON=ON``. The Python interface of TChem is ported via [pybind11](https://pybind11.readthedocs.io/en/stable) and the code is distributed together with TChem.
 
+### TChem Main executable
+
+TChem main executable uses/produces inputs/outputs in json format. This code is under construction, but it will replace all executables in the example directory. It uses boost 1.75 to parse json files, so boost is required. TChem's cmake implementation will search for boost in the system directory. If boost is not installed in this directory, export its installation path with ``-D export BOOST_ROOT=/where/boost/is/installed``. On the other hand, if one wants to continue using the executables from the example directory and do not want to build/install the main executable then use the cmake flag ``-D TCHEM_ENABLE_MAIN=OFF``; in this case boost is not required.
+
 ### Script to Build and Install TChem and its TPLs
 
-We put together a script, ``${TCHEM_REPOSITORY_PATH}/doc/config/master_bld.sh``, that clones, builds, and installs TChem, and the required TPLs (Kokkos, Tines, OpenBLAS, GTEST, and yaml-cpp). To use this script, update the compiler information for the C compiler,``MY_CC``, the C++ compiler ``MY_CXX``, and Fortran compiler ``MY_FC``. One can also choose whether to build/install the entire framework for GPU computations, i.e. ``CUDA``. These variables are located at the top of the script.    
+We put together a script, ``${TCHEM_REPOSITORY_PATH}/scripts/master_bld.sh``, that clones, builds, and installs TChem, and the required TPLs (Kokkos, Tines, OpenBLAS, GTEST, and yaml-cpp). To use this script, update the compiler information for the C compiler,``MY_CC``, the C++ compiler ``MY_CXX``, and Fortran compiler ``MY_FC``. One can also choose whether to build/install the entire framework for GPU computations, i.e. ``CUDA``. These variables are located at the top of the script.    

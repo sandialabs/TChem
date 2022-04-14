@@ -1,0 +1,2838 @@
+NCAR-version: v1.0
+environmental_conditions:
+  pressure:
+    evolving: 'false'
+    initial_value: [81060]
+    units: Pa
+  temperature:
+    evolving: 'false'
+    initial_value: [272.5]
+    units: K
+model_info:
+  chemistry_time_step:
+    units: min
+    value: 1.0
+  evolving_conditions:
+    exist: 'false'
+  output_time_step:
+    units: min
+    value: 1.0
+  simulation_length:
+    units: hr
+    value: 3.0
+initial_state:
+  AACD:
+    initial_value: [0.001]
+    units: mol m-3
+  ALD2:
+    initial_value: [0.005]
+    units: mol m-3
+  ALDX:
+    initial_value: [0.001]
+    units: mol m-3
+  BENZENE:
+    initial_value: [0.001]
+    units: mol m-3
+  BENZRO2:
+    initial_value: [0.0]
+    units: mol m-3
+  BNZHRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  BNZNRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  C2O3:
+    initial_value: [0.0]
+    units: mol m-3
+  CH4:
+    initial_value: [1.85]
+    units: mol m-3
+  CL:
+    initial_value: [0.0]
+    units: mol m-3
+  CL2:
+    initial_value: [0.02]
+    units: mol m-3
+  CLO:
+    initial_value: [0.0]
+    units: mol m-3
+  CO:
+    initial_value: [20.0]
+    units: mol m-3
+  CRES:
+    initial_value: [5e-06]
+    units: mol m-3
+  CRO:
+    initial_value: [0.0]
+    units: mol m-3
+  CXO3:
+    initial_value: [0.0]
+    units: mol m-3
+  ETH:
+    initial_value: [0.01]
+    units: mol m-3
+  ETHA:
+    initial_value: [0.0005]
+    units: mol m-3
+  ETOH:
+    initial_value: [0.1]
+    units: mol m-3
+  FACD:
+    initial_value: [1.0]
+    units: mol m-3
+  FMCL:
+    initial_value: [0.0]
+    units: mol m-3
+  FORM:
+    initial_value: [0.015]
+    units: mol m-3
+  H2O2:
+    initial_value: [8e-05]
+    units: mol m-3
+  HCL:
+    initial_value: [0.0]
+    units: mol m-3
+  HCO3:
+    initial_value: [0.0]
+    units: mol m-3
+  HNO3:
+    initial_value: [0.002]
+    units: mol m-3
+  HO2:
+    initial_value: [0.0001]
+    units: mol m-3
+  HOCL:
+    initial_value: [0.0]
+    units: mol m-3
+  HONO:
+    initial_value: [0.001]
+    units: mol m-3
+  IOLE:
+    initial_value: [0.0005]
+    units: mol m-3
+  ISOP:
+    initial_value: [0.001]
+    units: mol m-3
+  ISOPRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  ISPD:
+    initial_value: [0.0]
+    units: mol m-3
+  MEO2:
+    initial_value: [0.0]
+    units: mol m-3
+  MEOH:
+    initial_value: [0.002]
+    units: mol m-3
+  MEPX:
+    initial_value: [0.0]
+    units: mol m-3
+  MGLY:
+    initial_value: [0.0]
+    units: mol m-3
+  N2O5:
+    initial_value: [0.0]
+    units: mol m-3
+  NO:
+    initial_value: [0.002]
+    units: mol m-3
+  NO2:
+    initial_value: [0.018]
+    units: mol m-3
+  NO3:
+    initial_value: [0.0]
+    units: mol m-3
+  NTR:
+    initial_value: [0.0]
+    units: mol m-3
+  O:
+    initial_value: [0.0]
+    units: mol m-3
+  O1D:
+    initial_value: [0.0]
+    units: mol m-3
+  O3:
+    initial_value: [0.06]
+    units: mol m-3
+  OH:
+    initial_value: [1e-06]
+    units: mol m-3
+  OLE:
+    initial_value: [0.003]
+    units: mol m-3
+  OPEN:
+    initial_value: [0.0]
+    units: mol m-3
+  PACD:
+    initial_value: [0.0]
+    units: mol m-3
+  PAN:
+    initial_value: [0.0]
+    units: mol m-3
+  PANX:
+    initial_value: [0.0]
+    units: mol m-3
+  PAR:
+    initial_value: [0.001]
+    units: mol m-3
+  PNA:
+    initial_value: [0.0]
+    units: mol m-3
+  ROOH:
+    initial_value: [0.0]
+    units: mol m-3
+  ROR:
+    initial_value: [0.0]
+    units: mol m-3
+  SESQ:
+    initial_value: [0.0001]
+    units: mol m-3
+  SESQRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  SO2:
+    initial_value: [0.004]
+    units: mol m-3
+  SULF:
+    initial_value: [0.0]
+    units: mol m-3
+  SULRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  TERP:
+    initial_value: [0.04]
+    units: mol m-3
+  TO2:
+    initial_value: [0.0]
+    units: mol m-3
+  TOL:
+    initial_value: [0.0083]
+    units: mol m-3
+  TOLHRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  TOLNRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  TOLRO2:
+    initial_value: [0.0]
+    units: mol m-3
+  TRPRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  XO2:
+    initial_value: [0.0]
+    units: mol m-3
+  XO2N:
+    initial_value: [0.0]
+    units: mol m-3
+  XYL:
+    initial_value: [0.003]
+    units: mol m-3
+  XYLHRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  XYLNRXN:
+    initial_value: [0.0]
+    units: mol m-3
+  XYLRO2:
+    initial_value: [0.0]
+    units: mol m-3
+  N2O:
+    initial_value: [0.3]
+    units: mol m-3
+  DUMMY:
+    initial_value: [0.0]
+    units: mol m-3
+  O2:
+    initial_value: [209500.0]
+    units: mol m-3
+  H2O:
+    initial_value: [1000.0]
+    units: mol m-3
+  H2:
+    initial_value: [0.56]
+    units: mol m-3
+  M:
+    initial_value: [1000000.0]
+    units: mol m-3
+  N2:
+    initial_value: [780800.0]
+    units: mol m-3
+constant_species:
+- description: methane
+  name: CH4
+- description: molecular oxygen
+  name: O2
+- description: water vapor
+  name: H2O
+- description: molecular hydrogen
+  name: H2
+- description: third body
+  name: M
+- description: N2
+  name: N2
+species:
+- description: acetic and higher carboxylic acids
+  name: AACD
+- description: acetaldehyde
+  name: ALD2
+- description: propionaldehyde and higher aldehydes
+  name: ALDX
+- description: benzene
+  name: BENZENE
+- description: peroxy radical from benzene oxidation
+  name: BENZRO2
+- description: counter species for aerosol from BENZENE - how does this
+    differ from BNZNNRXN?
+  name: BNZHRXN
+- description: counter species for aerosol from BENZENE
+  name: BNZNRXN
+- description: acetyl peroxy radical
+  name: C2O3
+- description: chlorine radical
+  name: CL
+- description: molecular chlorine
+  name: CL2
+- description: chlorine monoxide
+  name: CLO
+- description: carbon monoxide
+  name: CO
+- description: cresol and higher molecular weight phenols
+  name: CRES
+- description: methylphenoxy radical
+  name: CRO
+- description: C3 and higher acylperoxy radicals
+  name: CXO3
+- description: ethene
+  name: ETH
+- description: ethane
+  name: ETHA
+- description: ethanol
+  name: ETOH
+- description: formic acid
+  name: FACD
+- description: formyl chloride (HC(O)Cl)
+  name: FMCL
+- description: formaldehyde
+  name: FORM
+- description: hydrogen peroxide
+  name: H2O2
+- description: hydrochlric acid
+  name: HCL
+- description: formyl peroxy radical? no description in cb05 report
+  name: HCO3
+- description: nitric acid
+  name: HNO3
+- description: hydroperoxy radical
+  name: HO2
+- description: hypochlorous acid
+  name: HOCL
+- description: nitrous acid
+  name: HONO
+- description: internal olefin carbon bond (R-C=C)
+  name: IOLE
+- description: isoprene
+  name: ISOP
+- description: counter for aerosol from ISOP
+  name: ISOPRXN
+- description: isoprene products (lumped methacrolein, methyl vinyl ketone,
+    etc.)
+  name: ISPD
+- description: methyl peroxy radical
+  name: MEO2
+- description: methanol
+  name: MEOH
+- description: methylhydroperoxide
+  name: MEPX
+- description: methylglyoxal and other aromatic products
+  name: MGLY
+- description: dinitrogen pentoxide
+  name: N2O5
+- description: nitric oxide
+  name: NO
+- description: nitrogen dioxide
+  name: NO2
+- description: nitrate radical
+  name: NO3
+- description: organic nitrate (RNO3)
+  name: NTR
+- description: oxygen atom in the O3P electronic state
+  name: O
+- description: oxygen atom in the O1D electronic state
+  name: O1D
+- description: ozone
+  name: O3
+- description: hydroxyl radical
+  name: OH
+- description: terminal olefin carbon bond (R-C=C)
+  name: OLE
+- description: aromatic ring opening products
+  name: OPEN
+- description: peroxyacetic and higher peroxycarboxylic acids
+  name: PACD
+- description: peroxyacetyl nitrate
+  name: PAN
+- description: C3 and higher peroxyacyl nitrates
+  name: PANX
+- description: paraffin carbon bond (C-C)
+  name: PAR
+- description: peroxynitric acid (HNO4)
+  name: PNA
+- description: higher organic peroxides
+  name: ROOH
+- description: secondary alkoxy radical
+  name: ROR
+- description: sesquiterpene
+  name: SESQ
+- description: counter for aerosol from SESQ
+  name: SESQRXN
+- description: sulfur dioxide
+  name: SO2
+- description: sulfuric acid (gaseous)
+  name: SULF
+- description: counter for aerosol from SO2
+  name: SULRXN
+- description: terpene
+  name: TERP
+- description: toluene-hydroxyl radical aduct
+  name: TO2
+- description: toluene
+  name: TOL
+- description: counter for aerosol from TOL - how does this differ from
+    TOLNRXN?
+  name: TOLHRXN
+- description: counter for aerosol from TOL
+  name: TOLNRXN
+- description: first generation product from TOL
+  name: TOLRO2
+- description: counter for aerosol from TERP
+  name: TRPRXN
+- description: NO to NO2 conversion from alkylperoxy (RO2) radical
+  name: XO2
+- description: NO to organic nitrate conversion from alkylperoxy (RO2) radical
+  name: XO2N
+- description: xylene and other polyalkyl aromatics
+  name: XYL
+- description: counter for aerosol from XYL - how does this differ from
+    XYLNRXN?
+  name: XYLHRXN
+- description: counter for aerosol from XYL
+  name: XYLNRXN
+- description: first generation product from XYL
+  name: XYLRO2
+- description: nitrous oxide - does not participate in CB05 reactions
+  name: N2O
+- description: not sure what this is
+  name: DUMMY
+reactions:
+- MUSICA_name: R1
+  reactants:
+    NO2: 1
+  products:
+    NO: 1
+    O: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R2
+  reactants:
+    O: 1
+    O2: 1
+    M: 1
+  products:
+    O3: 1
+    M: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 6e-34
+    B: -2.4
+    C: -0.0
+- MUSICA_name: R3
+  reactants:
+    O3: 1
+    NO: 1
+  products:
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 3e-12
+    B: 0.0
+    C: -1500.0
+- MUSICA_name: R4
+  reactants:
+    O: 1
+    NO2: 1
+  products:
+    NO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 5.6e-12
+    B: 0.0
+    C: 180.0
+- MUSICA_name: R5
+  reactants:
+    O: 1
+    NO2: 1
+  products:
+    NO3: 1
+  type: TROE
+  coefficients:
+    k0_A: 2.5e-31
+    k0_B: -1.8
+    k0_C: -0.0
+    kinf_A: 2.2e-11
+    kinf_B: -0.7
+    kinf_C: -0.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R6
+  reactants:
+    O: 1
+    NO: 1
+  products:
+    NO2: 1
+  type: TROE
+  coefficients:
+    k0_A: 9e-32
+    k0_B: -1.5
+    k0_C: -0.0
+    kinf_A: 3e-11
+    kinf_B: 0.0
+    kinf_C: -0.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R7
+  reactants:
+    NO2: 1
+    O3: 1
+  products:
+    NO3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.2e-13
+    B: 0.0
+    C: -2450.0
+- MUSICA_name: R8
+  reactants:
+    O3: 1
+  products:
+    O: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R9
+  reactants:
+    O3: 1
+  products:
+    O1D: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R10
+  reactants:
+    O1D: 1
+    M: 1
+  products:
+    O: 1
+    M: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.1e-11
+    B: 0.0
+    C: 102.0
+- MUSICA_name: R11
+  reactants:
+    O1D: 1
+    H2O: 1
+  products:
+    OH: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 2.2e-10
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R12
+  reactants:
+    O3: 1
+    OH: 1
+  products:
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.7e-12
+    B: 0.0
+    C: -940.0
+- MUSICA_name: R13
+  reactants:
+    O3: 1
+    HO2: 1
+  products:
+    OH: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1e-14
+    B: 0.0
+    C: -490.0
+- MUSICA_name: R14
+  reactants:
+    NO3: 1
+  products:
+    NO2: 1
+    O: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R15
+  reactants:
+    NO3: 1
+  products:
+    NO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R16
+  reactants:
+    NO3: 1
+    NO: 1
+  products:
+    NO2: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 1.5e-11
+    B: 0.0
+    C: 170.0
+- MUSICA_name: R17
+  reactants:
+    NO3: 1
+    NO2: 1
+  products:
+    NO: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 4.5e-14
+    B: 0.0
+    C: -1260.0
+- MUSICA_name: R18
+  reactants:
+    NO3: 1
+    NO2: 1
+  products:
+    N2O5: 1
+  type: TROE
+  coefficients:
+    k0_A: 2e-30
+    k0_B: -4.4
+    k0_C: -0.0
+    kinf_A: 1.4e-12
+    kinf_B: -0.7
+    kinf_C: -0.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R19
+  reactants:
+    N2O5: 1
+    H2O: 1
+  products:
+    HNO3: 2.0
+    DUMMY: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.5e-22
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R20
+  reactants:
+    N2O5: 1
+    H2O: 2
+  products:
+    HNO3: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 1.8e-39
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R21
+  reactants:
+    N2O5: 1
+  products:
+    NO3: 1
+    NO2: 1
+    DUMMY: 1
+  type: TROE
+  coefficients:
+    k0_A: 0.001
+    k0_B: -3.5
+    k0_C: -11000.0
+    kinf_A: 970000000000000.0
+    kinf_B: 0.1
+    kinf_C: -11080.0
+    Fc: 0.45
+    N: 1.0
+- MUSICA_name: R22
+  reactants:
+    NO: 2
+    O2: 1
+  products:
+    NO2: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 3.3e-39
+    B: 0.0
+    C: 530.0
+- MUSICA_name: R23
+  reactants:
+    NO: 1
+    NO2: 1
+    H2O: 1
+  products:
+    HONO: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 5e-40
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R24
+  reactants:
+    NO: 1
+    OH: 1
+  products:
+    HONO: 1
+  type: TROE
+  coefficients:
+    k0_A: 7e-31
+    k0_B: -2.6
+    k0_C: -0.0
+    kinf_A: 3.6e-11
+    kinf_B: -0.1
+    kinf_C: -0.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R25
+  reactants:
+    HONO: 1
+  products:
+    NO: 1
+    OH: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R26
+  reactants:
+    OH: 1
+    HONO: 1
+  products:
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.8e-11
+    B: 0.0
+    C: -390.0
+- MUSICA_name: R27
+  reactants:
+    HONO: 2
+  products:
+    NO: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1e-20
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R28
+  reactants:
+    NO2: 1
+    OH: 1
+  products:
+    HNO3: 1
+  type: TROE
+  coefficients:
+    k0_A: 2e-30
+    k0_B: -3.0
+    k0_C: -0.0
+    kinf_A: 2.5e-11
+    kinf_B: 0.0
+    kinf_C: -0.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R30
+  reactants:
+    HO2: 1
+    NO: 1
+  products:
+    OH: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 3.5e-12
+    B: 0.0
+    C: 250.0
+- MUSICA_name: R31
+  reactants:
+    HO2: 1
+    NO2: 1
+  products:
+    PNA: 1
+  type: TROE
+  coefficients:
+    k0_A: 1.8e-31
+    k0_B: -3.2
+    k0_C: -0.0
+    kinf_A: 4.7e-12
+    kinf_B: 0.0
+    kinf_C: -0.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R32
+  reactants:
+    PNA: 1
+  products:
+    HO2: 1
+    NO2: 1
+  type: TROE
+  coefficients:
+    k0_A: 4.1e-05
+    k0_B: 0.0
+    k0_C: -10650.0
+    kinf_A: 4800000000000000.0
+    kinf_B: 0.0
+    kinf_C: -11170.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R33
+  reactants:
+    OH: 1
+    PNA: 1
+  products:
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.3e-12
+    B: 0.0
+    C: 380.0
+- MUSICA_name: R34
+  reactants:
+    HO2: 2
+  products:
+    H2O2: 1
+    DUMMY: 1
+  type: CMAQ_H2O2
+  coefficients:
+    k1_A: 2.3e-13
+    k1_C: 600.0
+    k2_A: 1.7e-33
+    k2_C: 1000.0
+- MUSICA_name: R35
+  reactants:
+    HO2: 2
+    H2O: 1
+  products:
+    H2O2: 1
+  type: CMAQ_H2O2
+  coefficients:
+    k1_A: 3.22e-34
+    k1_C: 2800.0
+    k2_A: 2.38e-54
+    k2_C: 3200.0
+- MUSICA_name: R36
+  reactants:
+    H2O2: 1
+  products:
+    OH: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R37
+  reactants:
+    OH: 1
+    H2O2: 1
+  products:
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.9e-12
+    B: 0.0
+    C: -160.0
+- MUSICA_name: R38
+  reactants:
+    O1D: 1
+    H2: 1
+  products:
+    OH: 1
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.1e-10
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R39
+  reactants:
+    OH: 1
+    H2: 1
+  products:
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 5.5e-12
+    B: 0.0
+    C: -2000.0
+- MUSICA_name: R40
+  reactants:
+    OH: 1
+    O: 1
+  products:
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.2e-11
+    B: 0.0
+    C: 120.0
+- MUSICA_name: R41
+  reactants:
+    OH: 2
+  products:
+    O: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 4.2e-12
+    B: 0.0
+    C: -240.0
+- MUSICA_name: R42
+  reactants:
+    OH: 2
+  products:
+    H2O2: 1
+  type: TROE
+  coefficients:
+    k0_A: 6.9e-31
+    k0_B: -1.0
+    k0_C: -0.0
+    kinf_A: 2.6e-11
+    kinf_B: 0.0
+    kinf_C: -0.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R43
+  reactants:
+    OH: 1
+    HO2: 1
+  products:
+    DUMMY: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 4.8e-11
+    B: 0.0
+    C: 250.0
+- MUSICA_name: R44
+  reactants:
+    HO2: 1
+    O: 1
+  products:
+    OH: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 3e-11
+    B: 0.0
+    C: 200.0
+- MUSICA_name: R45
+  reactants:
+    H2O2: 1
+    O: 1
+  products:
+    OH: 1
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.4e-12
+    B: 0.0
+    C: -2000.0
+- MUSICA_name: R46
+  reactants:
+    NO3: 1
+    O: 1
+  products:
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R47
+  reactants:
+    NO3: 1
+    OH: 1
+  products:
+    HO2: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.2e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R48
+  reactants:
+    NO3: 1
+    HO2: 1
+  products:
+    HNO3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 3.5e-12
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R49
+  reactants:
+    NO3: 1
+    O3: 1
+  products:
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1e-17
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R50
+  reactants:
+    NO3: 2
+  products:
+    NO2: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 8.5e-13
+    B: 0.0
+    C: -2450.0
+- MUSICA_name: R51
+  reactants:
+    PNA: 1
+  products:
+    HO2: 0.61
+    NO2: 0.61
+    OH: 0.39
+    NO3: 0.39
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R52
+  reactants:
+    HNO3: 1
+  products:
+    OH: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R53
+  reactants:
+    N2O5: 1
+  products:
+    NO2: 1
+    NO3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R54
+  reactants:
+    XO2: 1
+    NO: 1
+  products:
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.6e-12
+    B: 0.0
+    C: 365.0
+- MUSICA_name: R55
+  reactants:
+    XO2N: 1
+    NO: 1
+  products:
+    NTR: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.6e-12
+    B: 0.0
+    C: 365.0
+- MUSICA_name: R56
+  reactants:
+    XO2: 1
+    HO2: 1
+  products:
+    ROOH: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 7.5e-13
+    B: 0.0
+    C: 700.0
+- MUSICA_name: R57
+  reactants:
+    XO2N: 1
+    HO2: 1
+  products:
+    ROOH: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 7.5e-13
+    B: 0.0
+    C: 700.0
+- MUSICA_name: R58
+  reactants:
+    XO2: 2
+  products:
+    DUMMY: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 6.8e-14
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R59
+  reactants:
+    XO2N: 2
+  products:
+    DUMMY: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 6.8e-14
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R60
+  reactants:
+    XO2: 1
+    XO2N: 1
+  products:
+    DUMMY: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 6.8e-14
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R61
+  reactants:
+    NTR: 1
+    OH: 1
+  products:
+    HNO3: 1
+    HO2: 1
+    FORM: 0.33
+    ALD2: 0.33
+    ALDX: 0.33
+    PAR: -0.66
+  type: ARRHENIUS
+  coefficients:
+    A: 5.9e-13
+    B: 0.0
+    C: -360.0
+- MUSICA_name: R62
+  reactants:
+    NTR: 1
+  products:
+    NO2: 1
+    HO2: 1
+    FORM: 0.33
+    ALD2: 0.33
+    ALDX: 0.33
+    PAR: -0.66
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R63
+  reactants:
+    ROOH: 1
+    OH: 1
+  products:
+    XO2: 1
+    ALD2: 0.5
+    ALDX: 0.5
+  type: ARRHENIUS
+  coefficients:
+    A: 3.01e-12
+    B: 0.0
+    C: 190.0
+- MUSICA_name: R64
+  reactants:
+    ROOH: 1
+  products:
+    OH: 1
+    HO2: 1
+    ALD2: 0.5
+    ALDX: 0.5
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R65
+  reactants:
+    OH: 1
+    CO: 1
+  products:
+    HO2: 1
+  type: CMAQ_H2O2
+  coefficients:
+    k1_A: 1.44e-13
+    k1_C: 0.0
+    k2_A: 3.43e-33
+    k2_C: 0.0
+- MUSICA_name: R66
+  reactants:
+    OH: 1
+    CH4: 1
+  products:
+    MEO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.45e-12
+    B: 0.0
+    C: -1775.0
+- MUSICA_name: R67
+  reactants:
+    MEO2: 1
+    NO: 1
+  products:
+    FORM: 1
+    HO2: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.8e-12
+    B: 0.0
+    C: 300.0
+- MUSICA_name: R68
+  reactants:
+    MEO2: 1
+    HO2: 1
+  products:
+    MEPX: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 4.1e-13
+    B: 0.0
+    C: 750.0
+- MUSICA_name: R69
+  reactants:
+    MEO2: 2
+  products:
+    FORM: 1.37
+    HO2: 0.74
+    MEOH: 0.63
+  type: ARRHENIUS
+  coefficients:
+    A: 9.5e-14
+    B: 0.0
+    C: 390.0
+- MUSICA_name: R70
+  reactants:
+    MEPX: 1
+    OH: 1
+  products:
+    MEO2: 0.7
+    XO2: 0.3
+    HO2: 0.3
+  type: ARRHENIUS
+  coefficients:
+    A: 3.8e-12
+    B: 0.0
+    C: 200.0
+- MUSICA_name: R71
+  reactants:
+    MEPX: 1
+  products:
+    FORM: 1
+    HO2: 1
+    OH: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R72
+  reactants:
+    MEOH: 1
+    OH: 1
+  products:
+    FORM: 1
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 7.3e-12
+    B: 0.0
+    C: -620.0
+- MUSICA_name: R73
+  reactants:
+    FORM: 1
+    OH: 1
+  products:
+    HO2: 1
+    CO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 9e-12
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R74
+  reactants:
+    FORM: 1
+  products:
+    HO2: 2.0
+    CO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R75
+  reactants:
+    FORM: 1
+  products:
+    CO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R76
+  reactants:
+    FORM: 1
+    O: 1
+  products:
+    OH: 1
+    HO2: 1
+    CO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 3.4e-11
+    B: 0.0
+    C: -1600.0
+- MUSICA_name: R77
+  reactants:
+    FORM: 1
+    NO3: 1
+  products:
+    HNO3: 1
+    HO2: 1
+    CO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 5.8e-16
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R78
+  reactants:
+    FORM: 1
+    HO2: 1
+  products:
+    HCO3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 9.7e-15
+    B: 0.0
+    C: 625.0
+- MUSICA_name: R79
+  reactants:
+    HCO3: 1
+  products:
+    FORM: 1
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2400000000000.0
+    B: 0.0
+    C: -7000.0
+- MUSICA_name: R80
+  reactants:
+    HCO3: 1
+    NO: 1
+  products:
+    FACD: 1
+    NO2: 1
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 5.6e-12
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R81
+  reactants:
+    HCO3: 1
+    HO2: 1
+  products:
+    MEPX: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 5.6e-15
+    B: 0.0
+    C: 2300.0
+- MUSICA_name: R82
+  reactants:
+    FACD: 1
+    OH: 1
+  products:
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 4e-13
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R83
+  reactants:
+    ALD2: 1
+    O: 1
+  products:
+    C2O3: 1
+    OH: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.8e-11
+    B: 0.0
+    C: -1100.0
+- MUSICA_name: R84
+  reactants:
+    ALD2: 1
+    OH: 1
+  products:
+    C2O3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 5.6e-12
+    B: 0.0
+    C: 270.0
+- MUSICA_name: R85
+  reactants:
+    ALD2: 1
+    NO3: 1
+  products:
+    C2O3: 1
+    HNO3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.4e-12
+    B: 0.0
+    C: -1900.0
+- MUSICA_name: R86
+  reactants:
+    ALD2: 1
+  products:
+    MEO2: 1
+    CO: 1
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R87
+  reactants:
+    C2O3: 1
+    NO: 1
+  products:
+    MEO2: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 8.1e-12
+    B: 0.0
+    C: 270.0
+- MUSICA_name: R88
+  reactants:
+    C2O3: 1
+    NO2: 1
+  products:
+    PAN: 1
+  type: TROE
+  coefficients:
+    k0_A: 2.7e-28
+    k0_B: -7.1
+    k0_C: -0.0
+    kinf_A: 1.2e-11
+    kinf_B: -0.9
+    kinf_C: -0.0
+    Fc: 0.3
+    N: 1.0
+- MUSICA_name: R89
+  reactants:
+    PAN: 1
+  products:
+    C2O3: 1
+    NO2: 1
+    DUMMY: 1
+  type: TROE
+  coefficients:
+    k0_A: 0.0049
+    k0_B: 0.0
+    k0_C: -12100.0
+    kinf_A: 5.4e+16
+    kinf_B: 0.0
+    kinf_C: -13830.0
+    Fc: 0.3
+    N: 1.0
+- MUSICA_name: R90
+  reactants:
+    PAN: 1
+  products:
+    C2O3: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R91
+  reactants:
+    C2O3: 1
+    HO2: 1
+  products:
+    PACD: 0.8
+    AACD: 0.2
+    O3: 0.2
+  type: ARRHENIUS
+  coefficients:
+    A: 4.3e-13
+    B: 0.0
+    C: 1040.0
+- MUSICA_name: R92
+  reactants:
+    C2O3: 1
+    MEO2: 1
+  products:
+    MEO2: 0.9
+    HO2: 0.9
+    FORM: 1
+    AACD: 0.1
+  type: ARRHENIUS
+  coefficients:
+    A: 2e-12
+    B: 0.0
+    C: 500.0
+- MUSICA_name: R93
+  reactants:
+    C2O3: 1
+    XO2: 1
+  products:
+    MEO2: 0.9
+    AACD: 0.1
+  type: ARRHENIUS
+  coefficients:
+    A: 4.4e-13
+    B: 0.0
+    C: 1070.0
+- MUSICA_name: R94
+  reactants:
+    C2O3: 2
+  products:
+    MEO2: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 2.9e-12
+    B: 0.0
+    C: 500.0
+- MUSICA_name: R95
+  reactants:
+    PACD: 1
+    OH: 1
+  products:
+    C2O3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 4e-13
+    B: 0.0
+    C: 200.0
+- MUSICA_name: R96
+  reactants:
+    PACD: 1
+  products:
+    MEO2: 1
+    OH: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R97
+  reactants:
+    AACD: 1
+    OH: 1
+  products:
+    MEO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 4e-13
+    B: 0.0
+    C: 200.0
+- MUSICA_name: R98
+  reactants:
+    ALDX: 1
+    O: 1
+  products:
+    CXO3: 1
+    OH: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.3e-11
+    B: 0.0
+    C: -870.0
+- MUSICA_name: R99
+  reactants:
+    ALDX: 1
+    OH: 1
+  products:
+    CXO3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 5.1e-12
+    B: 0.0
+    C: 405.0
+- MUSICA_name: R100
+  reactants:
+    ALDX: 1
+    NO3: 1
+  products:
+    CXO3: 1
+    HNO3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 6.5e-15
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R101
+  reactants:
+    ALDX: 1
+  products:
+    MEO2: 1
+    CO: 1
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R102
+  reactants:
+    CXO3: 1
+    NO: 1
+  products:
+    ALD2: 1
+    NO2: 1
+    HO2: 1
+    XO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 6.7e-12
+    B: 0.0
+    C: 340.0
+- MUSICA_name: R103
+  reactants:
+    CXO3: 1
+    NO2: 1
+  products:
+    PANX: 1
+  type: TROE
+  coefficients:
+    k0_A: 2.7e-28
+    k0_B: -7.1
+    k0_C: -0.0
+    kinf_A: 1.2e-11
+    kinf_B: -0.9
+    kinf_C: -0.0
+    Fc: 0.3
+    N: 1.0
+- MUSICA_name: R104
+  reactants:
+    PANX: 1
+  products:
+    CXO3: 1
+    NO2: 1
+    DUMMY: 1
+  type: TROE
+  coefficients:
+    k0_A: 0.0049
+    k0_B: 0.0
+    k0_C: -12100.0
+    kinf_A: 5.4e+16
+    kinf_B: 0.0
+    kinf_C: -13830.0
+    Fc: 0.3
+    N: 1.0
+- MUSICA_name: R105
+  reactants:
+    PANX: 1
+  products:
+    CXO3: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R106
+  reactants:
+    PANX: 1
+    OH: 1
+  products:
+    ALD2: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 3e-13
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R107
+  reactants:
+    CXO3: 1
+    HO2: 1
+  products:
+    PACD: 0.8
+    AACD: 0.2
+    O3: 0.2
+  type: ARRHENIUS
+  coefficients:
+    A: 4.3e-13
+    B: 0.0
+    C: 1040.0
+- MUSICA_name: R108
+  reactants:
+    CXO3: 1
+    MEO2: 1
+  products:
+    ALD2: 0.9
+    XO2: 0.9
+    HO2: 1
+    AACD: 0.1
+    FORM: 0.1
+  type: ARRHENIUS
+  coefficients:
+    A: 2e-12
+    B: 0.0
+    C: 500.0
+- MUSICA_name: R109
+  reactants:
+    CXO3: 1
+    XO2: 1
+  products:
+    ALD2: 0.9
+    AACD: 0.1
+  type: ARRHENIUS
+  coefficients:
+    A: 4.4e-13
+    B: 0.0
+    C: 1070.0
+- MUSICA_name: R110
+  reactants:
+    CXO3: 2
+  products:
+    ALD2: 2.0
+    XO2: 2.0
+    HO2: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 2.9e-12
+    B: 0.0
+    C: 500.0
+- MUSICA_name: R111
+  reactants:
+    CXO3: 1
+    C2O3: 1
+  products:
+    MEO2: 1
+    XO2: 1
+    HO2: 1
+    ALD2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.9e-12
+    B: 0.0
+    C: 500.0
+- MUSICA_name: R112
+  reactants:
+    PAR: 1
+    OH: 1
+  products:
+    XO2: 0.87
+    XO2N: 0.13
+    HO2: 0.11
+    ALD2: 0.06
+    PAR: -0.11
+    ROR: 0.76
+    ALDX: 0.05
+  type: ARRHENIUS
+  coefficients:
+    A: 8.1e-13
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R113
+  reactants:
+    ROR: 1
+  products:
+    XO2: 0.96
+    ALD2: 0.6
+    HO2: 0.94
+    PAR: -2.1
+    XO2N: 0.04
+    ROR: 0.02
+    ALDX: 0.5
+  type: ARRHENIUS
+  coefficients:
+    A: 1000000000000000.0
+    B: 0.0
+    C: -8000.0
+- MUSICA_name: R114
+  reactants:
+    ROR: 1
+  products:
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1600.0
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R115
+  reactants:
+    ROR: 1
+    NO2: 1
+  products:
+    NTR: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.5e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R116
+  reactants:
+    O: 1
+    OLE: 1
+  products:
+    ALD2: 0.2
+    ALDX: 0.3
+    HO2: 0.3
+    XO2: 0.2
+    CO: 0.2
+    FORM: 0.2
+    XO2N: 0.01
+    PAR: 0.2
+    OH: 0.1
+  type: ARRHENIUS
+  coefficients:
+    A: 1e-11
+    B: 0.0
+    C: -280.0
+- MUSICA_name: R117
+  reactants:
+    OH: 1
+    OLE: 1
+  products:
+    FORM: 0.8
+    ALD2: 0.33
+    ALDX: 0.62
+    XO2: 0.8
+    HO2: 0.95
+    PAR: -0.7
+  type: ARRHENIUS
+  coefficients:
+    A: 3.2e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R118
+  reactants:
+    O3: 1
+    OLE: 1
+  products:
+    ALD2: 0.18
+    FORM: 0.74
+    ALDX: 0.32
+    XO2: 0.22
+    OH: 0.1
+    CO: 0.33
+    HO2: 0.44
+    PAR: -1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 6.5e-15
+    B: 0.0
+    C: -1900.0
+- MUSICA_name: R119
+  reactants:
+    NO3: 1
+    OLE: 1
+  products:
+    NO2: 1
+    FORM: 1
+    XO2: 0.91
+    XO2N: 0.09
+    ALDX: 0.56
+    ALD2: 0.35
+    PAR: -1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 7e-13
+    B: 0.0
+    C: -2160.0
+- MUSICA_name: R120
+  reactants:
+    O: 1
+    ETH: 1
+  products:
+    FORM: 1
+    HO2: 1.7
+    CO: 1
+    XO2: 0.7
+    OH: 0.3
+  type: ARRHENIUS
+  coefficients:
+    A: 1.04e-11
+    B: 0.0
+    C: -792.0
+- MUSICA_name: R121
+  reactants:
+    OH: 1
+    ETH: 1
+  products:
+    XO2: 1
+    FORM: 1.56
+    ALDX: 0.22
+    HO2: 1
+  type: TROE
+  coefficients:
+    k0_A: 1e-28
+    k0_B: -0.8
+    k0_C: -0.0
+    kinf_A: 8.8e-12
+    kinf_B: 0.0
+    kinf_C: -0.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R122
+  reactants:
+    O3: 1
+    ETH: 1
+  products:
+    FORM: 1
+    CO: 0.63
+    HO2: 0.13
+    OH: 0.13
+    FACD: 0.37
+  type: ARRHENIUS
+  coefficients:
+    A: 1.2e-14
+    B: 0.0
+    C: -2630.0
+- MUSICA_name: R123
+  reactants:
+    NO3: 1
+    ETH: 1
+  products:
+    NO2: 1
+    XO2: 1
+    FORM: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 3.3e-12
+    B: 0.0
+    C: -2880.0
+- MUSICA_name: R124
+  reactants:
+    IOLE: 1
+    O: 1
+  products:
+    ALD2: 1.24
+    ALDX: 0.66
+    HO2: 0.1
+    XO2: 0.1
+    CO: 0.1
+    PAR: 0.1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.3e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R125
+  reactants:
+    IOLE: 1
+    OH: 1
+  products:
+    ALD2: 1.3
+    ALDX: 0.7
+    HO2: 1
+    XO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1e-11
+    B: 0.0
+    C: 550.0
+- MUSICA_name: R126
+  reactants:
+    IOLE: 1
+    O3: 1
+  products:
+    ALD2: 0.65
+    ALDX: 0.35
+    FORM: 0.25
+    CO: 0.25
+    O: 0.5
+    OH: 0.5
+    HO2: 0.5
+  type: ARRHENIUS
+  coefficients:
+    A: 8.4e-15
+    B: 0.0
+    C: -1100.0
+- MUSICA_name: R127
+  reactants:
+    IOLE: 1
+    NO3: 1
+  products:
+    ALD2: 1.18
+    ALDX: 0.64
+    HO2: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 9.6e-13
+    B: 0.0
+    C: -270.0
+- MUSICA_name: R128
+  reactants:
+    TOL: 1
+    OH: 1
+  products:
+    HO2: 0.44
+    XO2: 0.08
+    CRES: 0.36
+    TO2: 0.56
+    TOLRO2: 0.765
+  type: ARRHENIUS
+  coefficients:
+    A: 1.8e-12
+    B: 0.0
+    C: 355.0
+- MUSICA_name: R129
+  reactants:
+    TO2: 1
+    NO: 1
+  products:
+    NO2: 0.9
+    HO2: 0.9
+    OPEN: 0.9
+    NTR: 0.1
+  type: ARRHENIUS
+  coefficients:
+    A: 8.1e-12
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R130
+  reactants:
+    TO2: 1
+  products:
+    CRES: 1
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 4.2
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R131
+  reactants:
+    OH: 1
+    CRES: 1
+  products:
+    CRO: 0.4
+    XO2: 0.6
+    HO2: 0.6
+    OPEN: 0.3
+  type: ARRHENIUS
+  coefficients:
+    A: 4.1e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R132
+  reactants:
+    CRES: 1
+    NO3: 1
+  products:
+    CRO: 1
+    HNO3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.2e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R133
+  reactants:
+    CRO: 1
+    NO2: 1
+  products:
+    NTR: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.4e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R134
+  reactants:
+    CRO: 1
+    HO2: 1
+  products:
+    CRES: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 5.5e-12
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R135
+  reactants:
+    OPEN: 1
+  products:
+    C2O3: 1
+    HO2: 1
+    CO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0009
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R136
+  reactants:
+    OPEN: 1
+    OH: 1
+  products:
+    XO2: 1
+    CO: 2.0
+    HO2: 2.0
+    C2O3: 1
+    FORM: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 3e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R137
+  reactants:
+    OPEN: 1
+    O3: 1
+  products:
+    ALDX: 0.03
+    C2O3: 0.62
+    FORM: 0.7
+    XO2: 0.03
+    CO: 0.69
+    OH: 0.08
+    HO2: 0.76
+    MGLY: 0.2
+  type: ARRHENIUS
+  coefficients:
+    A: 5.4e-17
+    B: 0.0
+    C: -500.0
+- MUSICA_name: R138
+  reactants:
+    OH: 1
+    XYL: 1
+  products:
+    HO2: 0.7
+    XO2: 0.5
+    CRES: 0.2
+    MGLY: 0.8
+    PAR: 1.1
+    TO2: 0.3
+    XYLRO2: 0.804
+  type: ARRHENIUS
+  coefficients:
+    A: 1.7e-11
+    B: 0.0
+    C: 116.0
+- MUSICA_name: R139
+  reactants:
+    OH: 1
+    MGLY: 1
+  products:
+    XO2: 1
+    C2O3: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.8e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R140
+  reactants:
+    MGLY: 1
+  products:
+    C2O3: 1
+    HO2: 1
+    CO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R141
+  reactants:
+    O: 1
+    ISOP: 1
+  products:
+    ISPD: 0.75
+    FORM: 0.5
+    XO2: 0.25
+    HO2: 0.25
+    CXO3: 0.25
+    PAR: 0.25
+  type: ARRHENIUS
+  coefficients:
+    A: 3.6e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R142
+  reactants:
+    OH: 1
+    ISOP: 1
+  products:
+    ISPD: 0.912
+    FORM: 0.629
+    XO2: 0.991
+    HO2: 0.912
+    XO2N: 0.088
+    ISOPRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.54e-11
+    B: 0.0
+    C: 407.6
+- MUSICA_name: R143
+  reactants:
+    O3: 1
+    ISOP: 1
+  products:
+    ISPD: 0.65
+    FORM: 0.6
+    XO2: 0.2
+    HO2: 0.066
+    OH: 0.266
+    CXO3: 0.2
+    ALDX: 0.15
+    PAR: 0.35
+    CO: 0.066
+  type: ARRHENIUS
+  coefficients:
+    A: 7.86e-15
+    B: 0.0
+    C: -1912.0
+- MUSICA_name: R144
+  reactants:
+    NO3: 1
+    ISOP: 1
+  products:
+    ISPD: 0.2
+    NTR: 0.8
+    XO2: 1
+    HO2: 0.8
+    NO2: 0.2
+    ALDX: 0.8
+    PAR: 2.4
+  type: ARRHENIUS
+  coefficients:
+    A: 3.03e-12
+    B: 0.0
+    C: -448.0
+- MUSICA_name: R145
+  reactants:
+    OH: 1
+    ISPD: 1
+  products:
+    PAR: 1.565
+    FORM: 0.167
+    XO2: 0.713
+    HO2: 0.503
+    CO: 0.334
+    MGLY: 0.168
+    ALD2: 0.252
+    C2O3: 0.21
+    CXO3: 0.25
+    ALDX: 0.12
+  type: ARRHENIUS
+  coefficients:
+    A: 3.36e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R146
+  reactants:
+    O3: 1
+    ISPD: 1
+  products:
+    C2O3: 0.114
+    FORM: 0.15
+    MGLY: 0.85
+    HO2: 0.154
+    OH: 0.268
+    XO2: 0.064
+    ALD2: 0.02
+    PAR: 0.36
+    CO: 0.225
+  type: ARRHENIUS
+  coefficients:
+    A: 7.1e-18
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R147
+  reactants:
+    NO3: 1
+    ISPD: 1
+  products:
+    ALDX: 0.357
+    FORM: 0.282
+    PAR: 1.282
+    HO2: 0.925
+    CO: 0.643
+    NTR: 0.85
+    CXO3: 0.075
+    XO2: 0.075
+    HNO3: 0.15
+  type: ARRHENIUS
+  coefficients:
+    A: 1e-15
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R148
+  reactants:
+    ISPD: 1
+  products:
+    CO: 0.333
+    ALD2: 0.067
+    FORM: 0.9
+    PAR: 0.832
+    HO2: 1.033
+    XO2: 0.7
+    C2O3: 0.967
+  type: ARRHENIUS
+  coefficients:
+    A: 3.6e-07
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: R149
+  reactants:
+    TERP: 1
+    O: 1
+  products:
+    ALDX: 0.15
+    PAR: 5.12
+    TRPRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 3.6e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: R150
+  reactants:
+    TERP: 1
+    OH: 1
+  products:
+    HO2: 0.75
+    XO2: 1.25
+    XO2N: 0.25
+    FORM: 0.28
+    PAR: 1.66
+    ALDX: 0.47
+    TRPRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.5e-11
+    B: 0.0
+    C: 449.0
+- MUSICA_name: R151
+  reactants:
+    TERP: 1
+    O3: 1
+  products:
+    OH: 0.57
+    HO2: 0.07
+    XO2: 0.76
+    XO2N: 0.18
+    FORM: 0.24
+    CO: 0.001
+    PAR: 7.0
+    ALDX: 0.21
+    CXO3: 0.39
+    TRPRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.2e-15
+    B: 0.0
+    C: -821.0
+- MUSICA_name: R152
+  reactants:
+    TERP: 1
+    NO3: 1
+  products:
+    NO2: 0.47
+    HO2: 0.28
+    XO2: 1.03
+    XO2N: 0.25
+    ALDX: 0.47
+    NTR: 0.53
+    TRPRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 3.7e-12
+    B: 0.0
+    C: 175.0
+- MUSICA_name: R153
+  reactants:
+    SO2: 1
+    OH: 1
+  products:
+    SULF: 1
+    HO2: 1
+    SULRXN: 1
+  type: TROE
+  coefficients:
+    k0_A: 3e-31
+    k0_B: -3.3
+    k0_C: -0.0
+    kinf_A: 1.5e-12
+    kinf_B: 0.0
+    kinf_C: -0.0
+    Fc: 0.6
+    N: 1.0
+- MUSICA_name: R154
+  reactants:
+    OH: 1
+    ETOH: 1
+  products:
+    HO2: 1
+    ALD2: 0.9
+    ALDX: 0.05
+    FORM: 0.1
+    XO2: 0.1
+  type: ARRHENIUS
+  coefficients:
+    A: 6.9e-12
+    B: 0.0
+    C: -230.0
+- MUSICA_name: R155
+  reactants:
+    OH: 1
+    ETHA: 1
+  products:
+    ALD2: 0.991
+    XO2: 0.991
+    XO2N: 0.009
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 8.7e-12
+    B: 0.0
+    C: -1070.0
+- MUSICA_name: R156
+  reactants:
+    NO2: 1
+    ISOP: 1
+  products:
+    ISPD: 0.2
+    NTR: 0.8
+    XO2: 1
+    HO2: 0.8
+    NO: 0.2
+    ALDX: 0.8
+    PAR: 2.4
+  type: ARRHENIUS
+  coefficients:
+    A: 1.5e-19
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL1
+  reactants:
+    CL2: 1
+  products:
+    CL: 2.0
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0001
+  note: PHOTOLYSIS (A := photolysis rate)
+- MUSICA_name: CL3
+  reactants:
+    CL: 1
+    O3: 1
+  products:
+    CLO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.3e-11
+    B: 0.0
+    C: -200.0
+- MUSICA_name: CL4
+  reactants:
+    CLO: 2
+  products:
+    CL2: 0.3
+    CL: 1.4
+  type: ARRHENIUS
+  coefficients:
+    A: 1.63e-14
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL5
+  reactants:
+    CLO: 1
+    NO: 1
+  products:
+    CL: 1
+    NO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 6.4e-12
+    B: 0.0
+    C: 290.0
+- MUSICA_name: CL6
+  reactants:
+    CLO: 1
+    HO2: 1
+  products:
+    HOCL: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.7e-12
+    B: 0.0
+    C: 220.0
+- MUSICA_name: CL7
+  reactants:
+    OH: 1
+    FMCL: 1
+  products:
+    CL: 1
+    CO: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 5e-13
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL9
+  reactants:
+    CL: 1
+    CH4: 1
+  products:
+    HCL: 1
+    MEO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 6.6e-12
+    B: 0.0
+    C: -1240.0
+- MUSICA_name: CL10
+  reactants:
+    CL: 1
+    PAR: 1
+  products:
+    HCL: 1
+    XO2: 0.87
+    XO2N: 0.13
+    HO2: 0.11
+    ALD2: 0.06
+    PAR: -0.11
+    ROR: 0.76
+    ALDX: 0.05
+  type: ARRHENIUS
+  coefficients:
+    A: 5e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL11
+  reactants:
+    CL: 1
+    ETHA: 1
+  products:
+    HCL: 1
+    ALD2: 0.991
+    XO2: 0.991
+    XO2N: 0.009
+    HO2: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 8.3e-11
+    B: 0.0
+    C: -100.0
+- MUSICA_name: CL12
+  reactants:
+    CL: 1
+    ETH: 1
+  products:
+    FMCL: 1
+    XO2: 2.0
+    HO2: 1.0
+    FORM: 1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 1.07e-10
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL13
+  reactants:
+    CL: 1
+    OLE: 1
+  products:
+    FMCL: 1
+    ALD2: 0.33
+    ALDX: 0.67
+    XO2: 2.0
+    HO2: 1.0
+    PAR: -1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 2.5e-10
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL14
+  reactants:
+    CL: 1
+    IOLE: 1
+  products:
+    HCL: 0.3
+    FMCL: 0.7
+    ALD2: 0.45
+    ALDX: 0.55
+    OLE: 0.3
+    PAR: 0.3
+    XO2: 1.7
+    HO2: 1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 3.5e-10
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL15
+  reactants:
+    CL: 1
+    ISOP: 1
+  products:
+    HCL: 0.15
+    XO2: 1.0
+    HO2: 1.0
+    FMCL: 0.85
+    ISPD: 1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 4.3e-10
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL16
+  reactants:
+    CL: 1
+    FORM: 1
+  products:
+    HCL: 1
+    HO2: 1.0
+    CO: 1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 8.2e-11
+    B: 0.0
+    C: -34.0
+- MUSICA_name: CL17
+  reactants:
+    CL: 1
+    ALD2: 1
+  products:
+    HCL: 1
+    C2O3: 1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 7.9e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL18
+  reactants:
+    CL: 1
+    ALDX: 1
+  products:
+    HCL: 1
+    CXO3: 1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 1.3e-10
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL19
+  reactants:
+    CL: 1
+    MEOH: 1
+  products:
+    HCL: 1
+    HO2: 1.0
+    FORM: 1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 5.5e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: CL20
+  reactants:
+    CL: 1
+    ETOH: 1
+  products:
+    HCL: 1
+    HO2: 1.0
+    ALD2: 1.0
+  type: ARRHENIUS
+  coefficients:
+    A: 8.2e-11
+    B: 0.0
+    C: 45.0
+- MUSICA_name: CL21
+  reactants:
+    HCL: 1
+    OH: 1
+  products:
+    CL: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 6.58e-13
+    B: 1.16
+    C: 58.0
+- MUSICA_name: SA01
+  reactants:
+    TOLRO2: 1
+    NO: 1
+  products:
+    NO: 1
+    TOLNRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.7e-12
+    B: 0.0
+    C: 360.0
+- MUSICA_name: SA02
+  reactants:
+    TOLRO2: 1
+    HO2: 1
+  products:
+    HO2: 1
+    TOLHRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.9e-13
+    B: 0.0
+    C: 1300.0
+- MUSICA_name: SA03
+  reactants:
+    XYLRO2: 1
+    NO: 1
+  products:
+    NO: 1
+    XYLNRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.7e-12
+    B: 0.0
+    C: 360.0
+- MUSICA_name: SA04
+  reactants:
+    XYLRO2: 1
+    HO2: 1
+  products:
+    HO2: 1
+    XYLHRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.9e-13
+    B: 0.0
+    C: 1300.0
+- MUSICA_name: SA05
+  reactants:
+    BENZENE: 1
+    OH: 1
+  products:
+    OH: 1
+    BENZRO2: 0.764
+  type: ARRHENIUS
+  coefficients:
+    A: 2.47e-12
+    B: 0.0
+    C: -206.0
+- MUSICA_name: SA06
+  reactants:
+    BENZRO2: 1
+    NO: 1
+  products:
+    NO: 1
+    BNZNRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 2.7e-12
+    B: 0.0
+    C: 360.0
+- MUSICA_name: SA07
+  reactants:
+    BENZRO2: 1
+    HO2: 1
+  products:
+    HO2: 1
+    BNZHRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.9e-13
+    B: 0.0
+    C: 1300.0
+- MUSICA_name: SA08
+  reactants:
+    SESQ: 1
+    O3: 1
+  products:
+    O3: 1
+    SESQRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.16e-14
+    B: 0.0
+    C: -0.0
+- MUSICA_name: SA09
+  reactants:
+    SESQ: 1
+    OH: 1
+  products:
+    OH: 1
+    SESQRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.97e-10
+    B: 0.0
+    C: -0.0
+- MUSICA_name: SA10
+  reactants:
+    SESQ: 1
+    NO3: 1
+  products:
+    NO3: 1
+    SESQRXN: 1
+  type: ARRHENIUS
+  coefficients:
+    A: 1.9e-11
+    B: 0.0
+    C: -0.0
+- MUSICA_name: jo2
+  reactants:
+    O2: 1
+  products:
+    O: 2
+  type: ARRHENIUS
+  coefficients:
+    A: 0.0
+  note: PHOTOLYSIS (A := photolysis rate)
+- coefficients:
+    A: 2.4e-14
+    C: 460.0
+  note: CMAQ_OH_HNO3
+  products:
+    NO3: 1.0
+  reactants:
+    HNO3: 1.0
+    OH: 1.0
+  type: ARRHENIUS
+- coefficients:
+    k0_A: 6.5e-34
+    k0_C: 1335.0
+    kinf_A: 2.7e-17
+    kinf_C: 2199.0
+    Fc : 1
+  note: CMAQ_OH_HNO3
+  products:
+    NO3: 1.0
+  reactants:
+    HNO3: 1.0
+    OH: 1.0
+  type: TROE

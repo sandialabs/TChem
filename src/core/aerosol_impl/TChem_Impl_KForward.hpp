@@ -64,12 +64,13 @@ struct KForward
         kfor(param._reaction_index) = param._A * ats<value_type>::exp(param._C * t_1) *
                                       ( param._B == 0.0 ? one : ats<value_type>::pow (t/param._D, param._B)) *
                                       ( param._E == 0.0 ? one : (one + param._E*p) ) *
-                                      ats<value_type>::pow (conv,
-                                      kmcd.reacNreac(param._reaction_index) - ordinal_type(1) ) ;
+                                      ats<value_type>::pow (conv,kmcd.convExponent(param._reaction_index)) ;
         // printf("Kforward A_ %e B_ %e C_ %e D_ %e E_ %e \n",param._A, param._B,  param._C,  param._D, param._E  );
         // printf("CONV_ %e PRESSURE_PA_ %e TEMPERATURE_K_ %e NUM_REACT_ %d \n",CONV_PPM, p,  t,  kmcd.reacNreac(param._reaction_index) );
         // printf("RATE_CONSTANT_ %e  ireac %d \n", kfor(param._reaction_index), param._reaction_index);
         //
+
+
         // const double term1 = param._A * ats<value_type><value_type>::exp(param._C/t) ;
         // const double term2 = (param._B == 0.0 ? one : ats<value_type><real_type>::pow (t/param._D, param._B));
         // const double term3 = (param._E == 0.0 ? one : (one + param._E*p) );
@@ -113,7 +114,7 @@ struct KForward
         kfor(idx_reac) =  k0 / ( real_type(1.0) + k0_kinf ) *
                           ats<value_type>::pow( Fc, real_type(1.0) / ( real_type(1.0) +
                           ats<value_type>::pow( ats<value_type>::log10(k0_kinf) / N , real_type(2.0) ) ) )   *
-                          ats<value_type>::pow (conv, kmcd.reacNreac(idx_reac) - ordinal_type(1) ) ;
+                          ats<value_type>::pow (conv, kmcd.convExponent(idx_reac) ) ;
 
     });
 
@@ -126,8 +127,7 @@ struct KForward
                                       ( param._B1 == 0.0 ? one : ats<value_type>::pow (t/real_type(300.0), param._B1)) +
                                       param._A2 * ats<value_type>::exp(param._C2 * t_1) *
                                       ( param._B2 == 0.0 ? one : ats<value_type>::pow (t/real_type(300.0), param._B2))*conv) *
-                                      ats<value_type>::pow (conv,
-                                      kmcd.reacNreac(param._reaction_index) - ordinal_type(1) ) ;
+                                      ats<value_type>::pow (conv, kmcd.convExponent(param._reaction_index)) ;
 
 
     });

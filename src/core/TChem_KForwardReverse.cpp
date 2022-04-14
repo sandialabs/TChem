@@ -85,6 +85,12 @@ KForwardReverse_TemplateRun( /// input
         auto iter = ordinal_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
         w += kmcd.nReac * 2;
 
+        const ordinal_type work_kfor_rev_size =
+        Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+
+        auto work = real_type_1d_view_type(w, work_kfor_rev_size);
+        w += work_kfor_rev_size;
+
         // 1. compute thermo
         Gk::team_invoke(member,
                          t, /// input
@@ -102,6 +108,7 @@ KForwardReverse_TemplateRun( /// input
                                       kfor_at_i,
                                       krev_at_i, /// output
                                       iter,
+                                      work,
                                       kmcd);
       }
     });

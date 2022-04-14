@@ -1,0 +1,18 @@
+install clang format
+ - port install clang (e.g., clang-11)
+ - check available clang options
+port select --list clang 
+Available versions for clang:
+	mp-clang-11 (active)
+	mp-clang-12
+	mp-clang-13
+	none
+  - set the default version (in this case, clang 11)
+sudo port select --set clang mp-clang-11	
+  - check clang format is avail
+which clang-format
+clang-format is /opt/local/bin/clang-format
+
+setup git pre commit hook
+  - copy this pre-commit to $REPO_ROOT/.git/hooks/
+copy pre-commit ../../.git/hooks

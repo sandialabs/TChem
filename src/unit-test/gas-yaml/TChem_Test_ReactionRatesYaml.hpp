@@ -24,34 +24,64 @@ Sandia National Laboratories, Livermore, CA, USA
 // #include "TChem_KineticModelData.hpp"
 // #include "TChem_NetProductionRatePerMass.hpp"
 
-TEST(NetProductionRatePerMassYaml, single)
-{
-  #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
-  std::string exec="../../example/TChem_NetProductionRatePerMass_Yaml.x";
+TEST(NetProductionRatePerMassYaml, single) {
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+  std::string exec = "../../example/TChem_NetProductionRatePerMass_Yaml.x";
 
-  std::string prefixPath="../../example/data/reaction-rates/";
+  std::string prefixPath = "../../example/data/reaction-rates/";
   std::string chemFile(prefixPath + "chem.yaml");
   // std::string thermFile(prefixPath + "therm.dat");
   std::string inputFile(prefixPath + "input.dat");
   std::string outputFile("net-production-rate-per-mass.dat");
-  std::string invoke=(exec+" "+
-		      "--chemfile="+chemFile+" "+
-		      // "--thermfile="+thermFile+" "+
-		      "--inputfile="+inputFile+" "+
-		      "--outputfile="+outputFile+" "+
-		      "--batchsize=1 verbose=true");
+  std::string invoke =
+      (exec + " " + "--chemfile=" + chemFile + " " +
+       // "--thermfile="+thermFile+" "+
+       "--inputfile=" + inputFile + " " + "--outputfile=" + outputFile + " " + "--batchsize=1 verbose=true");
   const auto invoke_c_str = invoke.c_str();
   printf("testing : %s\n", invoke_c_str);
   std::system(invoke_c_str);
 
   /// compare with ref
-  EXPECT_TRUE(TChem::Test::compareFiles("net-production-rate-per-mass.dat",
-					"../reference/net-production-rate-per-mass.dat")
-	      );
-  //
-  #else
-   printf("This test requires Yaml ...\n" );
-  #endif
+  EXPECT_TRUE(TChem::Test::compareFilesValues("net-production-rate-per-mass.dat",
+                                              "../reference/net-production-rate-per-mass.dat"));
+//
+#else
+  printf("This test requires Yaml ...\n");
+#endif
+}
+
+TEST(ChebyshevReactionType, single) {
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+  std::string exec = "../../example/TChem_NetProductionRatePerMass_Yaml.x";
+
+  std::string prefixPath = "inputs_chebyshev/";
+  std::string chemFile(prefixPath + "chem.yaml");
+  std::string inputFile(prefixPath + "inputGas.dat");
+  std::string outputFile("net-production-rate-per-mass-chebyshev.dat");
+  std::string invoke = (exec + " " + "--chemfile=" + chemFile + " " + "--inputfile=" + inputFile + " " +
+                        "--outputfile=" + outputFile + " " + "--batchsize=1 verbose=true");
+  const auto invoke_c_str = invoke.c_str();
+  printf("testing : %s\n", invoke_c_str);
+  std::system(invoke_c_str);
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("net-production-rate-per-mass-chebyshev.dat",
+                                              prefixPath + "net-production-rate-per-mass-chebyshev.dat"));
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("ropfwd_net-production-rate-per-mass-chebyshev.dat",
+                                              prefixPath + "ropfwd_net-production-rate-per-mass-chebyshev.dat"));
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("roprev_net-production-rate-per-mass-chebyshev.dat",
+                                              prefixPath + "roprev_net-production-rate-per-mass-chebyshev.dat"));
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("kfwd_net-production-rate-per-mass-chebyshev.dat",
+                                              prefixPath + "kfwd_net-production-rate-per-mass-chebyshev.dat"));
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("krev_net-production-rate-per-mass-chebyshev.dat",
+                                              prefixPath + "krev_net-production-rate-per-mass-chebyshev.dat"));
+
+#else
+  printf("This test requires Yaml ...\n");
+#endif
 }
 
 #endif

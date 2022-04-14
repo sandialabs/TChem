@@ -44,6 +44,8 @@ namespace TChem {
 
     using string_type_1d_view_type = Tines::value_type_1d_view<char [LENGTHOFSPECNAME + 1],device_type>;
 
+    using chebyshev_reaction_type_1d_view_type =  Tines::value_type_1d_view<chebyshev_reaction_type,device_type>;
+
     //// const views
     using kmcd_ordinal_type_1d_view = ConstUnmanaged<ordinal_type_1d_view>;
     using kmcd_ordinal_type_2d_view = ConstUnmanaged<ordinal_type_2d_view>;
@@ -53,6 +55,8 @@ namespace TChem {
     using kmcd_real_type_3d_view = ConstUnmanaged<real_type_3d_view_type>;
 
     using kmcd_string_type_1d_view =ConstUnmanaged<string_type_1d_view_type>;
+
+    using kmcd_chebyshev_reaction_type_1d_view_1d_view = ConstUnmanaged<chebyshev_reaction_type_1d_view_type>;
 
     real_type rho;
     kmcd_string_type_1d_view speciesNames;
@@ -148,6 +152,13 @@ namespace TChem {
 
     kmcd_real_type_3d_view cppol;
     kmcd_real_type_2d_view stoiCoefMatrix;
+
+    kmcd_chebyshev_reaction_type_1d_view_1d_view ChebyshevCoef;
+    kmcd_real_type_2d_view Chebyshev_data;
+
+    ordinal_type Chebyshev_max_nrows;
+
+    kmcd_ordinal_type_1d_view reactionType;
 
     // kmcd_real_type_3d_view spec9trng;
     // kmcd_real_type_3d_view spec9coefs;
@@ -260,6 +271,10 @@ namespace TChem {
     // data.spec9coefs = kmd.spec9coefs_.template view<DT>();
     // data.sNames = kmd.sNames_.template view<DT>();
     data.stoiCoefMatrix = kmd.stoiCoefMatrix_.template view<DT>();
+    data.ChebyshevCoef = kmd.ChebyshevCoef_.template view<DT>();
+    data.Chebyshev_data = kmd.Chebyshev_data_.template view<DT>();
+    data.Chebyshev_max_nrows = kmd.Chebyshev_max_nrows_;
+    data.reactionType = kmd.reactionType_.template view<DT>();
 
     return data;
   }

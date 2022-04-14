@@ -32,7 +32,10 @@ struct ConstantVolumeIgnitionReactorRHS
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
     const kinetic_model_type& kmcd)
   {
-    const ordinal_type workspace_size = (4 * kmcd.nSpec + 8 * kmcd.nReac);
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+
+    const ordinal_type workspace_size = (4 * kmcd.nSpec + 8 * kmcd.nReac + work_kfor_rev_size);
     return workspace_size;
   }
 
@@ -66,6 +69,7 @@ struct ConstantVolumeIgnitionReactorRHS
     const value_type_1d_view_type& ropRev,
     const value_type_1d_view_type& Crnd,
     const ordinary_type_1d_view_type& iter,
+    const value_type_1d_view_type& work_kfor_rev,
     /// const input from kinetic model
     const kinetic_model_type& kmcd)
   {
@@ -96,6 +100,7 @@ struct ConstantVolumeIgnitionReactorRHS
                                        ropRev,
                                        Crnd,
                                        iter,
+                                       work_kfor_rev,
                                        kmcd);
 
     /// 2. transform molar reaction rates to mass reaction rates
@@ -189,6 +194,12 @@ struct ConstantVolumeIgnitionReactorRHS
     auto Crnd = value_type_1d_view_type(w, kmcd.nReac, sacadoStorageDimension);
     w += kmcd.nReac*len;
 
+
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = value_type_1d_view_type(w, work_kfor_rev_size, sacadoStorageDimension);
+    w += work_kfor_rev_size*len;
+
     auto iter = Kokkos::View<ordinal_type*,
                              Kokkos::LayoutRight,
                              typename real_type_1d_view_type::memory_space>(
@@ -219,6 +230,7 @@ struct ConstantVolumeIgnitionReactorRHS
                        ropRev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
 
@@ -276,6 +288,11 @@ struct ConstantVolumeIgnitionReactorRHS
       (ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = real_type_1d_view_type(w, work_kfor_rev_size);
+    w += work_kfor_rev_size;
+
     auto rhs = (real_type*)omega.data();
     auto omega_t = real_type_1d_view_type(rhs, 1);
     rhs += 1;
@@ -301,6 +318,7 @@ struct ConstantVolumeIgnitionReactorRHS
                        ropRev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
 };

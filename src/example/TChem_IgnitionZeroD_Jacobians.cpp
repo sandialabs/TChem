@@ -45,7 +45,7 @@ main(int argc, char* argv[])
   TCHEM_PROFILER_REGION_END;
 
   /// default inputs
-  std::string prefixPath("");
+  std::string prefixPath("data/ignition-zero-d/");
   std::string chemFile(prefixPath + "chem.inp");
   std::string thermFile(prefixPath + "therm.dat");
   std::string inputFile(prefixPath + "input.dat");
@@ -147,6 +147,7 @@ main(int argc, char* argv[])
                               nBatch);
 
     } else{
+      printf("reading input file from : %s\n", inputFile.c_str());
       state_host = real_type_2d_view_host("state vector host", nBatch, stateVecDim);
       auto state_host_at_0 = Kokkos::subview(state_host, 0, Kokkos::ALL());
       TChem::Test::readStateVector(inputFile, kmcd.nSpec, state_host_at_0);
@@ -188,7 +189,7 @@ main(int argc, char* argv[])
         workspace = real_type_2d_view("workspace", policy.league_size(), per_team_extent);
       }
       Kokkos::fence();
-      
+
       /// skip the first run
       SourceTerm::runDeviceBatch( policy, state, source_term, workspace, kmcd);
       exec_space_instance.fence();
@@ -226,7 +227,7 @@ main(int argc, char* argv[])
 
       const ordinal_type per_team_extent = JacobianReduced::getWorkSpaceSize(kmcd);
       ordinal_type per_team_scratch = TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
-      
+
       real_type_2d_view workspace;
       if (use_shared_workspace) {
         policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));

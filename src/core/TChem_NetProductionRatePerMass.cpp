@@ -77,10 +77,12 @@ NetProductionRatePerMass_TemplateRun( /// input
                                ? Impl::RhoMixMs<real_type, device_type >::team_invoke(member, t, p, Ys, kmcd)
                                : kmcd.rho;
         //
+        auto w = work.data();
+        auto ww = real_type_1d_view_type(w, work.span());
         member.team_barrier();
 
         Impl::ReactionRates<real_type, device_type > ::team_invoke(
-          member, t, p, density, Ys, omega_at_i, work, kmcd);
+          member, t, p, density, Ys, omega_at_i, ww, kmcd);
         }
     });
 

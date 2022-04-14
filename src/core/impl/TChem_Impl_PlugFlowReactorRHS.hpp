@@ -55,8 +55,11 @@ struct PlugFlowReactorRHS
     const kinetic_model_type& kmcd,
     const kinetic_surf_model_type& kmcdSurf)
   {
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+
     return (7 * kmcd.nSpec + 8 * kmcd.nReac + 5 * kmcdSurf.nSpec +
-            5 * kmcdSurf.nReac);
+            5 * kmcdSurf.nReac + work_kfor_rev_size);
   }
 
   template<typename MemberType>
@@ -94,6 +97,7 @@ struct PlugFlowReactorRHS
     const value_type_1d_view_type& ropRev,
     const value_type_1d_view_type& Crnd,
     const ordinal_type_1d_view_type& iter,
+    const value_type_1d_view_type& work_kfor_rev,
     // surface species
     const value_type_1d_view_type& Surf_gk,
     const value_type_1d_view_type& Surf_hks,
@@ -141,6 +145,7 @@ struct PlugFlowReactorRHS
                                        ropRev,
                                        Crnd,
                                        iter,
+                                       work_kfor_rev,
                                        kmcd);
 
     member.team_barrier();
@@ -379,24 +384,18 @@ struct PlugFlowReactorRHS
     auto CoverageFactor = real_type_1d_view_type(w, kmcdSurf.nReac);
     w += kmcdSurf.nReac;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = real_type_1d_view_type(w, work_kfor_rev_size);
+    w += work_kfor_rev_size;
+
 
     using ordinal_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
 
 
-    // auto iter = Kokkos::View<ordinal_type*,
-    //                          Kokkos::LayoutRight,
-    //                          typename WorkViewType::memory_space>(
-    //   (ordinal_type*)w, kmcd.nReac * 2);
     auto iter = ordinal_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
 
-    // auto iterSurf = Kokkos::View<ordinal_type*,
-    //                              Kokkos::LayoutRight,
-    //                              typename WorkViewType::memory_space>(
-    //   (ordinal_type*)w, kmcdSurf.nReac * 2);
-    //
-    // auto iterSurf = ordinal_type_1d_view_type((ordinal_type*)w, kmcdSurf.nReac * 2);
-    // w += kmcdSurf.nReac * 2;
 
     auto dT = real_type_1d_view_type(rhs.data(), 1);
     auto dYs = real_type_1d_view_type(rhs.data() + 1, kmcd.nSpec);
@@ -433,6 +432,7 @@ struct PlugFlowReactorRHS
                        ropRev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        // surface
                        Surf_gk,
                        Surf_hks,
@@ -469,16 +469,6 @@ struct PlugFlowReactorRHS
     const kinetic_surf_model_type& kmcdSurf,
     const pfr_data_type& pfrd)
   {
-    // const real_type zero(0);
-
-    // const ordinal_type len_rhs_w = getWorkSpaceSize(kmcd, kmcdSurf);
-    // if (len_rhs_w > ordinal_type(work.extent(0))) {
-    //   Kokkos::abort("Error: workspace used is smaller than it "
-    //                 "required::TChem_Impl_PlugFlowReactorRHS\n");
-    //   printf("work required %d, provided %d \n",
-    //          len_rhs_w,
-    //          ordinal_type(work.extent(0)));
-    // }
 
     // We need to add 1 to the number of equation becase of sacado
     const ordinal_type sacadoStorageDimension = ats<value_type>::sacadoStorageDimension(u);
@@ -537,6 +527,11 @@ struct PlugFlowReactorRHS
     auto CoverageFactor = value_type_1d_view_type(w, kmcdSurf.nReac, sacadoStorageDimension);
     w += kmcdSurf.nReac*len;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = value_type_1d_view_type(w, work_kfor_rev_size, sacadoStorageDimension);
+    w += work_kfor_rev_size*len;
+
 
     using ordinal_type_1d_view_type = Tines::value_type_1d_view<ordinal_type,device_type>;
     auto iter = ordinal_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
@@ -579,6 +574,7 @@ struct PlugFlowReactorRHS
                        ropRev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        // surface
                        Surf_gk,
                        Surf_hks,

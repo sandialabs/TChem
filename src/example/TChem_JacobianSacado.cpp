@@ -2,15 +2,15 @@
 #include "TChem_Util.hpp"
 #include "Sacado.hpp"
 #include "Tines.hpp"
-
 #include "TChem_Impl_IgnitionZeroD_Problem.hpp"
+
 
 int
 main(int argc, char* argv[])
 {
 
   /// default inputs
-  std::string prefixPath("data/");
+  std::string prefixPath("data/H2/");
   std::string chemFile(prefixPath + "chem.inp");
   std::string thermFile(prefixPath + "therm.dat");
   std::string inputFile(prefixPath + "sample.dat");
@@ -48,6 +48,7 @@ main(int argc, char* argv[])
     using TChem::real_type;
     using TChem::ordinal_type;
     using fad_type = Sacado::Fad::SLFad<real_type,1000>;
+    // using fad_type = Sacado::Fad::DFad<real_type>;
 
     using ats = Tines::ats<real_type>;
 
@@ -71,18 +72,13 @@ main(int argc, char* argv[])
     TChem::KineticModelData kmd(chemFile, thermFile);
     const auto kmcd = TChem::createGasKineticModelConstData<host_device_type>(kmd);
 
-    const ordinal_type stateVecDim =
-      TChem::Impl::getStateVectorSize(kmcd.nSpec);
+    const ordinal_type stateVecDim = TChem::Impl::getStateVectorSize(kmcd.nSpec);
 
     real_type_2d_view_type state_host;
-    const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
-    Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
+    const auto speciesNamesHost = kmcd.speciesNames;
     {
       // get species molecular weigths
-      const auto SpeciesMolecularWeights =
-        Kokkos::create_mirror_view(kmcd.sMass);
-      Kokkos::deep_copy(SpeciesMolecularWeights, kmcd.sMass);
-
+      const auto SpeciesMolecularWeights =kmcd.sMass;
       TChem::Test::readSample(inputFile,
                               speciesNamesHost,
                               SpeciesMolecularWeights,
@@ -91,6 +87,7 @@ main(int argc, char* argv[])
                               state_host,
                               nBatch);
     }
+
     real_type_2d_view_type state("StateVector Devices", nBatch, stateVecDim);
     Kokkos::deep_copy(state, state_host);
     // output:: CpMass

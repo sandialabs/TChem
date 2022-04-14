@@ -1,3 +1,9 @@
+(2022-14-04)
+1. Fix error in atmospheric implementation.
+2. TLA implementation of reaction rates.
+3. Add Chebychev reaction type. 
+4. TChem main executable.
+
 Version 2.3.0 (2021-09-02)
 1. KineticModelConstData and KineticSurfModelConstData have different a template parameter, DeviceType instead of SpT(execution space); this change will require to modify old code.
 
@@ -6,8 +12,8 @@ Previous version
    TChem::KineticModelData kmd(chemFile, thermFile);
    const auto kmcd = kmd.createConstData<TChem::exec_space>();
 
-New version 
-   using device_type = typename Tines::UseThisDevice< TChem::exec_space >::type; 
+New version
+   using device_type = typename Tines::UseThisDevice< TChem::exec_space >::type;
    TChem::KineticModelData kmd(chemFile, thermFile);
    const auto kmcd = kmd.createConstData<device_type>();
 
@@ -21,12 +27,12 @@ New version
 
 Version 2.1.0 (2021-02-09)
 
-We removed the depends on Kokkoskernels and OpenBlass, instead version 2.1.0 uses Tines for linear algebra operations. 
+We removed the depends on Kokkoskernels and OpenBlass, instead version 2.1.0 uses Tines for linear algebra operations.
 
-We moved the ODE and DAE solvers from version 2.0.0 to the Tines library (https://github.com/sandialabs/Tines.git). Thus version 2.1.0 depends on Tines for time integration. 
-  
+We moved the ODE and DAE solvers from version 2.0.0 to the Tines library (https://github.com/sandialabs/Tines.git). Thus version 2.1.0 depends on Tines for time integration.
+
 We added a python interface using pybind11. This interface is under construction.  
 
-We added batch interfaces for several quantities such as source terms and Jacobians for the plug flow reactor and for the continuously stirred tank reactor. 
+We added batch interfaces for several quantities such as source terms and Jacobians for the plug flow reactor and for the continuously stirred tank reactor.
 
-Version 2.0.0 (2020-10-15) 
+Version 2.0.0 (2020-10-15)

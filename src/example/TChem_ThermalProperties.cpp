@@ -42,10 +42,9 @@ main(int argc, char* argv[])
   std::string thermFile(prefixPath + "therm.dat");
   std::string inputFile(prefixPath + "sample.dat");
   // std::string outputFile(prefixPath + "CpMixMass.dat");
-  bool verbose(true);
+  bool verbose(true),use_sample_format(false);
 
   int nBatch(1), team_size(-1), vector_size(-1);
-  ;
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
@@ -71,7 +70,9 @@ main(int argc, char* argv[])
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
   opts.set_option<bool>(
-    "verbose", "If true, printout the first Jacobian values", &verbose);
+                        "use-sample-format",
+                         "If true, input file does not have header or format",
+                         &use_sample_format);
 
   const bool r_parse = opts.parse(argc, argv);
   if (r_parse)
@@ -98,7 +99,7 @@ main(int argc, char* argv[])
     real_type_2d_view_host state_host;
     const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
     Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
-    {
+    if (use_sample_format) {
       // get species molecular weigths
       const auto SpeciesMolecularWeights =
         Kokkos::create_mirror_view(kmcd.sMass);
@@ -111,7 +112,15 @@ main(int argc, char* argv[])
                               stateVecDim,
                               state_host,
                               nBatch);
+    } else
+    {
+      state_host = real_type_2d_view_host("state vector host", nBatch, stateVecDim);
+      auto state_host_at_0 = Kokkos::subview(state_host, 0, Kokkos::ALL());
+      TChem::Test::readStateVector(inputFile, kmcd.nSpec, state_host_at_0);
+      TChem::Test::cloneView(state_host);
+
     }
+
     real_type_2d_view state("StateVector Devices", nBatch, stateVecDim);
 
     // output:: CpMass
@@ -140,9 +149,6 @@ main(int argc, char* argv[])
       typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
 
     const ordinal_type level = 1;
-
-
-
     {
 
       policy_type policy_cp(exec_space_instance, nBatch, Kokkos::AUTO());

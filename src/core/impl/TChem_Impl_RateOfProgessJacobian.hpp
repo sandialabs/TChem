@@ -61,11 +61,17 @@ struct RateOfProgessJacobian
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
     const KineticModelConstDataType& kmcd)
   {
+    using kmcd_type = KineticModelConstDataType;
+    using device_type = typename kmcd_type::device_type;
+
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+
     const ordinal_type iter_size =
       (kmcd.nSpec > kmcd.nReac ? kmcd.nSpec : kmcd.nReac) * 2;
     const ordinal_type workspace_size =
       ( 7 * kmcd.nSpec + 8 * kmcd.nReac +
-       iter_size + 4);
+       iter_size + 4 + work_kfor_rev_size);
     return workspace_size;
   }
 
@@ -102,6 +108,7 @@ struct RateOfProgessJacobian
     const RealType1DViewType& PrDer,
     const RealType1DViewType& team_sum,
     const OrdinalType1DViewType& iter,
+    const RealType1DViewType& work_kfor_rev,
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
@@ -159,7 +166,7 @@ struct RateOfProgessJacobian
                               kmcd); /// only need gkp
 
     /// compute forward and reverse rate constants
-    KForwardReverse::team_invoke(member, t, p, gk, kfor, krev, iter, kmcd);
+    KForwardReverse::team_invoke(member, t, p, gk, kfor, krev, iter, work_kfor_rev, kmcd);
 
     KForwardReverseDerivative::team_invoke(
       member, t, p, kforp, krevp, gkp, iter, kmcd);
@@ -326,6 +333,9 @@ struct RateOfProgessJacobian
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
+    using kmcd_type = KineticModelConstDataType;
+    using device_type = typename kmcd_type::device_type;
+
     static_assert(Kokkos::Impl::SpaceAccessibility<
                     typename RealType1DViewType::execution_space,
                     typename WorkViewType::memory_space>::accessible,
@@ -385,6 +395,11 @@ struct RateOfProgessJacobian
       (ordinal_type*)w, iter_size);
     w += iter_size;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = RealType1DViewType(w, work_kfor_rev_size);
+    w += work_kfor_rev_size;
+
     team_invoke_detail(member,
                        t,
                        p,
@@ -408,6 +423,7 @@ struct RateOfProgessJacobian
                        PrDer,
                        team_sum,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
 };

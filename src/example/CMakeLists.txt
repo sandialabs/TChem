@@ -4,7 +4,6 @@ SET(TCHEM_EXAMPLE_SOURCES "")
 # Append examples that work for all device types
 LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_AtmosphericChemistry.cpp
-  TChem_ConstantVolumeIgnitionReactorSmatrixSensitivityAnalysis.cpp
   TChem_GkSurfGas.cpp
   TChem_IgnitionZeroD_ModelVariation.cpp
   TChem_IgnitionZeroD_SourceTermJacobian.cpp

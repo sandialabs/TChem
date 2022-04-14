@@ -42,9 +42,7 @@ using real_type_2d_view_host = TChem::real_type_2d_view_host;
 using time_advance_type_0d_view_host = TChem::time_advance_type_0d_view_host;
 using time_advance_type_1d_view_host = TChem::time_advance_type_1d_view_host;
 
-int
-main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
 
 #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
 
@@ -55,8 +53,8 @@ main(int argc, char* argv[])
   real_type tbeg(0), tend(1);
   real_type dtmin(1e-8), dtmax(1e-1);
   real_type rtol_time(1e-4), atol_newton(1e-10), rtol_newton(1e-6);
-  int num_time_iterations_per_interval(1e1), max_num_time_iterations(1e3),
-    max_num_newton_iterations(100), jacobian_interval(1);
+  int num_time_iterations_per_interval(1e1), max_num_time_iterations(1e3), max_num_newton_iterations(100),
+      jacobian_interval(1);
 
   int nBatch(1), team_size(-1), vector_size(-1);
   bool verbose(true);
@@ -64,38 +62,23 @@ main(int argc, char* argv[])
   std::string outputFile("AtmosphericChemistry.dat");
 
   /// parse command line arguments
-  TChem::CommandLineParser opts(
-    "This example computes the solution of an ignition problem");
-  opts.set_option<std::string>(
-    "inputsPath", "path to input files e.g., data/inputs", &prefixPath);
-  opts.set_option<std::string>
-  ("chemfile", "Chem file name e.g., chem.inp",&chemFile);
+  TChem::CommandLineParser opts("This example computes the solution of an ignition problem");
+  opts.set_option<std::string>("inputsPath", "path to input files e.g., data/inputs", &prefixPath);
+  opts.set_option<std::string>("chemfile", "Chem file name e.g., chem.inp", &chemFile);
   opts.set_option<real_type>("tbeg", "Time begin", &tbeg);
   opts.set_option<real_type>("tend", "Time end", &tend);
   opts.set_option<real_type>("dtmin", "Minimum time step size", &dtmin);
   opts.set_option<real_type>("dtmax", "Maximum time step size", &dtmax);
-  opts.set_option<real_type>(
-    "atol-newton", "Absolute tolerance used in newton solver", &atol_newton);
-  opts.set_option<real_type>(
-    "rtol-newton", "Relative tolerance used in newton solver", &rtol_newton);
-  opts.set_option<std::string>("outputfile",
-    "Output file name e.g., IgnSolution.dat", &outputFile);
-  opts.set_option<real_type>(
-    "tol-time", "Tolerence used for adaptive time stepping", &rtol_time);
-  opts.set_option<int>("time-iterations-per-interval",
-                       "Number of time iterations per interval to store qoi",
+  opts.set_option<real_type>("atol-newton", "Absolute tolerance used in newton solver", &atol_newton);
+  opts.set_option<real_type>("rtol-newton", "Relative tolerance used in newton solver", &rtol_newton);
+  opts.set_option<std::string>("outputfile", "Output file name e.g., IgnSolution.dat", &outputFile);
+  opts.set_option<real_type>("tol-time", "Tolerence used for adaptive time stepping", &rtol_time);
+  opts.set_option<int>("time-iterations-per-interval", "Number of time iterations per interval to store qoi",
                        &num_time_iterations_per_interval);
-  opts.set_option<int>("max-time-iterations",
-                       "Maximum number of time iterations",
-                       &max_num_time_iterations);
-  opts.set_option<int>("jacobian-interval",
-                       "Jacobians are evaluated once in this interval",
-                       &jacobian_interval);
-  opts.set_option<int>("max-newton-iterations",
-                       "Maximum number of newton iterations",
-                       &max_num_newton_iterations);
-  opts.set_option<bool>(
-    "verbose", "If true, printout the first Jacobian values", &verbose);
+  opts.set_option<int>("max-time-iterations", "Maximum number of time iterations", &max_num_time_iterations);
+  opts.set_option<int>("jacobian-interval", "Jacobians are evaluated once in this interval", &jacobian_interval);
+  opts.set_option<int>("max-newton-iterations", "Maximum number of newton iterations", &max_num_newton_iterations);
+  opts.set_option<bool>("verbose", "If true, printout the first Jacobian values", &verbose);
   opts.set_option<int>("team-size", "User defined team size", &team_size);
   opts.set_option<int>("vector-size", "User defined vector size", &vector_size);
 
@@ -109,26 +92,24 @@ main(int argc, char* argv[])
 
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
-    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+
+    using device_type = typename Tines::UseThisDevice<exec_space>::type;
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile);
     const auto kmcd = TChem::createNCAR_KineticModelConstData<device_type>(kmd);
 
-    const ordinal_type stateVecDim =
-      TChem::Impl::getStateVectorSize(kmcd.nSpec);
+    const ordinal_type stateVecDim = TChem::Impl::getStateVectorSize(kmcd.nSpec);
 
     printf("Number of Species %d \n", kmcd.nSpec);
     printf("Number of Reactions %d \n", kmcd.nReac);
     const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
     Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
 
-    FILE* fout = fopen(outputFile.c_str(), "w");
+    FILE *fout = fopen(outputFile.c_str(), "w");
     // read scenario condition from yaml file
     real_type_2d_view_host state_host;
-    TChem::AtmChemistry
-         ::setScenarioConditions(chemFile, speciesNamesHost,
-                                 kmcd.nSpec, state_host, nBatch );
+    TChem::AtmChemistry ::setScenarioConditions(chemFile, speciesNamesHost, kmcd.nSpec, state_host, nBatch);
 
     real_type_2d_view state("StateVector Devices", nBatch, stateVecDim);
 
@@ -143,34 +124,29 @@ main(int argc, char* argv[])
     {
       for (ordinal_type i = 0; i < nBatch; i++) {
         printf("Host::Initial condition sample No %d\n", i);
-        const auto state_at_i_host =
-          Kokkos::subview(state_host, i, Kokkos::ALL());
-        for (ordinal_type k = 0, kend = state_at_i_host.extent(0); k < kend;
-             ++k)
+        const auto state_at_i_host = Kokkos::subview(state_host, i, Kokkos::ALL());
+        for (ordinal_type k = 0, kend = state_at_i_host.extent(0); k < kend; ++k)
           printf(" %e", state_at_i_host(k));
         printf("\n");
       }
     }
 
     Kokkos::parallel_for(
-      Kokkos::RangePolicy<TChem::exec_space>(0, nBatch),
-      KOKKOS_LAMBDA(const ordinal_type& i) {
-        printf("Devices::Initial condition sample No %d\n", i);
-        auto state_at_i = Kokkos::subview(state, i, Kokkos::ALL());
-        for (ordinal_type k = 0, kend = state_at_i.extent(0); k < kend; ++k)
-          printf(" %e", state_at_i(k));
-        printf("\n");
-      });
+        Kokkos::RangePolicy<TChem::exec_space>(0, nBatch), KOKKOS_LAMBDA(const ordinal_type &i) {
+          printf("Devices::Initial condition sample No %d\n", i);
+          auto state_at_i = Kokkos::subview(state, i, Kokkos::ALL());
+          for (ordinal_type k = 0, kend = state_at_i.extent(0); k < kend; ++k)
+            printf(" %e", state_at_i(k));
+          printf("\n");
+        });
 
 #endif
 
     //
 
-    auto writeState = [](const ordinal_type iter,
-                         const real_type_1d_view_host _t,
-                         const real_type_1d_view_host _dt,
+    auto writeState = [](const ordinal_type iter, const real_type_1d_view_host _t, const real_type_1d_view_host _dt,
                          const real_type_2d_view_host _state_at_i,
-                         FILE* fout) { // sample, time, density, pressure,
+                         FILE *fout) { // sample, time, density, pressure,
                                        // temperature, mass fraction
       for (size_t sp = 0; sp < _state_at_i.extent(0); sp++) {
         fprintf(fout, "%d \t %15.10e \t  %15.10e \t ", iter, _t(sp), _dt(sp));
@@ -183,17 +159,10 @@ main(int argc, char* argv[])
 
     };
 
-    auto printState = [](const time_advance_type _tadv,
-                         const real_type _t,
-                         const real_type_1d_view_host _state_at_i) {
+    auto printState = [](const time_advance_type _tadv, const real_type _t, const real_type_1d_view_host _state_at_i) {
 #if defined(TCHEM_EXAMPLE_IGNITIONZEROD_QOI_PRINT)
       /// iter, t, dt, rho, pres, temp, Ys ....
-      printf("%e %e %e %e %e",
-             _t,
-             _t - _tadv._tbeg,
-             _state_at_i(0),
-             _state_at_i(1),
-             _state_at_i(2));
+      printf("%e %e %e %e %e", _t, _t - _tadv._tbeg, _state_at_i(0), _state_at_i(1), _state_at_i(2));
       for (ordinal_type k = 3, kend = _state_at_i.extent(0); k < kend; ++k)
         printf(" %e", _state_at_i(k));
       printf("\n");
@@ -204,8 +173,7 @@ main(int argc, char* argv[])
     {
       const auto exec_space_instance = TChem::exec_space();
 
-      using policy_type =
-        typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
+      using policy_type = typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
 
       /// team policy
       policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
@@ -219,8 +187,7 @@ main(int argc, char* argv[])
 
       per_team_extent = TChem::AtmosphericChemistry::getWorkSpaceSize(kmcd);
 
-      const ordinal_type per_team_scratch =
-        TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+      const ordinal_type per_team_scratch = TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
       policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
 
       { /// time integration
@@ -240,12 +207,10 @@ main(int argc, char* argv[])
         using problem_type = TChem::Impl::AtmosphericChemistry_Problem<real_type, device_type>;
         number_of_equations = problem_type::getNumberOfTimeODEs(kmcd);
 
-        real_type_2d_view tol_time(
-          "tol time", number_of_equations, 2);
+        real_type_2d_view tol_time("tol time", number_of_equations, 2);
         real_type_1d_view tol_newton("tol newton", 2);
 
-        real_type_2d_view fac(
-          "fac", nBatch, number_of_equations);
+        real_type_2d_view fac("fac", nBatch, number_of_equations);
 
         /// tune tolerence
         {
@@ -271,8 +236,7 @@ main(int argc, char* argv[])
         tadv_default._dtmin = dtmin;
         tadv_default._dtmax = dtmax;
         tadv_default._max_num_newton_iterations = max_num_newton_iterations;
-        tadv_default._num_time_iterations_per_interval =
-          num_time_iterations_per_interval;
+        tadv_default._num_time_iterations_per_interval = num_time_iterations_per_interval;
         tadv_default._jacobian_interval = jacobian_interval;
 
         time_advance_type_1d_view tadv("tadv", nBatch);
@@ -299,16 +263,11 @@ main(int argc, char* argv[])
         }
 #endif
 
-
         Kokkos::deep_copy(dt_host, dt);
         Kokkos::deep_copy(t_host, t);
 
         fprintf(fout, "%s \t %s \t %s \t ", "iter", "t", "dt");
-        fprintf(fout,
-                  "%s \t %s \t %s \t",
-                  "Density[kg/m3]",
-                  "Pressure[Pascal]",
-                  "Temperature[K]");
+        fprintf(fout, "%s \t %s \t %s \t", "Density[kg/m3]", "Pressure[Pascal]", "Temperature[K]");
 
         for (ordinal_type k = 0; k < kmcd.nSpec; k++)
           fprintf(fout, "%s \t", &speciesNamesHost(k, 0));
@@ -316,10 +275,10 @@ main(int argc, char* argv[])
         writeState(-1, t_host, dt_host, state_host, fout);
 
         real_type tsum(0);
-        for (; iter < max_num_time_iterations && tsum <= tend*0.9999; ++iter) {
+        for (; iter < max_num_time_iterations && tsum <= tend * 0.9999; ++iter) {
 
-          TChem::AtmosphericChemistry::runDeviceBatch(
-            policy, tol_newton, tol_time, fac, tadv, state, t, dt, state, kmcd);
+          TChem::AtmosphericChemistry::runDeviceBatch(policy, tol_newton, tol_time, fac, tadv, state, t, dt, state,
+                                                      kmcd);
 
 #if defined(TCHEM_EXAMPLE_IGNITIONZEROD_QOI_PRINT)
           {
@@ -340,15 +299,15 @@ main(int argc, char* argv[])
           /// carry over time and dt computed in this step
           tsum = zero;
           Kokkos::parallel_reduce(
-            Kokkos::RangePolicy<TChem::exec_space>(0, nBatch),
-            KOKKOS_LAMBDA(const ordinal_type& i, real_type& update) {
-              tadv(i)._tbeg = t(i);
-              tadv(i)._dt = dt(i);
-              // printf("t %e, dt %e\n", t(i), dt(i));
-              // printf("tadv t %e, tadv dt %e\n", tadv(i)._tbeg, tadv(i)._dt );
-              update += t(i);
-            },
-            tsum);
+              Kokkos::RangePolicy<TChem::exec_space>(0, nBatch),
+              KOKKOS_LAMBDA(const ordinal_type &i, real_type &update) {
+                tadv(i)._tbeg = t(i);
+                tadv(i)._dt = dt(i);
+                // printf("t %e, dt %e\n", t(i), dt(i));
+                // printf("tadv t %e, tadv dt %e\n", tadv(i)._tbeg, tadv(i)._dt );
+                update += t(i);
+              },
+              tsum);
           Kokkos::fence();
           tsum /= nBatch;
         }
@@ -357,20 +316,17 @@ main(int argc, char* argv[])
     Kokkos::fence(); /// timing purpose
     const real_type t_device_batch = timer.seconds();
 
-    printf("Time ignition  %e [sec] %e [sec/sample]\n",
-           t_device_batch,
-           t_device_batch / real_type(nBatch));
+    printf("Time ignition  %e [sec] %e [sec/sample]\n", t_device_batch, t_device_batch / real_type(nBatch));
 
 #if defined(TCHEM_EXAMPLE_IGNITIONZEROD_QOI_PRINT)
     Kokkos::parallel_for(
-      Kokkos::RangePolicy<TChem::exec_space>(0, nBatch),
-      KOKKOS_LAMBDA(const ordinal_type& i) {
-        printf("Devices:: Solution sample No %d\n", i);
-        auto state_at_i = Kokkos::subview(state, i, Kokkos::ALL());
-        for (ordinal_type k = 0, kend = state_at_i.extent(0); k < kend; ++k)
-          printf(" %e", state_at_i(k));
-        printf("\n");
-      });
+        Kokkos::RangePolicy<TChem::exec_space>(0, nBatch), KOKKOS_LAMBDA(const ordinal_type &i) {
+          printf("Devices:: Solution sample No %d\n", i);
+          auto state_at_i = Kokkos::subview(state, i, Kokkos::ALL());
+          for (ordinal_type k = 0, kend = state_at_i.extent(0); k < kend; ++k)
+            printf(" %e", state_at_i(k));
+          printf("\n");
+        });
 #endif
 
     fclose(fout);
@@ -378,7 +334,7 @@ main(int argc, char* argv[])
   Kokkos::finalize();
 
 #else
-  printf("This example requires Yaml ...\n" );
+  printf("This example requires Yaml ...\n");
 #endif
 
   return 0;

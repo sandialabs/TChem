@@ -32,6 +32,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_EntropyMass.hpp"
 #include "TChem_GkSurfGas.hpp"
 #include "TChem_IgnitionZeroD.hpp"
+#include "TChem_ConstantVolumeIgnitionReactor.hpp"
 #include "TChem_IgnitionZeroDNumJacobian.hpp"
 #include "TChem_IgnitionZeroDNumJacobianFwd.hpp"
 #include "TChem_IgnitionZeroD_SacadoJacobian.hpp"

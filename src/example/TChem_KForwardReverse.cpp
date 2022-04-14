@@ -189,7 +189,9 @@ main(int argc, char* argv[])
     if (team_size > 0 && vector_size > 0) {
       policy = policy_type(exec_space_instance, nBatch, team_size, vector_size);
     }
-    const ordinal_type per_team_extent = 3*kmcd.nSpec + kmcd.nReac * 2;
+    const ordinal_type work_kfor_rev_size =
+    TChem::Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+    const ordinal_type per_team_extent = 3 * kmcd.nSpec + 2 * kmcd.nReac +  work_kfor_rev_size;
 
     const ordinal_type per_team_scratch =
       TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
@@ -233,8 +235,12 @@ main(int argc, char* argv[])
           w += kmcd_at_i.nSpec;
           auto cpks = real_type_1d_view(w, kmcd_at_i.nSpec);
           w += kmcd_at_i.nSpec;
-          auto iter = real_type_1d_view(w, kmcd_at_i.nReac * 2);
+          auto work_kfor_rev = real_type_1d_view(w, work_kfor_rev_size);
+          w += work_kfor_rev_size;
+          auto iter_real_type = real_type_1d_view(w, kmcd_at_i.nReac * 2);
           w += kmcd_at_i.nReac * 2;
+          auto ww =  (ordinal_type*)iter_real_type.data();
+          auto iter = ordinal_type_1d_view(ww,iter_real_type.span());
 
 
           Impl::GkFcn<real_type, device_type>::team_invoke(member,
@@ -247,7 +253,7 @@ main(int argc, char* argv[])
 
 
           Impl::KForwardReverse<real_type, device_type> ::team_invoke(
-            member, t, p, gk, kfor_at_i, krev_at_i, iter, kmcd_at_i);
+            member, t, p, gk, kfor_at_i, krev_at_i, iter, work_kfor_rev, kmcd_at_i);
         }
       });
     Kokkos::Profiling::popRegion();

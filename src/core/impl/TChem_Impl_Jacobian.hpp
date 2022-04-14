@@ -89,9 +89,11 @@ struct Jacobian
     const RealType1DViewType& PrDer,
     const RealType1DViewType& team_sum,
     const OrdinalType1DViewType& iter,
+    const RealType1DViewType& work_kfor_rev,
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
+
     using kmcd_type = KineticModelConstDataType;
     using device_type = typename kmcd_type::device_type;
     using Gk = GkFcn<real_type,device_type>;
@@ -148,7 +150,7 @@ struct Jacobian
     member.team_barrier();
 
     /// compute forward and reverse rate constants
-    KForwardReverse::team_invoke(member, t, p, gk, kfor, krev, iter, kmcd);
+    KForwardReverse::team_invoke(member, t, p, gk, kfor, krev, iter, work_kfor_rev, kmcd);
     KForwardReverseDerivative::team_invoke(
       member, t, p, kforp, krevp, gkp, iter, kmcd);
     member.team_barrier();
@@ -546,6 +548,7 @@ struct Jacobian
     const RealType1DViewType team_sum = RealType1DViewType(w, 4);
     w += 4;
 
+
     /// iteration workspace
     const ordinal_type iter_size =
       (kmcd.nSpec > kmcd.nReac ? kmcd.nSpec : kmcd.nReac) * 2;
@@ -554,6 +557,14 @@ struct Jacobian
                                    typename WorkViewType::memory_space>(
       (ordinal_type*)w, iter_size);
     w += iter_size;
+
+    using kmcd_type = KineticModelConstDataType;
+    using device_type = typename kmcd_type::device_type;
+
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd) ;
+    auto work_kfor_rev = RealType1DViewType(w, work_kfor_rev_size);
+    w += work_kfor_rev_size;
 
     team_invoke_detail(control,
                        member,
@@ -579,6 +590,7 @@ struct Jacobian
                        PrDer,
                        team_sum,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
 };

@@ -21,6 +21,7 @@ Sandia National Laboratories, Livermore, CA, USA
 #ifndef __TCHEM_JACOBIAN_HPP__
 #define __TCHEM_JACOBIAN_HPP__
 
+#include "TChem_Impl_Jacobian.hpp"
 #include "TChem_KineticModelData.hpp"
 #include "TChem_Util.hpp"
 
@@ -54,7 +55,11 @@ struct Jacobian
   {
     const ordinal_type iter_size =
       (kmcd.nSpec > kmcd.nReac ? kmcd.nSpec : kmcd.nReac) * 2;
-    return (6 * kmcd.nSpec + 10 * kmcd.nReac + 4 + iter_size);
+    //
+    const ordinal_type work_kfor_rev_size =
+    TChem::Impl::KForwardReverse<real_type,DeviceType>::getWorkSpaceSize(kmcd);
+
+    return (6 * kmcd.nSpec + 10 * kmcd.nReac + 4 + iter_size + work_kfor_rev_size);
   }
 
   static void runHostBatch( /// input

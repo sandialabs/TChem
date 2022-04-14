@@ -36,12 +36,18 @@ struct JacobianReduced
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
     const KineticModelConstDataType& kmcd)
   {
+    using kmcd_type = KineticModelConstDataType;
+    using device_type = typename kmcd_type::device_type;
+    
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+
     const ordinal_type jac_dim_full = kmcd.nSpec + 3;
     const ordinal_type iter_size =
       (kmcd.nSpec > kmcd.nReac ? kmcd.nSpec : kmcd.nReac) * 2;
     const ordinal_type workspace_size =
       (jac_dim_full * jac_dim_full + 7 * kmcd.nSpec + 8 * kmcd.nReac +
-       iter_size + 4);
+       iter_size + 4 + work_kfor_rev_size);
     return workspace_size;
   }
 
@@ -85,6 +91,7 @@ struct JacobianReduced
     const RealType1DViewType& PrDer,
     const RealType1DViewType& team_sum,
     const OrdinalType1DViewType& iter,
+    const RealType1DViewType& work_kfor_rev,
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
@@ -122,6 +129,7 @@ struct JacobianReduced
                                  PrDer,
                                  team_sum,
                                  iter,
+                                 work_kfor_rev,
                                  kmcd);
     member.team_barrier();
 
@@ -242,6 +250,14 @@ struct JacobianReduced
       (ordinal_type*)w, iter_size);
     w += iter_size;
 
+    using kmcd_type = KineticModelConstDataType;
+    using device_type = typename kmcd_type::device_type;
+
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd) - iter_size;
+    auto work_kfor_rev = RealType1DViewType(w, work_kfor_rev_size);
+    w += work_kfor_rev_size;
+
     team_invoke_detail(member,
                        t,
                        p,
@@ -266,6 +282,7 @@ struct JacobianReduced
                        PrDer,
                        team_sum,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
 };

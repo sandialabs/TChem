@@ -18,10 +18,6 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-#include "TChem_Util.hpp"
-
-#include "TChem_Impl_Jacobian.hpp"
-
 #include "TChem_Jacobian.hpp"
 
 namespace TChem {
@@ -82,11 +78,13 @@ struct Functor
     TCHEM_CHECK_ERROR(!sv_at_i.isValid(),
                       "Error: input state vector is not valid");
     {
+      auto w = (real_type*)work.data();
+      auto ww = func_real_type_1d_view(w, per_team_extent);
       const real_type t = sv_at_i.Temperature();
       const real_type p = sv_at_i.Pressure();
       const func_real_type_1d_view Xc = sv_at_i.MassFractions();
       Impl::Jacobian::team_invoke(
-        control, member, t, p, Xc, jac_at_i, work, kmcd);
+        control, member, t, p, Xc, jac_at_i, ww, kmcd);
     }
   }
 };

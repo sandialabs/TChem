@@ -47,7 +47,9 @@ struct KForwardReverse
   static inline ordinal_type getWorkSpaceSize(
     const KineticModelConstData<DeviceType>& kmcd)
   {
-    return 3 * kmcd.nSpec + kmcd.nReac * 2;
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,DeviceType>::getWorkSpaceSize(kmcd);
+    return 3 * kmcd.nSpec + 2 * kmcd.nReac + work_kfor_rev_size;
   }
 
   static void runDeviceBatch( /// input

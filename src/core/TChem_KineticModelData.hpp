@@ -191,9 +191,16 @@ namespace TChem {
 
     /* Reaction data */
     /* is reaction reversible ? */
-    ordinal_type nReac_;
+    ordinal_type nReac_{0};
 
     ordinal_type_1d_dual_view sCharge_, sTfit_, sPhase_;
+    // parameters such ranges and reaction index
+    chebyshev_reaction_type_1d_dual_view ChebyshevCoef_;
+    // data or coefficients
+    real_type_2d_dual_view Chebyshev_data_;
+    ordinal_type Chebyshev_max_nrows_{0};
+
+    ordinal_type_1d_dual_view reactionType_;
 
     void allocateViews(FILE* errfile);
     void syncToDevice();
@@ -237,6 +244,7 @@ namespace TChem {
     emission_source_type_1d_dual_view EmissionCoef_;
     ordinal_type  nConstSpec_;
     real_type CONV_PPM_;
+    ordinal_type_1d_dual_view convExponent_;
 
     void syncSurfToDevice();
     void allocateViewsSurf(FILE* errfile);

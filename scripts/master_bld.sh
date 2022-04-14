@@ -29,6 +29,11 @@ REPO_BASE=${PWD}/repos
 BUILD_BASE=${PWD}/build
 INSTALL_BASE=${PWD}/install
 
+# Flag to create and install TChem main executable that uses/produces inputs/ouputs in json-format file.
+# set ON to enable MAIN code, but it requires Boost 1.75.
+TCHEM_ENABLE_MAIN=ON
+
+
 # User configuration  -- end
 #=======================================================================================
 
@@ -184,6 +189,7 @@ cmake \
     -D TCHEM_ENABLE_TEST=ON \
     -D TCHEM_ENABLE_EXAMPLE=ON \
     -D TCHEM_ENABLE_PYTHON=OFF \
+    -D TCHEM_ENABLE_MAIN=${TCHEM_ENABLE_MAIN} \
     -D TCHEM_ENABLE_SACADO_JACOBIAN_TRANSIENT_CONT_STIRRED_TANK_REACTOR=OFF \
     -D TCHEM_ENABLE_NUMERICAL_JACOBIAN_IGNITION_ZERO_D_REACTOR=OFF \
     -D TCHEM_ENABLE_SACADO_JACOBIAN_CONSTANT_VOLUME_IGNITION_REACTOR=OFF \
@@ -195,7 +201,7 @@ cmake \
     ${TCHEM_REPOSITORY_PATH}/src
 make ${JFLAG} install
 }
-# yaml 
+# yaml
 get_yaml (){
 echo "get gtest:"
 if [ -d "${YAML_REPOSITORY_PATH}" ] && [ "$(ls -A ${YAML_REPOSITORY_PATH})" ]; then

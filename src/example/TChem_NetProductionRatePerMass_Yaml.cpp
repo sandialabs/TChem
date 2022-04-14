@@ -18,9 +18,9 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
-#include "TChem_NetProductionRatePerMass.hpp"
+// #include "TChem_NetProductionRatePerMass.hpp"
 #include "TChem_CommandLineParser.hpp"
-#include "TChem_KineticModelData.hpp"
+#include "TChem.hpp"
 #include "TChem_Util.hpp"
 
 using ordinal_type = TChem::ordinal_type;
@@ -63,11 +63,11 @@ main(int argc, char* argv[])
     "team_thread_size", "time thread size ", &team_size);
   //
   opts.set_option<int>(
-    "vector_thread_size", "vector thread size ", &vector_size);  
+    "vector_thread_size", "vector thread size ", &vector_size);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
   opts.set_option<bool>(
-    "useYaml", "If true, use yaml to parse input file", &useYaml);
+    "use-yaml-parser", "If true, use yaml to parse input file", &useYaml);
   opts.set_option<bool>(
     "use_sample_format", "If true, input file does not header or format", &use_sample_format);
 
@@ -171,6 +171,67 @@ main(int argc, char* argv[])
     TChem::NetProductionRatePerMass::runDeviceBatch(policy, state, omega, kmcd);
     Kokkos::fence(); /// timing purpose
     const real_type t_device_batch = timer.seconds();
+
+    {
+      policy_type policy_kfwd_krev(exec_space_instance, nBatch, Kokkos::AUTO());
+      const ordinal_type level = 1;
+
+      const ordinal_type per_team_extent = TChem::KForwardReverse::getWorkSpaceSize(kmcd);
+      ordinal_type per_team_scratch =
+        TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+      policy_kfwd_krev.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+      real_type_2d_view kfor("NetProductionRatePerMass", nBatch, kmcd.nReac);
+      real_type_2d_view krev("NetProductionRatePerMass", nBatch, kmcd.nReac);
+      TChem::KForwardReverse::runDeviceBatch(policy_kfwd_krev, state, kfor,  krev, kmcd);
+
+      if (verbose) {
+        auto kfor_host = Kokkos::create_mirror_view(kfor);
+        Kokkos::deep_copy(kfor_host, kfor);
+
+        auto krev_host = Kokkos::create_mirror_view(krev);
+        Kokkos::deep_copy(krev_host, krev);
+
+        auto kfor_host_at_0 = Kokkos::subview(kfor_host, 0, Kokkos::ALL());
+        TChem::Test::writeReactionRates("kfwd_"+outputFile, kmcd.nReac, kfor_host_at_0);
+
+        auto krev_host_at_0 = Kokkos::subview(krev_host, 0, Kokkos::ALL());
+        TChem::Test::writeReactionRates("krev_"+outputFile, kmcd.nReac, krev_host_at_0);
+      }
+    }
+
+    {
+
+      policy_type policy_rop(exec_space_instance, nBatch, Kokkos::AUTO());
+      const ordinal_type level = 1;
+
+      const ordinal_type per_team_extent = TChem::RateOfProgress::getWorkSpaceSize(kmcd);
+      ordinal_type per_team_scratch =
+        TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+      policy_rop.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+      real_type_2d_view RoPFor("Rate of progress fwd", nBatch, kmcd.nReac);
+      real_type_2d_view RoPRev("Rate of progress rev", nBatch, kmcd.nReac);
+
+      TChem::RateOfProgress::runDeviceBatch( policy_rop,
+                      state,
+                      RoPFor,
+                      RoPRev,
+                      kmcd);
+
+      if (verbose) {
+        auto RoPFor_host = Kokkos::create_mirror_view(RoPFor);
+        Kokkos::deep_copy(RoPFor_host, RoPFor);
+
+        auto RoPRev_host = Kokkos::create_mirror_view(RoPRev);
+        Kokkos::deep_copy(RoPRev_host, RoPRev);
+
+        auto RoPFor_host_at_0 = Kokkos::subview(RoPFor_host, 0, Kokkos::ALL());
+        TChem::Test::writeReactionRates("ropfwd_"+outputFile, kmcd.nReac, RoPFor_host_at_0);
+
+        auto RoPRev_host_at_0 = Kokkos::subview(RoPRev_host, 0, Kokkos::ALL());
+        TChem::Test::writeReactionRates("roprev_"+outputFile, kmcd.nReac, RoPRev_host_at_0);
+      }
+
+    }
 
     /// show time
     printf("---------------------------------------------------\n");

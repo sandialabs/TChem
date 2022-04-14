@@ -68,9 +68,12 @@ NetProductionRatePerMole::runHostBatch( /// input
         const real_type p = sv_at_i.Pressure();
         const real_type density = sv_at_i.Density();
 
+        auto w = work.data();
+        auto ww = real_type_1d_view_host_type(w, work.span());
+
         const real_type_1d_view_host_type Xc = sv_at_i.MassFractions();
         Impl::ReactionRates<real_type, host_device_type >::team_invoke(
-          member, t, p, density, Xc, omega_at_i, work, kmcd);
+          member, t, p, density, Xc, omega_at_i, ww, kmcd);
       }
     });
   Kokkos::Profiling::popRegion();
@@ -118,8 +121,11 @@ NetProductionRatePerMole::runDeviceBatch( /// input
         const real_type p = sv_at_i.Pressure();
         const real_type density = sv_at_i.Density();
         const real_type_1d_view_type Xc = sv_at_i.MassFractions();
+        auto w = work.data();
+        auto ww = real_type_1d_view_type(w, work.span());
+
         Impl::ReactionRates<real_type, device_type >::team_invoke(
-          member, t, p, density, Xc, omega_at_i, work, kmcd);
+          member, t, p, density, Xc, omega_at_i, ww, kmcd);
 
         member.team_barrier();
 

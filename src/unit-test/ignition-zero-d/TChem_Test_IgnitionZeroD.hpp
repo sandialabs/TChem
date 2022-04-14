@@ -57,4 +57,46 @@ TEST(IgnitionZeroD, single)
 
 }
 
+TEST(SourceAndJacobians, single)
+{
+  std::string exec="../../example/TChem_IgnitionZeroD_Jacobians.x";
+  std::string prefixPath="../../example/data/ignition-zero-d/gri3.0/";
+
+  std::string chemfile(prefixPath + "chem.inp");
+  std::string thermfile(prefixPath + "therm.dat");
+  std::string inputfile(prefixPath + "inputGas.dat");
+  std::string outputfile("ign_zero_d.dat");
+
+  std::string invoke = (exec +
+                        " --batchsize=1"+
+                        " --outputfile="+outputfile +
+                        " --verbose=true" +
+                        " --use-sample-format=false"+
+                        " --output-file-times=_wall_times.dat" +
+                        " --chemfile="  + chemfile +
+                        " --thermfile=" + thermfile +
+                        " --inputfile=" + inputfile);
+
+  const auto invoke_c_str = invoke.c_str();
+  printf("testing : %s\n", invoke_c_str);
+  std::system(invoke_c_str);
+
+  // /// compare with ref
+  EXPECT_TRUE(TChem::Test::compareFilesValues("source_term_ign_zero_d.dat",
+					"reference/source_term_ign_zero_d.dat"));
+  //
+  EXPECT_TRUE(TChem::Test::compareFilesValues("analytic_Jacobian_ign_zero_d.dat",
+					"reference/analytic_Jacobian_ign_zero_d.dat"));
+  //
+  EXPECT_TRUE(TChem::Test::compareFilesValues("numerical_Jacobian_ign_zero_d.dat",
+					"reference/numerical_Jacobian_ign_zero_d.dat"));
+  //
+  EXPECT_TRUE(TChem::Test::compareFilesValues("sacado_Jacobian_ign_zero_d.dat",
+					"reference/sacado_Jacobian_ign_zero_d.dat"));
+  //
+  EXPECT_TRUE(TChem::Test::compareFilesValues("numerical_Jacobian_fwd_ign_zero_d.dat",
+					"reference/numerical_Jacobian_fwd_ign_zero_d.dat"));
+
+}
+
 #endif

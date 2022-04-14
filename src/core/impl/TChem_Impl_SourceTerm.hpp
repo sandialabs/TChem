@@ -52,8 +52,12 @@ struct SourceTerm
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
     const kinetic_model_type& kmcd)
   {
+
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+
     const ordinal_type len = ats<value_type>::sacadoStorageCapacity();
-    const ordinal_type workspace_size = (4 * kmcd.nSpec + 6 * kmcd.nReac)*len + 2*kmcd.nReac;
+    const ordinal_type workspace_size = (4 * kmcd.nSpec + 6 * kmcd.nReac + work_kfor_rev_size)*len + 2*kmcd.nReac;
     return workspace_size;
   }
 
@@ -86,6 +90,7 @@ struct SourceTerm
     const value_type_1d_view_type& ropRev,
     const value_type_1d_view_type& Crnd,
     const ordinary_type_1d_view_type& iter,
+    const value_type_1d_view_type& work_kfor_rev,
     /// const input from kinetic model
     const kinetic_model_type& kmcd)
   {
@@ -117,13 +122,14 @@ struct SourceTerm
                                        ropRev,
                                        Crnd,
                                        iter,
+                                       work_kfor_rev,
                                        kmcd);
 
     // Kokkos::single(Kokkos::PerTeam(member), [=]() {
     //     if (member.league_rank() == 0) {
-    //       printf("omega %e, %e, %e\n", 
-    //              Tines::ats<value_type>::sacadoScalarValue(omega(0)), 
-    //              Tines::ats<value_type>::sacadoScalarValue(omega(1)), 
+    //       printf("omega %e, %e, %e\n",
+    //              Tines::ats<value_type>::sacadoScalarValue(omega(0)),
+    //              Tines::ats<value_type>::sacadoScalarValue(omega(1)),
     //              Tines::ats<value_type>::sacadoScalarValue(omega(2)));
     //     }
     //   });
@@ -140,8 +146,8 @@ struct SourceTerm
     {
       const value_type orho = one / rhomix;
       Kokkos::parallel_for(Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nSpec),
-                           [&](const ordinal_type& i) { 
-                             omega(i) *= orho; 
+                           [&](const ordinal_type& i) {
+                             omega(i) *= orho;
                              if (i == 0 ) {
                                omega_t(0) = zero;
                              }
@@ -149,7 +155,7 @@ struct SourceTerm
     }
     member.team_barrier();
 
-    /// 6. compute source term for temperature      
+    /// 6. compute source term for temperature
 #if defined(SACADO_VIEW_CUDA_HIERARCHICAL)
     Kokkos::abort("This is not ready yet");
     // {
@@ -166,7 +172,7 @@ struct SourceTerm
     //     (Tines::RangeFactory<value_type>::TeamVectorRange(member, 1),
     //      [&](const ordinal_type& dummy) {
     //       omega_t(0) = val;
-    //       omega_t(0) /= cpmix; 
+    //       omega_t(0) /= cpmix;
     //     });
     // }
 #else
@@ -177,7 +183,7 @@ struct SourceTerm
                            });
       member.team_barrier();
       Kokkos::single(Kokkos::PerTeam(member), [&]() {
-          omega_t(0) /= cpmix; 
+          omega_t(0) /= cpmix;
         });
     }
 #endif
@@ -232,6 +238,11 @@ struct SourceTerm
                              typename real_type_1d_view_type::memory_space>(
       (ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = value_type_1d_view_type(w, work_kfor_rev_size, sacadoStorageDimension);
+    w += work_kfor_rev_size*len;
+
 
     using range_type = Kokkos::pair<ordinal_type, ordinal_type>;
 
@@ -256,6 +267,7 @@ struct SourceTerm
                        ropRev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
 
@@ -312,6 +324,11 @@ struct SourceTerm
       (ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = real_type_1d_view_type(w, work_kfor_rev_size);
+    w += work_kfor_rev_size;
+
     auto omega_t = real_type_1d_view_type(omega.data(), 1);
     auto omega_s = real_type_1d_view_type(omega.data() + 1, kmcd.nSpec);
 
@@ -333,6 +350,7 @@ struct SourceTerm
                        ropRev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
 };

@@ -60,7 +60,10 @@ struct ReactionRates
   KOKKOS_INLINE_FUNCTION static ordinal_type getWorkSpaceSize(
     const kinetic_model_type& kmcd)
   {
-    return (4 * kmcd.nSpec + 8 * kmcd.nReac);
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+
+    return (4 * kmcd.nSpec + 8 * kmcd.nReac + work_kfor_rev_size);
   }
 
   template<typename MemberType>
@@ -85,6 +88,7 @@ struct ReactionRates
     const value_type_1d_view_type& ropRev,
     const value_type_1d_view_type& Crnd,
     const ordinary_type_1d_view_type& iter,
+    const value_type_1d_view_type& work_kfor_rev,
     /// const input from kinetic model
     const kinetic_model_type& kmcd)
   {
@@ -114,6 +118,7 @@ struct ReactionRates
                                   kfor,
                                   krev, /// output
                                   iter,
+                                  work_kfor_rev,
                                   kmcd);
 
     ///
@@ -175,7 +180,7 @@ struct ReactionRates
     Kokkos::abort("This is not ready yet");
 #else
     Kokkos::parallel_for
-      (Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac), 
+      (Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcd.nReac),
        [&](const ordinal_type& i) {
         ropFor(i) -= ropRev(i);
         ropFor(i) *= Crnd(i);
@@ -287,6 +292,11 @@ struct ReactionRates
     auto iter = ordinary_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<value_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = value_type_1d_view_type(w, work_kfor_rev_size, sacadoStorageDimension);
+    w += work_kfor_rev_size*len;
+
     team_invoke_detail(member,
                        t,
                        p,
@@ -304,11 +314,11 @@ struct ReactionRates
                        ropRev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
 
-  template<typename MemberType,
-           typename WorkViewType>
+  template<typename MemberType>
   KOKKOS_FORCEINLINE_FUNCTION static void team_invoke(
     const MemberType& member,
     /// input
@@ -319,7 +329,7 @@ struct ReactionRates
     /// output
     const real_type_1d_view_type& omega, /// (kmcd.nSpec)
     /// workspace
-    const WorkViewType& work,
+    const real_type_1d_view_type& work,
     /// kmcd.nSpec(4) : concX,gk,hks,cpks,
     /// kmcd.nReac(5) : concM,kfor,krev,rop,Crnd
     /// const input from kinetic model
@@ -357,6 +367,11 @@ struct ReactionRates
     auto iter = ordinary_type_1d_view_type((ordinal_type*)w, kmcd.nReac * 2);
     w += kmcd.nReac * 2;
 
+    const ordinal_type work_kfor_rev_size =
+    Impl::KForwardReverse<real_type,device_type>::getWorkSpaceSize(kmcd);
+    auto work_kfor_rev = real_type_1d_view_type(w, work_kfor_rev_size);
+    w += work_kfor_rev_size;
+
     team_invoke_detail(member,
                        t,
                        p,
@@ -374,6 +389,7 @@ struct ReactionRates
                        ropRev,
                        Crnd,
                        iter,
+                       work_kfor_rev,
                        kmcd);
   }
 };

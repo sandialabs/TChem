@@ -124,7 +124,7 @@ struct KForwardReverse
             // printf("reacPlogPars %e log %e\n",kmcd.reacPlogPars(idx,0), logP );
             if (logP <= kmcd.reacPlogPars(idx, 0)) {
 
-              kfor(i) += rpp(1)*ats<value_type>::exp(rpp(2) * tln - rpp(3) * t_1);
+              kfor(i) = rpp(1)*ats<value_type>::exp(rpp(2) * tln - rpp(3) * t_1);
               // printf("lowest  iplog %d A %e b %e E %e p %e\n", iplog, rpp(1), rpp(2), rpp(3), rpp(0) );
 
               // check if there are intervale with same pressure

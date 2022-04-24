@@ -1,7 +1,7 @@
 (2022-14-04)
 1. Fix error in atmospheric implementation.
 2. TLA implementation of reaction rates.
-3. Add Chebychev reaction type. 
+3. Add Chebyshev reaction type.
 4. TChem main executable.
 
 Version 2.3.0 (2021-09-02)

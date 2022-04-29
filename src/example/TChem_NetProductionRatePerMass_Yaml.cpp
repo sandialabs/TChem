@@ -19,8 +19,8 @@ Questions? Contact Cosmin Safta at <csafta@sandia.gov>, or
 Sandia National Laboratories, Livermore, CA, USA
 ===================================================================================== */
 // #include "TChem_NetProductionRatePerMass.hpp"
-#include "TChem_CommandLineParser.hpp"
 #include "TChem.hpp"
+#include "TChem_CommandLineParser.hpp"
 #include "TChem_Util.hpp"
 
 using ordinal_type = TChem::ordinal_type;
@@ -28,48 +28,34 @@ using real_type = TChem::real_type;
 using real_type_1d_view = TChem::real_type_1d_view;
 using real_type_2d_view = TChem::real_type_2d_view;
 
-int
-main(int argc, char* argv[])
-{
-  #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+int main(int argc, char *argv[]) {
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
   /// default inputs
   std::string prefixPath("data/reaction-rates/");
   std::string chemFile(prefixPath + "chem.inp");
   std::string inputFile(prefixPath + "input.dat");
   std::string outputFile(prefixPath + "omega.dat");
   std::string thermFile(prefixPath + "therm.dat");
-  int nBatch(1), team_size(-1), vector_size(-1);;
+  int nBatch(1), team_size(-1), vector_size(-1);
+  ;
   bool verbose(true);
   bool useYaml(true);
   bool use_sample_format(false);
 
   /// parse command line arguments
-  TChem::CommandLineParser opts(
-    "This example computes reaction rates with a given state vector");
-  opts.set_option<std::string>(
-    "chemfile", "Chem file name e.g., chem.yaml", &chemFile);
-  opts.set_option<std::string>(
-    "inputfile", "Input state file name e.g., input.dat", &inputFile);
-  opts.set_option<std::string>(
-    "outputfile", "Output omega file name e.g., omega.dat", &outputFile);
-  opts.set_option<std::string>(
-    "thermfile", "Therm file name e.g., therm.dat", &thermFile);
-  opts.set_option<int>(
-    "batchsize",
-    "Batchsize the same state vector described in statefile is cloned",
-    &nBatch);
+  TChem::CommandLineParser opts("This example computes reaction rates with a given state vector");
+  opts.set_option<std::string>("chemfile", "Chem file name e.g., chem.yaml", &chemFile);
+  opts.set_option<std::string>("inputfile", "Input state file name e.g., input.dat", &inputFile);
+  opts.set_option<std::string>("outputfile", "Output omega file name e.g., omega.dat", &outputFile);
+  opts.set_option<std::string>("thermfile", "Therm file name e.g., therm.dat", &thermFile);
+  opts.set_option<int>("batchsize", "Batchsize the same state vector described in statefile is cloned", &nBatch);
   //
-  opts.set_option<int>(
-    "team_thread_size", "time thread size ", &team_size);
+  opts.set_option<int>("team_thread_size", "time thread size ", &team_size);
   //
-  opts.set_option<int>(
-    "vector_thread_size", "vector thread size ", &vector_size);
-  opts.set_option<bool>(
-    "verbose", "If true, printout the first omega values", &verbose);
-  opts.set_option<bool>(
-    "use-yaml-parser", "If true, use yaml to parse input file", &useYaml);
-  opts.set_option<bool>(
-    "use_sample_format", "If true, input file does not header or format", &use_sample_format);
+  opts.set_option<int>("vector_thread_size", "vector thread size ", &vector_size);
+  opts.set_option<bool>("verbose", "If true, printout the first omega values", &verbose);
+  opts.set_option<bool>("use-yaml-parser", "If true, use yaml to parse input file", &useYaml);
+  opts.set_option<bool>("use_sample_format", "If true, input file does not header or format", &use_sample_format);
 
   const bool r_parse = opts.parse(argc, argv);
   if (r_parse)
@@ -92,61 +78,38 @@ main(int argc, char* argv[])
       kmd = TChem::KineticModelData(chemFile, thermFile);
     }
 
-
-    using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+    using device_type = typename Tines::UseThisDevice<exec_space>::type;
 
     const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
 
-    /// input: state vectors: temperature, pressure and mass fraction
-    real_type_2d_view state(
-      "StateVector", nBatch, TChem::Impl::getStateVectorSize(kmcd.nSpec));
-
-    /// output: omega, reaction rates
-    real_type_2d_view omega("NetProductionRatePerMass", nBatch, kmcd.nSpec);
-
-    /// create a mirror view to store input from a file
-    // auto state_host = Kokkos::create_mirror_view(state);
-
-    /// input from a file; this is not necessary as the input is created
-    /// by other applications.
-    // {
-    //   auto state_host_at_0 = Kokkos::subview(state_host, 0, Kokkos::ALL());
-    //   TChem::Test::readStateVector(inputFile, kmcd.nSpec, state_host_at_0);
-    //   TChem::Test::cloneView(state_host);
-    // }
-    const ordinal_type stateVecDim =
-      TChem::Impl::getStateVectorSize(kmcd.nSpec);
+    const ordinal_type stateVecDim = TChem::Impl::getStateVectorSize(kmcd.nSpec);
 
     real_type_2d_view_host state_host;
 
-    if (use_sample_format){
+    if (use_sample_format) {
       // read gas
       const auto speciesNamesHost = Kokkos::create_mirror_view(kmcd.speciesNames);
       Kokkos::deep_copy(speciesNamesHost, kmcd.speciesNames);
 
       // get species molecular weigths
-      const auto SpeciesMolecularWeights =
-        Kokkos::create_mirror_view(kmcd.sMass);
+      const auto SpeciesMolecularWeights = Kokkos::create_mirror_view(kmcd.sMass);
       Kokkos::deep_copy(SpeciesMolecularWeights, kmcd.sMass);
 
-      TChem::Test::readSample(inputFile,
-                              speciesNamesHost,
-                              SpeciesMolecularWeights,
-                              kmcd.nSpec,
-                              stateVecDim,
-                              state_host,
+      TChem::Test::readSample(inputFile, speciesNamesHost, SpeciesMolecularWeights, kmcd.nSpec, stateVecDim, state_host,
                               nBatch);
 
-    } else{
+    } else {
       state_host = real_type_2d_view_host("state vector host", nBatch, stateVecDim);
       auto state_host_at_0 = Kokkos::subview(state_host, 0, Kokkos::ALL());
       TChem::Test::readStateVector(inputFile, kmcd.nSpec, state_host_at_0);
       TChem::Test::cloneView(state_host);
-
     }
 
-    using policy_type =
-      typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
+    real_type_2d_view state("StateVector", nBatch, TChem::Impl::getStateVectorSize(kmcd.nSpec));
+    /// output: omega, reaction rates
+    real_type_2d_view omega("NetProductionRatePerMass", nBatch, kmcd.nSpec);
+
+    using policy_type = typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
 
     policy_type policy(exec_space_instance, nBatch, Kokkos::AUTO());
     const ordinal_type level = 1;
@@ -156,10 +119,8 @@ main(int argc, char* argv[])
     }
 
     const ordinal_type per_team_extent = NetProductionRatePerMass::getWorkSpaceSize(kmcd);
-    ordinal_type per_team_scratch =
-      TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+    ordinal_type per_team_scratch = TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
     policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
-
 
     Kokkos::Timer timer;
 
@@ -177,12 +138,11 @@ main(int argc, char* argv[])
       const ordinal_type level = 1;
 
       const ordinal_type per_team_extent = TChem::KForwardReverse::getWorkSpaceSize(kmcd);
-      ordinal_type per_team_scratch =
-        TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+      ordinal_type per_team_scratch = TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
       policy_kfwd_krev.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
       real_type_2d_view kfor("NetProductionRatePerMass", nBatch, kmcd.nReac);
       real_type_2d_view krev("NetProductionRatePerMass", nBatch, kmcd.nReac);
-      TChem::KForwardReverse::runDeviceBatch(policy_kfwd_krev, state, kfor,  krev, kmcd);
+      TChem::KForwardReverse::runDeviceBatch(policy_kfwd_krev, state, kfor, krev, kmcd);
 
       if (verbose) {
         auto kfor_host = Kokkos::create_mirror_view(kfor);
@@ -192,10 +152,10 @@ main(int argc, char* argv[])
         Kokkos::deep_copy(krev_host, krev);
 
         auto kfor_host_at_0 = Kokkos::subview(kfor_host, 0, Kokkos::ALL());
-        TChem::Test::writeReactionRates("kfwd_"+outputFile, kmcd.nReac, kfor_host_at_0);
+        TChem::Test::writeReactionRates("kfwd_" + outputFile, kmcd.nReac, kfor_host_at_0);
 
         auto krev_host_at_0 = Kokkos::subview(krev_host, 0, Kokkos::ALL());
-        TChem::Test::writeReactionRates("krev_"+outputFile, kmcd.nReac, krev_host_at_0);
+        TChem::Test::writeReactionRates("krev_" + outputFile, kmcd.nReac, krev_host_at_0);
       }
     }
 
@@ -205,17 +165,12 @@ main(int argc, char* argv[])
       const ordinal_type level = 1;
 
       const ordinal_type per_team_extent = TChem::RateOfProgress::getWorkSpaceSize(kmcd);
-      ordinal_type per_team_scratch =
-        TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+      ordinal_type per_team_scratch = TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
       policy_rop.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
       real_type_2d_view RoPFor("Rate of progress fwd", nBatch, kmcd.nReac);
       real_type_2d_view RoPRev("Rate of progress rev", nBatch, kmcd.nReac);
 
-      TChem::RateOfProgress::runDeviceBatch( policy_rop,
-                      state,
-                      RoPFor,
-                      RoPRev,
-                      kmcd);
+      TChem::RateOfProgress::runDeviceBatch(policy_rop, state, RoPFor, RoPRev, kmcd);
 
       if (verbose) {
         auto RoPFor_host = Kokkos::create_mirror_view(RoPFor);
@@ -225,29 +180,20 @@ main(int argc, char* argv[])
         Kokkos::deep_copy(RoPRev_host, RoPRev);
 
         auto RoPFor_host_at_0 = Kokkos::subview(RoPFor_host, 0, Kokkos::ALL());
-        TChem::Test::writeReactionRates("ropfwd_"+outputFile, kmcd.nReac, RoPFor_host_at_0);
+        TChem::Test::writeReactionRates("ropfwd_" + outputFile, kmcd.nReac, RoPFor_host_at_0);
 
         auto RoPRev_host_at_0 = Kokkos::subview(RoPRev_host, 0, Kokkos::ALL());
-        TChem::Test::writeReactionRates("roprev_"+outputFile, kmcd.nReac, RoPRev_host_at_0);
+        TChem::Test::writeReactionRates("roprev_" + outputFile, kmcd.nReac, RoPRev_host_at_0);
       }
-
     }
 
     /// show time
     printf("---------------------------------------------------\n");
-    printf("Testing Arguments: \n batch size %d\n chemfile %s\n inputfile %s\n outputfile %s\n verbose %s\n",
-           nBatch,
-           chemFile.c_str(),
-           inputFile.c_str(),
-	   outputFile.c_str(),
-	   verbose ? "true" : "false");
+    printf("Testing Arguments: \n batch size %d\n chemfile %s\n inputfile %s\n outputfile %s\n verbose %s\n", nBatch,
+           chemFile.c_str(), inputFile.c_str(), outputFile.c_str(), verbose ? "true" : "false");
     printf("---------------------------------------------------\n");
-    printf("Time deep copy      %e [sec] %e [sec/sample]\n",
-           t_deepcopy,
-           t_deepcopy / real_type(nBatch));
-    printf("Time reaction rates %e [sec] %e [sec/sample]\n",
-           t_device_batch,
-           t_device_batch / real_type(nBatch));
+    printf("Time deep copy      %e [sec] %e [sec/sample]\n", t_deepcopy, t_deepcopy / real_type(nBatch));
+    printf("Time reaction rates %e [sec] %e [sec/sample]\n", t_device_batch, t_device_batch / real_type(nBatch));
 
     /// create a mirror view of omeage (output) to export a file
     if (verbose) {
@@ -257,16 +203,15 @@ main(int argc, char* argv[])
       /// all values are same (print only the first one)
       {
         auto omega_host_at_0 = Kokkos::subview(omega_host, 0, Kokkos::ALL());
-        TChem::Test::writeReactionRates(
-          outputFile, kmcd.nSpec, omega_host_at_0);
+        TChem::Test::writeReactionRates(outputFile, kmcd.nSpec, omega_host_at_0);
       }
     }
   }
   Kokkos::finalize();
 
-  #else
-   printf("This example requires Yaml ...\n" );
-  #endif
+#else
+  printf("This example requires Yaml ...\n");
+#endif
 
   return 0;
 }

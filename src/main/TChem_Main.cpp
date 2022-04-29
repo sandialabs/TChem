@@ -340,6 +340,9 @@ int main(int argc, char *argv[]) {
     ordinal_type n_equations(0);
     try {
       boost::property_tree::ptree node;
+      // To DO
+      /// KK: this is no longer required since we have function evaluation output
+      ///     change required to optional; we do not do both reactor and function evaluations
       validate_required(root, "reactor", node);
       validate_required(node, "type", reactor_type_name);
 
@@ -355,6 +358,78 @@ int main(int argc, char *argv[]) {
       }
     } catch (const std::exception &e) {
       std::cerr << "Error: exception is caught parsing reactor\n" << e.what() << "\n";
+    }
+
+    ///
+    /// kintic model array (soft copy)
+    ///
+    TChem::kmd_type_1d_view_host kmds;
+    try {
+      kmds = kmd.clone(n_samples);
+    } catch (const std::exception &e) {
+      std::cerr << "Error: exception is caught creating clones of kinetic model\n" << e.what() << "\n";
+    }
+
+    ///
+    /// model variation of pre-exponential factors
+    ///
+    try {
+      boost::property_tree::ptree node;
+      if (validate_optional(root, "gas model variation", node)) {
+        std::string input_filename;
+        {
+          std::string filename;
+          validate_required(node, "file name", filename);
+          input_filename = replace_env_variable(filename);
+        }
+
+        boost::json::value jin;
+        const int r_val = parse_json(input_filename, jin);
+        TCHEM_CHECK_ERROR(r_val, "Error: fails to parse JSON");
+
+        std::vector<std::vector<real_type>> pre_exponential_factor;
+        std::vector<ordinal_type> reaction_index;
+
+        reaction_index = boost::json::value_to<std::vector<ordinal_type>>(jin.at("reaction_index"));
+        pre_exponential_factor =
+            boost::json::value_to<std::vector<std::vector<real_type>>>(jin.at("pre_exponential_factor"));
+        {
+          std::stringstream ss;
+          ss << "Error: n_samples (" << n_samples << ") does not match to model variation input ("
+             << pre_exponential_factor.size() << ")\n";
+          TCHEM_CHECK_ERROR(n_samples != pre_exponential_factor.size(), ss.str().c_str());
+        }
+
+        const ordinal_type n_reactions = reaction_index.size();
+        {
+          std::stringstream ss;
+          ss << "Error: number of modified reactions (" << n_reactions
+             << ") does not match to pre-exponential factor size (" << pre_exponential_factor[0].size() << ")\n";
+          TCHEM_CHECK_ERROR(n_reactions != pre_exponential_factor[0].size(), ss.str().c_str());
+        }
+
+        if (verbose > 0) {
+          std::cout << "number of reactions being modified: " << n_reactions << "\n";
+        }
+
+        real_type_3d_view_host factors("factors", n_samples, n_reactions, 3);
+        Kokkos::deep_copy(factors, real_type(1));
+
+        auto pre_exp_factor = Kokkos::subview(factors, Kokkos::ALL(), Kokkos::ALL(), 0);
+        // auto act_energy_factor = Kokkos::subview(factors, Kokkos::ALL(), Kokkos::ALL(), 1);
+        // auto temp_coef_factor = Kokkos::subview(factors, Kokkos::ALL(), Kokkos::ALL(), 2);
+
+        Kokkos::parallel_for(Kokkos::RangePolicy<host_exec_space>(0, n_samples * n_reactions),
+                             [&](const ordinal_type &ij) {
+                               const ordinal_type i = ij / n_reactions, j = ij % n_reactions;
+                               pre_exp_factor(i, j) = pre_exponential_factor.at(i).at(j);
+                             });
+        constexpr ordinal_type gas(0);
+        const ordinal_type_1d_view_host reaction_index_view(reaction_index.data(), n_reactions);
+        TChem::modifyArrheniusForwardParameter(kmds, gas, reaction_index_view, factors);
+      }
+    } catch (const std::exception &e) {
+      std::cerr << "Error: exception is caught reading model variation \n" << e.what() << " \n";
     }
 
     ///
@@ -606,20 +681,98 @@ int main(int argc, char *argv[]) {
       }
     };
 
+    // write generic data
+    auto write_data = [indent2, indent3](std::ofstream &ofs, const ordinal_type s, const real_type_1d_view_host &data) {
+      ofs << std::scientific << std::setprecision(15);
+      ofs << indent2 << "{\n";
+      ofs << indent3 << "\"sample\" : " << s << ",\n";
+      ofs << indent3 << "\"data\" : [ ";
+      ofs << data(0);
+      for (ordinal_type i = 1, iend = data.extent(0); i < iend; ++i)
+        ofs << "," << data(i);
+      ofs << "]\n";
+      ofs << indent2 << "},\n";
+    };
+
+    auto kmcds = TChem::createGasKineticModelConstData<device_type>(kmds);
+    using team_policy_type = typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
+
+    /// function evaluation
+    ///
+    /// evaluation of functions: source terms, jacobians, reaction constants ... mainly use for testing
+    // reaction rate constants
+    boost::property_tree::ptree node;
+    try {
+      if (validate_optional(root, "function evaluation", node)) {
+        // list of function evaluations
+        const auto exec_space_instance = exec_space();
+        team_policy_type team_policy(exec_space_instance, n_samples, Kokkos::AUTO());
+        if (team_size > 0 && vector_size > 0) {
+          team_policy = team_policy_type(exec_space_instance, n_samples, team_size, vector_size);
+        } // end team_size
+
+        boost::property_tree::ptree gas_rate_constants_node;
+        if (validate_optional(node, "gas reaction rate constants", gas_rate_constants_node)) {
+          const ordinal_type level = 1;
+          const ordinal_type per_team_extent = KForwardReverse::getWorkSpaceSize(kmcd_host);
+          const ordinal_type per_team_scratch = TChem::Scratch<real_type_1d_view>::shmem_size(per_team_extent);
+
+          real_type_3d_view kfor_krev("kfor_krev", 2, n_samples, kmcd_host.nReac);
+          const auto kfor = Kokkos::subview(kfor_krev, 0, Kokkos::ALL(), Kokkos::ALL());
+          const auto krev = Kokkos::subview(kfor_krev, 1, Kokkos::ALL(), Kokkos::ALL());
+
+          team_policy.set_scratch_size(level, Kokkos::PerTeam(per_team_scratch));
+          KForwardReverse::runDeviceBatch(team_policy, sv, kfor, krev, kmcds);
+
+          boost::property_tree::ptree output_node;
+          validate_required(gas_rate_constants_node, "output", output_node);
+          std::string filename;
+          validate_required(output_node, "file name", filename);
+          std::string output_filename = replace_env_variable(filename);
+          // if we do not want to save a file: use none for output
+          if (filename != "none") {
+            std::ofstream ofs_rrc;
+            ofs_rrc.open(output_filename);
+            {
+              std::string msg("Error: fail to open file " + output_filename);
+              TCHEM_CHECK_ERROR(!ofs_sv.is_open(), msg.c_str());
+            }
+            auto kfor_krev_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), kfor_krev);
+            ofs_rrc << "{\n";
+            ofs_rrc << indent << "\"number of samples\" :" << n_samples << ",\n";
+            ofs_rrc << indent << "\"number of reactions\" :" << kmcd_host.nReac << ",\n";
+            ofs_rrc << indent << "\"k-reverse-rate\" : [\n";
+
+            for (ordinal_type i = 0, iend = n_samples; i < iend; ++i) {
+              const real_type_1d_view_host krev_host_at_i = Kokkos::subview(kfor_krev_host, 1, i, Kokkos::ALL());
+              write_data(ofs_rrc, i, krev_host_at_i);
+            } // end samples
+            ofs_rrc << indent << "{}],\n";
+
+            ofs_rrc << indent << "\"k-forwad-rate\" : [\n";
+            for (ordinal_type i = 0, iend = n_samples; i < iend; ++i) {
+              const real_type_1d_view_host kfwd_host_at_i = Kokkos::subview(kfor_krev_host, 0, i, Kokkos::ALL());
+              write_data(ofs_rrc, i, kfwd_host_at_i);
+            } // end samples
+
+            ofs_rrc << indent << "{}]\n}\n";
+            ofs_rrc.close();
+          }
+        }
+      }
+    } catch (const std::exception &e) {
+      std::cerr << "Error: exception is caught in function evaluation \n" << e.what() << "\n";
+    }
+
     ///
     /// driver
     ///
 
     try {
-      auto kmds = kmd.clone(n_samples);
-      auto kmcds = TChem::createGasKineticModelConstData<device_type>(kmds);
-
       real_type_2d_view ign_delay_time("ignition_delay_time", 2, n_samples);
       auto ign_delay_time_host = Kokkos::create_mirror_view(ign_delay_time);
 
       Kokkos::deep_copy(ign_delay_time, real_type(-1));
-
-      using team_policy_type = typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
 
       /// team policy
       const auto exec_space_instance = exec_space();

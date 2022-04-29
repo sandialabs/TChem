@@ -1,0 +1,108 @@
+generator: ck2yaml
+input-files: [chem.inp, therm.dat]
+cantera-version: 2.5.1
+date: Sun, 24 Apr 2022 14:00:18 -0700
+
+units: {length: cm, time: s, quantity: mol, activation-energy: kcal/mol}
+
+phases:
+- name: gas
+  thermo: ideal-gas
+  elements: [H, C, O]
+  species: [pentane, C2H5, NC3H7, O2, CH3, CH3OO]
+  kinetics: gas
+  state: {T: 300.0, P: 1 atm}
+
+species:
+- name: pentane
+  composition: {C: 5, H: 12}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1393.0, 5000.0]
+    data:
+    - [-0.299552, 0.0594963, -3.41764e-05, 9.47896e-09, -9.73675e-13, -1.9896e+04,
+      27.5742]
+    - [15.8289, 0.0259345, -8.83016e-06, 1.36655e-09, -7.91029e-14, -2.59397e+04,
+      -60.5558]
+- name: C2H5
+  composition: {C: 2, H: 5}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [4.24186, -3.56905e-03, 4.82667e-05, -5.85401e-08, 2.25805e-11, 1.2969e+04,
+      4.44704]
+    - [4.32196, 0.0123931, -4.39681e-06, 7.0352e-10, -4.18435e-14, 1.21759e+04,
+      0.171104]
+- name: NC3H7
+  composition: {C: 3, H: 7}
+  thermo:
+    model: NASA7
+    temperature-ranges: [100.0, 984.47, 5000.0]
+    data:
+    - [3.02814653, 0.0147024406, 2.4050597e-05, -3.6673334e-08, 1.38609211e-11,
+      1.0512055e+04, 12.4699036]
+    - [6.16546668, 0.0184494026, -6.79026098e-06, 1.23048412e-09, -8.63859742e-14,
+      9095.04645, -6.67624892]
+- name: O2
+  composition: {O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [3.78246, -2.99673e-03, 9.8473e-06, -9.6813e-09, 3.24373e-12, -1063.94,
+      3.65768]
+    - [3.66096, 6.56366e-04, -1.4115e-07, 2.05798e-11, -1.29913e-15, -1215.98,
+      3.41536]
+- name: CH3
+  composition: {C: 1, H: 3}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [3.65718, 2.1266e-03, 5.45839e-06, -6.6181e-09, 2.46571e-12, 1.64227e+04,
+      1.67354]
+    - [2.97812, 5.79785e-03, -1.97558e-06, 3.07298e-10, -1.79174e-14, 1.65095e+04,
+      4.72248]
+- name: CH3OO
+  composition: {C: 1, H: 3, O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [298.0, 1000.0, 3000.0]
+    data:
+    - [2.93065, 8.68504e-03, 8.80315e-06, -1.39561e-08, 5.0294e-12, 227.483,
+      12.8755]
+    - [2.88425, 0.0140068, -6.88364e-06, 1.6379e-09, -1.53129e-13, -20.0433,
+      11.8153]
+
+reactions:
+- equation: pentane <=> C2H5 + NC3H7  # Reaction 1
+  type: pressure-dependent-Arrhenius
+  rate-constants:
+  - {P: 0.01 atm, A: 1.18e+96, b: -23.17, Ea: 126.046}
+  - {P: 0.01 atm, A: 1.18e+96, b: -23.17, Ea: 126.046}
+  - {P: 0.1 atm, A: 1.855e+89, b: -20.9, Ea: 125.63}
+  - {P: 1.0 atm, A: 3.55e+76, b: -17.02, Ea: 120.458}
+  - {P: 2.0 atm, A: 3.475e+71, b: -15.54, Ea: 117.854}
+  - {P: 2.0 atm, A: 3.475e+71, b: -15.54, Ea: 117.854}
+  - {P: 5.0 atm, A: 2.16e+64, b: -13.43, Ea: 113.815}
+  - {P: 10.0 atm, A: 4.55e+58, b: -11.79, Ea: 110.456}
+  - {P: 10.0 atm, A: 4.55e+58, b: -11.79, Ea: 110.456}
+  - {P: 20.0 atm, A: 1.02e+53, b: -10.15, Ea: 106.996}
+  - {P: 50.0 atm, A: 9.0e+45, b: -8.13, Ea: 102.538}
+- equation: O2 + CH3 <=> CH3OO  # Reaction 2
+  duplicate: true
+  type: pressure-dependent-Arrhenius
+  rate-constants:
+  - {P: 1.0 atm, A: 5.0e+22, b: -3.85, Ea: 2.0}
+  - {P: 10.0 atm, A: 3.35e+21, b: -3.2, Ea: 2.3}
+  - {P: 20.0 atm, A: 3.25e+29, b: -5.6, Ea: 6.85}
+  - {P: 50.0 atm, A: 2.83e+18, b: -2.2, Ea: 1.4}
+  - {P: 100.0 atm, A: 1.05e+19, b: -2.3, Ea: 1.8}
+- equation: O2 + CH3 <=> CH3OO  # Reaction 3
+  duplicate: true
+  type: pressure-dependent-Arrhenius
+  rate-constants:
+  - {P: 20.0 atm, A: 4.1e+20, b: -2.94, Ea: 1.9}
+  - {P: 50.0 atm, A: 5.6e+28, b: -5.25, Ea: 6.85}
+  - {P: 100.0 atm, A: 4.1e+30, b: -5.7, Ea: 8.75}

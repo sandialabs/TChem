@@ -180,6 +180,17 @@ int validate(boost::property_tree::ptree &tree, boost::property_tree::ptree &roo
         validate_required(sensitivity_node, "theta", theta);
       }
 
+      boost::property_tree::ptree function_evaluation_node;
+      if (validate_optional(root, "function evaluation", function_evaluation_node)) {
+        boost::property_tree::ptree gas_reaction_rates_node;
+        if (validate_optional(function_evaluation_node, "gas reaction rate constants", gas_reaction_rates_node)) {
+          boost::property_tree::ptree gas_reaction_rates_output_node;
+          validate_required(gas_reaction_rates_node, "output", gas_reaction_rates_output_node);
+          std::string file_name;
+          validate_required(gas_reaction_rates_output_node, "file name", file_name);
+        }
+      }
+
       boost::property_tree::ptree input_node;
       validate_required(root, "input", input_node);
       {

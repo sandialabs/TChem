@@ -84,4 +84,38 @@ TEST(ChebyshevReactionType, single) {
 #endif
 }
 
+TEST(PlogReactionType, single) {
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+  std::string exec = "../../example/TChem_NetProductionRatePerMass_Yaml.x";
+
+  std::string prefixPath = "inputs_plog/";
+  std::string chemFile(prefixPath + "chem.yaml");
+  std::string inputFile(prefixPath + "sample.dat");
+  std::string outputFile("net-production-rate-per-mass-plog.dat");
+  std::string invoke = (exec + " " + "--chemfile=" + chemFile + " " + "--inputfile=" + inputFile + " " +
+                        "--outputfile=" + outputFile + " " + "--use_sample_format=true --verbose=true");
+  const auto invoke_c_str = invoke.c_str();
+  printf("testing : %s\n", invoke_c_str);
+  std::system(invoke_c_str);
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("net-production-rate-per-mass-plog.dat",
+                                              prefixPath + "net-production-rate-per-mass-plog.dat"));
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("ropfwd_net-production-rate-per-mass-plog.dat",
+                                              prefixPath + "ropfwd_net-production-rate-per-mass-plog.dat"));
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("roprev_net-production-rate-per-mass-plog.dat",
+                                              prefixPath + "roprev_net-production-rate-per-mass-plog.dat"));
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("kfwd_net-production-rate-per-mass-plog.dat",
+                                              prefixPath + "kfwd_net-production-rate-per-mass-plog.dat"));
+
+  EXPECT_TRUE(TChem::Test::compareFilesValues("krev_net-production-rate-per-mass-plog.dat",
+                                              prefixPath + "krev_net-production-rate-per-mass-plog.dat"));
+
+#else
+  printf("This test requires Yaml ...\n");
+#endif
+}
+
 #endif

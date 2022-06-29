@@ -133,28 +133,39 @@ ENDIF()
 #
 # Kokkos
 #
-IF (KOKKOS_INSTALL_PATH)
-  MESSAGE(STATUS "TChem attempts to use Kokkos installed at ${KOKKOS_INSTALL_PATH}")
-  FIND_PACKAGE(Kokkos REQUIRED)
-  SET(TCHEM_INTERNAL_KOKKOS_TARGET "Kokkos::kokkos")
-  SET(TCHEM_ENABLE_TPL_KOKKOS ON CACHE BOOL "Enable Kokkos")
-  LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_KOKKOS_TARGET})
+IF(TARGET Kokkos::kokkos)
+  # check to see if kokkos was loaded in another project
+  message("Found Kokkos::kokkos target")
 ELSE()
-  MESSAGE(FATAL_ERROR "-- Kokkos install path is not provided")
+  IF (KOKKOS_INSTALL_PATH)
+    MESSAGE(STATUS "TChem attempts to use Kokkos installed at ${KOKKOS_INSTALL_PATH}")
+    FIND_PACKAGE(Kokkos REQUIRED)
+    SET(TCHEM_INTERNAL_KOKKOS_TARGET "Kokkos::kokkos")
+    SET(TCHEM_ENABLE_TPL_KOKKOS ON CACHE BOOL "Enable Kokkos")
+    LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_KOKKOS_TARGET})
+  ELSE()
+    MESSAGE(FATAL_ERROR "-- Kokkos install path is not provided")
+  ENDIF()
 ENDIF()
 
 #
 # Tines
 #
-IF (TINES_INSTALL_PATH)
-  MESSAGE(STATUS "TChem attempts to use Tines installed at ${TINES_INSTALL_PATH}")
-  FIND_PACKAGE(Tines REQUIRED)
-  SET(TCHEM_INTERNAL_TINES_TARGET "Tines::tines")
-  SET(TCHEM_ENABLE_TPL_TINES ON CACHE BOOL "Enable Tines")
-  LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_TINES_TARGET})
+IF(TARGET Tines::tines)
+  # check to see if tines was loaded in another project
+  message("Found Tines::tines target")
 ELSE()
-  MESSAGE(FATAL_ERROR "-- Tines install path is not provided")
+  IF (TINES_INSTALL_PATH)
+    MESSAGE(STATUS "TChem attempts to use Tines installed at ${TINES_INSTALL_PATH}")
+    FIND_PACKAGE(Tines REQUIRED)
+    SET(TCHEM_INTERNAL_TINES_TARGET "Tines::tines")
+    SET(TCHEM_ENABLE_TPL_TINES ON CACHE BOOL "Enable Tines")
+    LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_TINES_TARGET})
+  ELSE()
+    MESSAGE(FATAL_ERROR "-- Tines install path is not provided")
+  ENDIF()
 ENDIF()
+
 
 #
 # gtest

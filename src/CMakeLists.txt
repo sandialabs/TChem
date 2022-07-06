@@ -160,9 +160,6 @@ IF(TARGET Tines::tines)
   message("Found Tines::tines target")
   SET(TCHEM_INTERNAL_TINES_TARGET "Tines::tines")
   SET(TCHEM_ENABLE_TPL_TINES ON CACHE BOOL "Enable Tines")
-  get_target_property(tmpOutput Tines::tines INCLUDE_DIRECTORIES)
-  message(tmpOutput: ${tmpOutput})
-
   LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_TINES_TARGET})
 ELSE()
   IF (TINES_INSTALL_PATH)
@@ -225,3 +222,8 @@ ENDIF()
 IF (TCHEM_ENABLE_PYTHON)
   ADD_SUBDIRECTORY(pytchem)
 ENDIF()
+
+# add in target include for build to enable finding TChem_Config
+TARGET_INCLUDE_DIRECTORIES(tchem
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)

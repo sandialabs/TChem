@@ -42,7 +42,7 @@ OPTION(TCHEM_ENABLE_VERBOSE "Flag to enable TChem verbose flag" OFF)
 OPTION(TCHEM_ENABLE_DEBUG "Flag to enable TChem debug flag" OFF)
 OPTION(TCHEM_ENABLE_PYTHON "Flag to enable python binding" OFF)
 OPTION(TCHEM_ENABLE_FORTRAN "Flag to enable fortran binding" OFF)
-OPTION(TCHEM_ENABLE_INSTALL "Flag to enable install exports for TCHEM" OFF)
+OPTION(TCHEM_ENABLE_INSTALL "Flag to enable install exports for TCHEM" ON)
 
 OPTION(TCHEM_ENABLE_NO_NEG_CONCENTRATION_ARBITRARY_ORDER "Flag to enable no negative values of concentration only in arbitrary-order reactions" OFF)
 OPTION(TCHEM_ENABLE_PROBLEMS_NUMERICAL_JACOBIAN "Flag to enable numerical jacobian" OFF)

@@ -136,7 +136,7 @@ ENDIF()
 #
 IF(TARGET Kokkos::kokkos)
   # check to see if kokkos was loaded in another project
-  message("Found Kokkos::kokkos target")
+  message(STATUS "Found Kokkos::kokkos target")
   SET(TCHEM_INTERNAL_KOKKOS_TARGET "Kokkos::kokkos")
   SET(TCHEM_ENABLE_TPL_KOKKOS ON CACHE BOOL "Enable Kokkos")
   LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_KOKKOS_TARGET})
@@ -157,7 +157,7 @@ ENDIF()
 #
 IF(TARGET Tines::tines)
   # check to see if tines was loaded in another project
-  message("Found Tines::tines target")
+  message(STATUS "Found Tines::tines target")
   SET(TCHEM_INTERNAL_TINES_TARGET "Tines::tines")
   SET(TCHEM_ENABLE_TPL_TINES ON CACHE BOOL "Enable Tines")
   LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_TINES_TARGET})

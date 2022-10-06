@@ -1047,6 +1047,9 @@ static inline void readStateVector(const std::string &filename, const ordinal_ty
       std::stringstream ss;
       ss << "Error: filename (" << filename << ") is not open\n";
       std::logic_error(ss.str());
+      std::string error_ = "Error: filename (" + filename + ") is not open\n";
+      printf("%s\n", error_.c_str());
+      exit(-1);
     }
   } else {
     std::logic_error("Error: stateVector is not valid");

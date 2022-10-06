@@ -42,22 +42,19 @@ main(int argc, char* argv[])
   std::string thermFile(prefixPath + "therm.dat");
   std::string chemSurfFile(prefixPath + "chemSurf.inp");
   std::string thermSurfFile(prefixPath + "thermSurf.dat");
-
   std::string inputFile(prefixPath + "inputGas.dat");
-  // std::string inputFileSurf(prefixPath + "inputSurfGas.dat");
-  std::string outputFileGk(prefixPath + "gk.dat");
-  std::string outputFileGkSurf(prefixPath + "gkSurf.dat");
-  std::string outputFilehks(prefixPath + "hks.dat");
-  std::string outputFilehksSurf(prefixPath + "hksSurf.dat");
-  std::string outputFilekfor(prefixPath + "kfor.dat");
-  std::string outputFilekrev(prefixPath + "krev.dat");
+
+
 
   int nBatch(1);
   bool verbose(true);
+  bool useYaml(false);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
     "This example computes reaction rates with a given state vector");
+  opts.set_option<std::string>(
+    "prefixPath", "prefixPath", &prefixPath);
   opts.set_option<std::string>(
     "chemfile", "Chem file name e.g., chem.inp", &chemFile);
   opts.set_option<std::string>(
@@ -78,9 +75,21 @@ main(int argc, char* argv[])
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
   opts.set_option<bool>(
+    "useYaml", "If true, use yaml to parse input file", &useYaml);
+  opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
 
   const bool r_parse = opts.parse(argc, argv);
+
+
+  // std::string inputFileSurf(prefixPath + "inputSurfGas.dat");
+  std::string outputFileGk(prefixPath + "gk.dat");
+  std::string outputFileGkSurf(prefixPath + "gkSurf.dat");
+  std::string outputFilehks(prefixPath + "hks.dat");
+  std::string outputFilehksSurf(prefixPath + "hksSurf.dat");
+  std::string outputFilekfor(prefixPath + "kfor.dat");
+  std::string outputFilekrev(prefixPath + "krev.dat");
+
   if (r_parse)
     return 0; // print help return
 
@@ -94,9 +103,15 @@ main(int argc, char* argv[])
     /// construct kmd and use the view for testing
     using device_type = typename Tines::UseThisDevice<TChem::exec_space>::type;
 
-    // need to fix it
-    TChem::KineticModelData kmd(
-      chemFile, thermFile, chemSurfFile, thermSurfFile);
+    /// construct kmd and use the view for testing
+    TChem::KineticModelData kmd;
+
+    if (useYaml) {
+      kmd = TChem::KineticModelData(chemFile, true);
+    } else {
+      kmd = TChem::KineticModelData(chemFile, thermFile, chemSurfFile, thermSurfFile);
+    }
+
     const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
     const auto kmcdSurf = TChem::createSurfaceKineticModelConstData<device_type>(kmd);
 

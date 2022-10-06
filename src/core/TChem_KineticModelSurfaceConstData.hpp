@@ -91,6 +91,17 @@ namespace TChem {
 
     real_type TChem_reltol;
     real_type TChem_abstol;
+
+    //arbitrary order reactions 
+    kmcd_ordinal_type_1d_view reaction_No_arbitrary_order;
+    kmcd_ordinal_type_1d_view reacNreac_arbitrary_order;
+    kmcd_ordinal_type_2d_view reacSidx_arbitrary_order;
+    kmcd_real_type_2d_view reacNuki_arbitrary_order;
+    kmcd_ordinal_type_2d_view reacSsrf_arbitrary_order;
+
+    bool motz_wise; 
+
+
   };
 
   // surface combustion
@@ -133,6 +144,21 @@ namespace TChem {
     data.vsurfki = kmd.vsurfki_.template view<DT>();
 
     data.coverageFactor = kmd.coverageFactor_.template view<DT>();
+    data.motz_wise = kmd.motz_wise_;
+
+
+
+    //arbitrary order reactions 
+    // reaction No
+    data. reaction_No_arbitrary_order = kmd.reaction_No_arbitrary_order_.template view<DT>();
+    // number of reactants in reaction
+    data.reacNreac_arbitrary_order = kmd.reacNreac_arbitrary_order_.template view<DT>();
+    // species index 
+    data.reacSidx_arbitrary_order = kmd.reacSidx_arbitrary_order_.template view<DT>();
+    // arbitrary ordder 
+    data.reacNuki_arbitrary_order = kmd.reacNuki_arbitrary_order_.template view<DT>();
+    // is gas or surface species 
+    data.reacSsrf_arbitrary_order = kmd.reacSsrf_arbitrary_order_.template view<DT>();
 
     return data;
   }

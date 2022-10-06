@@ -73,6 +73,7 @@ struct KForwardReverseSurface
                                        kmcdSurf.reacArhenFor(i, 2) * t_1));
 
         if (kmcdSurf.isStick(i) == 1) {
+          value_type gamma = kfor(i);
           // eq 16.117 chapter 16 Robert J. Kee
           ordinal_type m(0);
           for (ordinal_type j = 0; j < kmcdSurf.reacNreac(i); j++) {
@@ -84,9 +85,15 @@ struct KForwardReverseSurface
                 i, j)); // check this, assume only one species?
             }
           }
-          // evaluate
-          kfor(i) *= ats<value_type>::sqrt(kmcd.Rcgs * t / (DPI() * Wk)) /
+          // Motz–Wise Correction eq 16.118 chapter 16 Robert J. Kee
+          if (kmcdSurf.motz_wise) {
+            gamma /= (real_type(1) - real_type(0.5)*gamma);
+          }
+
+          kfor(i) = gamma * ats<value_type>::sqrt(kmcd.Rcgs * t / (DPI() * Wk)) /
                      ats<value_type>::pow(kmcdSurf.sitedensity, m);
+
+
         }
 
         /* is reaction reversible ? */

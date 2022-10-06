@@ -40,6 +40,7 @@ main(int argc, char* argv[])
   std::string outputFile(prefixPath + "omega.dat");
   int nBatch(1), team_size(-1), vector_size(-1);
   bool verbose(true), use_sample_format(false);
+  bool useYaml(false);
 
 
   /// parse command line arguments
@@ -53,19 +54,17 @@ main(int argc, char* argv[])
     "inputfile", "Input state file name e.g., input.dat", &inputFile);
   opts.set_option<std::string>(
     "outputfile", "Output omega file name e.g., omega.dat", &outputFile);
-  //
   opts.set_option<int>(
     "team_thread_size", "time thread size ", &team_size);
-  //
   opts.set_option<int>(
     "vector_thread_size", "vector thread size ", &vector_size);
   opts.set_option<int>(
     "batchsize",
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
-  //
   opts.set_option<bool>(
     "use_sample_format", "If true, input file has  header or format", &use_sample_format);
+  opts.set_option<bool>("use-yaml", "If true, use yaml to parse input file", &useYaml);
   opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
 
@@ -77,17 +76,21 @@ main(int argc, char* argv[])
   {
     const bool detail = false;
 
-
-
     TChem::exec_space::print_configuration(std::cout, detail);
     TChem::host_exec_space::print_configuration(std::cout, detail);
     const auto exec_space_instance = TChem::exec_space();
 
-
     using device_type = typename Tines::UseThisDevice<exec_space>::type;
 
     /// construct kmd and use the view for testing
-    TChem::KineticModelData kmd(chemFile, thermFile);
+    TChem::KineticModelData kmd;
+
+    if (useYaml) {
+      kmd = TChem::KineticModelData(chemFile);
+    } else {
+      kmd = TChem::KineticModelData(chemFile, thermFile);
+    }
+
     const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
 
 

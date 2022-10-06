@@ -85,6 +85,7 @@ struct RateOfProgressSurface
           } else { // gas
             ropFor_at_i *= ats<value_type>::pow(concX(kspec), niup);
           }
+         
         }
 
         if (kmcdSurf.isRev(i)) {
@@ -107,6 +108,31 @@ struct RateOfProgressSurface
         ropFor(i) = ropFor_at_i;
         ropRev(i) = ropRev_at_i;
       }); /* done loop over all reactions */
+
+      // correct reaction with arbitrary order
+      Kokkos::parallel_for(
+      Tines::RangeFactory<value_type>::TeamVectorRange(member, kmcdSurf.reaction_No_arbitrary_order.extent(0)),
+      [&](const ordinal_type& i) {  
+        const auto ireac = kmcdSurf.reaction_No_arbitrary_order(i);
+        value_type ropFor_at_i = kfor(ireac) * CoverageFactor(ireac);
+        
+        for (ordinal_type j = 0; j < kmcdSurf.reacNreac_arbitrary_order(i); ++j) {
+          const ordinal_type kspec = kmcdSurf.reacSidx_arbitrary_order(i, j); // species index
+          const real_type niup =
+            ats<ordinal_type>::abs(kmcdSurf.reacNuki_arbitrary_order(i, j)); // st coef
+          if (kmcdSurf.reacSsrf_arbitrary_order(i, j) == 1) {                // surface
+            ropFor_at_i *= ats<value_type>::pow(concXSurf(kspec), niup);
+          } else { // gas
+            ropFor_at_i *= ats<value_type>::pow(concX(kspec), niup);
+          }
+         
+        }
+
+       ropFor(ireac) = ropFor_at_i;
+       ropRev(ireac) = 0;
+        }); /* done loop over all reactions */
+ 
+
 
 #if defined(TCHEM_ENABLE_SERIAL_TEST_OUTPUT) && !defined(__CUDA_ARCH__)
     if (member.league_rank() == 0) {

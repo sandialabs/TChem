@@ -224,9 +224,12 @@ namespace TChem {
     ordinal_type_1d_dual_view TCsurf_reacNrp_, TCsurf_isRev_;
     ordinal_type_1d_dual_view TCsurf_reacNreac_, TCsurf_reacNprod_,
       TCsurf_reacScoef_;
+
     /* stoichiometric coeffs and reactants and product indices */
     ordinal_type_2d_dual_view TCsurf_reacNuki_, TCsurf_reacSidx_,
       TCsurf_reacSsrf_;
+
+    bool motz_wise_;  
 
     /* Arrhenius parameters, forward and reverse */
     real_type_2d_dual_view TCsurf_reacArhenFor_;
@@ -237,6 +240,10 @@ namespace TChem {
     ordinal_type_2d_dual_view vsurfki_;
 
     coverage_modification_type_1d_dual_view coverageFactor_;
+
+    ordinal_type_1d_dual_view reaction_No_arbitrary_order_, reacNreac_arbitrary_order_;
+    ordinal_type_2d_dual_view reacSidx_arbitrary_order_, reacSsrf_arbitrary_order_;
+    real_type_2d_dual_view reacNuki_arbitrary_order_;
 
     // aerosol chemistry
     arrhenius_reaction_type_1d_dual_view ArrheniusCoef_;

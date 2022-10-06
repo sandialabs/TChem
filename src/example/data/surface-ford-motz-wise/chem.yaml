@@ -1,0 +1,442 @@
+description: |-
+  Gas-phase reactions for syngas
+  <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>!
+  Princeton Mechanisms Burke + Li
+  <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>!
+
+  ---------------------------------------------------------------------!
+  ***********************************************************************
+  ****                                                                  *
+  ****     SyngaS-O2 SURFACE MECHANISM  ON Pt                           *
+  ****                                                                  *
+  ****                                                                  *
+  ****     X.Zheng, J.MantzaraS*, R.Bombach, CombuSt. Flame 160 (2013)  *
+  ****                                                                  *
+  ****     Kinetic data:                                                *
+  ****      k = A * T**b * exp (-Ea/RT)         A          b       Ea   *
+  ****                                       (cm,mol,S)    -      J/mol *
+  ****                                                                  *
+  ****                                                                  *
+  ****     (SURFACE CHEMKIN format, courteSy of L.L. Raja)              *
+  ****                                                                  *
+  ***********************************************************************
+
+generator: ck2yaml
+input-files: [chem_Syngas_Burke+Li.inp, chemSurf_Syngas_Pt.inp]
+cantera-version: 2.5.1
+date: Tue, 04 Oct 2022 11:33:57 -0700
+
+units: {length: cm, time: s, quantity: mol, activation-energy: cal/mol}
+
+phases:
+- name: gas
+  thermo: ideal-gas
+  elements: [H, O, N, C, Pt]
+  species: [H2, CO, O2, H2O, CO2, OH, O, H, N2, HO2, H2O2, HCO, CH2O]
+  kinetics: gas
+  reactions:
+  - gas-reactions
+  state: {T: 300.0, P: 1 atm}
+- name: surface1
+  thermo: ideal-surface
+  elements: [H, O, N, C, Pt]
+  species: [O(S), H(S), OH(S), H2O(S), CO(S), CO2(S), C(S), Pt(S), HCOO(S)]
+  site-density: 2.7e-09
+  Motz-Wise: true
+  kinetics: surface
+  reactions:
+  - surface1-reactions
+  state: {T: 300.0, P: 1 atm}
+
+species:
+- name: H2
+  composition: {H: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [2.3443029, 7.9804248e-03, -1.9477917e-05, 2.0156967e-08, -7.3760289e-12,
+      -917.92413, 0.68300218]
+    - [2.9328305, 8.2659802e-04, -1.4640057e-07, 1.5409851e-11, -6.8879615e-16,
+      -813.05582, -1.0243164]
+- name: CO
+  composition: {O: 1, C: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [3.5795335, -6.1035369e-04, 1.0168143e-06, 9.0700586e-10, -9.0442449e-13,
+      -1.4344086e+04, 3.5084093]
+    - [3.0484859, 1.3517281e-03, -4.8579405e-07, 7.8853644e-11, -4.6980746e-15,
+      -1.4266117e+04, 6.0170977]
+- name: O2
+  composition: {O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [3.78245636, -2.99673415e-03, 9.847302e-06, -9.68129508e-09, 3.24372836e-12,
+      -1063.94356, 3.65767573]
+    - [3.66096083, 6.56365523e-04, -1.41149485e-07, 2.05797658e-11, -1.29913248e-15,
+      -1215.97725, 3.41536184]
+- name: H2O
+  composition: {H: 2, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [4.1986352, -2.0364017e-03, 6.5203416e-06, -5.4879269e-09, 1.771968e-12,
+      -3.0293726e+04, -0.84900901]
+    - [2.6770389, 2.9731816e-03, -7.7376889e-07, 9.4433514e-11, -4.2689991e-15,
+      -2.9885894e+04, 6.88255]
+- name: CO2
+  composition: {O: 2, C: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [2.356813, 8.9841299e-03, -7.1220632e-06, 2.4573008e-09, -1.4288548e-13,
+      -4.8371971e+04, 9.9009035]
+    - [4.6365111, 2.7414569e-03, -9.9589759e-07, 1.6038666e-10, -9.1619857e-15,
+      -4.9024904e+04, -1.9348955]
+- name: OH
+  composition: {H: 1, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [3.99201543, -2.40131752e-03, 4.61793841e-06, -3.88113333e-09, 1.3641147e-12,
+      3357.11894, -0.103925458]
+    - [2.83864607, 1.10725586e-03, -2.93914978e-07, 4.20524247e-11, -2.42169092e-15,
+      3685.9969, 5.84452662]
+- name: O
+  composition: {O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [3.1682671, -3.27931884e-03, 6.64306396e-06, -6.12806624e-09, 2.11265971e-12,
+      2.91222592e+04, 2.05193346]
+    - [2.54363697, -2.73162486e-05, -4.1902952e-09, 4.95481845e-12, -4.79553694e-16,
+      2.9226012e+04, 4.92229457]
+- name: H
+  composition: {H: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [2.5, 0.0, 0.0, 0.0, 0.0, 2.547366e+04, -0.44668285]
+    - [2.5, 0.0, 0.0, 0.0, 0.0, 2.547366e+04, -0.44668285]
+- name: N2
+  composition: {N: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [3.5309628, -1.236595e-04, -5.0299339e-07, 2.4352768e-09, -1.4087954e-12,
+      -1046.9637, 2.9674391]
+    - [2.9525407, 1.3968838e-03, -4.9262577e-07, 7.8600091e-11, -4.6074978e-15,
+      -923.93753, 5.8718221]
+- name: HO2
+  composition: {H: 1, O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [4.301788, -4.7490201e-03, 2.1157953e-05, -2.4275961e-08, 9.292067e-12,
+      446.212417, 3.716701]
+    - [4.1722659, 1.8812098e-03, -3.4629297e-07, 1.9468516e-11, 1.7609153e-16,
+      213.222508, 2.9577974]
+- name: H2O2
+  composition: {H: 2, O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [4.27611269, -5.42822417e-04, 1.67335701e-05, -2.15770813e-08, 8.62454363e-12,
+      -1.77035843e+04, 3.43505074]
+    - [4.57333537, 4.0498407e-03, -1.29479479e-06, 1.9728171e-10, -1.13402846e-14,
+      -1.80040975e+04, 0.704278488]
+- name: HCO
+  composition: {H: 1, O: 1, C: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [4.22118584, -3.24392532e-03, 1.37799446e-05, -1.33144093e-08, 4.33768865e-12,
+      3839.56496, 3.39437243]
+    - [3.64896209, 3.08090819e-03, -1.12429876e-06, 1.86308085e-10, -1.13951828e-14,
+      3712.09048, 5.06147406]
+- name: CH2O
+  composition: {H: 2, O: 1, C: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [4.7937036, -9.9081518e-03, 3.7321459e-05, -3.7927902e-08, 1.3177015e-11,
+      -1.4308955e+04, 0.60288702]
+    - [3.1694807, 6.1932742e-03, -2.2505981e-06, 3.6598245e-10, -2.201541e-14,
+      -1.4478425e+04, 6.0423533]
+- name: O(S)
+  composition: {O: 1, Pt: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-0.94986904, 7.4042305e-03, -1.0451424e-06, -6.112042e-09, 3.3787992e-12,
+      -1.3209912e+04, 3.6137905]
+    - [1.945418, 9.1761647e-04, -1.1226719e-07, -9.9099624e-11, 2.4307699e-14,
+      -1.4005187e+04, -11.531663]
+    note: '92491'
+- name: H(S)
+  composition: {H: 1, Pt: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-1.3029877, 5.4173199e-03, 3.1277972e-07, -3.2328533e-09, 1.136282e-12,
+      -4227.7075, 5.8743238]
+    - [1.0696996, 1.543223e-03, -1.5500922e-07, -1.6573165e-10, 3.8359347e-14,
+      -5054.6128, -7.1555238]
+    note: '92491'
+- name: OH(S)
+  composition: {O: 1, H: 1, Pt: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-2.0340881, 9.3662683e-03, 6.6275214e-07, -5.2074887e-09, 1.7088735e-12,
+      -2.5319949e+04, 8.9863186]
+    - [1.8249973, 3.2501565e-03, -3.1197541e-07, -3.4603206e-10, 7.9171472e-14,
+      -2.6685492e+04, -12.280891]
+    note: '92491'
+- name: H2O(S)
+  composition: {O: 1, H: 2, Pt: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-2.7651553, 0.013315115, 1.0127695e-06, -7.1820083e-09, 2.2813776e-12,
+      -3.6398055e+04, 12.098145]
+    - [2.5803051, 4.9570827e-03, -4.6894056e-07, -5.2633137e-10, 1.1998322e-13,
+      -3.8302234e+04, -17.406322]
+    note: '92491'
+- name: CO(S)
+  composition: {C: 1, O: 1, Pt: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [4.8907466, 6.8134235e-05, 1.9768814e-07, 1.2388669e-09, -9.0339249e-13,
+      -3.2297836e+04, -17.453161]
+    - [4.7083778, 9.6037297e-04, -1.1805279e-07, -7.6883826e-11, 1.8232e-14,
+      -3.2311723e+04, -16.719593]
+    note: '0'
+- name: CO2(S)
+  composition: {C: 1, O: 2, Pt: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [0.469, 6.2662e-03, 0.0, 0.0, 0.0, -5.04587e+04, -4.555]
+    - [0.469, 6.266e-03, 0.0, 0.0, 0.0, -5.04587e+04, -4.555]
+    note: '081292'
+- name: C(S)
+  composition: {C: 1, Pt: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [0.58924019, 2.5012842e-03, -3.4229498e-07, -1.8994346e-09, 1.0190406e-12,
+      1.0236923e+04, 2.1937017]
+    - [1.5792824, 3.6528701e-04, -5.0657672e-08, -3.4884855e-11, 8.8089699e-15,
+      9953.5752, -3.0240495]
+    note: '0'
+- name: Pt(S)
+  composition: {Pt: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    - [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+- name: HCOO(S)
+  composition: {C: 1, H: 1, O: 2, Pt: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 900.0, 900.0]
+    data:
+    - [2.84183375, 4.4099233e-03, -5.96551946e-06, 7.32082418e-09, -3.47262183e-12,
+      -1.5264007e+04, -5.39553627]
+    - [2.84183375, 4.4099233e-03, -5.96551946e-06, 7.32082418e-09, -3.47262183e-12,
+      -1.5264007e+04, -5.39553627]
+    note: (adjuSt)
+
+gas-reactions:
+- equation: H + O2 <=> O + OH  # Reaction 1
+  rate-constant: {A: 1.04e+14, b: 0.0, Ea: 1.5286e+04}
+- equation: O + H2 <=> H + OH  # Reaction 2
+  duplicate: true
+  rate-constant: {A: 3.818e+12, b: 0.0, Ea: 7948.0}
+- equation: O + H2 <=> H + OH  # Reaction 3
+  duplicate: true
+  rate-constant: {A: 8.792e+14, b: 0.0, Ea: 1.917e+04}
+- equation: H2 + OH <=> H2O + H  # Reaction 4
+  rate-constant: {A: 2.16e+08, b: 1.51, Ea: 3430.0}
+- equation: OH + OH <=> O + H2O  # Reaction 5
+  rate-constant: {A: 3.34e+04, b: 2.42, Ea: -1930.0}
+- equation: H2 + M <=> H + H + M  # Reaction 6
+  type: three-body
+  rate-constant: {A: 4.577e+19, b: -1.4, Ea: 1.0438e+05}
+  efficiencies: {H2: 2.5, H2O: 12.0, CO: 1.9, CO2: 3.8}
+- equation: O + O + M <=> O2 + M  # Reaction 7
+  type: three-body
+  rate-constant: {A: 6.165e+15, b: -0.5, Ea: 0.0}
+  efficiencies: {H2: 2.5, H2O: 12.0, CO: 1.9, CO2: 3.8}
+- equation: O + H + M <=> OH + M  # Reaction 8
+  type: three-body
+  rate-constant: {A: 4.714e+18, b: -1.0, Ea: 0.0}
+  efficiencies: {H2: 2.5, H2O: 12.0, CO: 1.9, CO2: 3.8}
+- equation: H2O + M <=> H + OH + M  # Reaction 9
+  type: three-body
+  rate-constant: {A: 6.064e+27, b: -3.322, Ea: 1.2079e+05}
+  efficiencies: {H2: 3.0, H2O: 0.0, O2: 1.5, N2: 2.0}
+- equation: H2O + H2O <=> H + OH + H2O  # Reaction 10
+  rate-constant: {A: 1.006e+26, b: -2.44, Ea: 1.2018e+05}
+- equation: H + O2 (+M) <=> HO2 (+M)  # Reaction 11
+  type: falloff
+  low-P-rate-constant: {A: 6.366e+20, b: -1.72, Ea: 524.8}
+  high-P-rate-constant: {A: 4.65084e+12, b: 0.44, Ea: 0.0}
+  Troe: {A: 0.5, T3: 1.0e-30, T1: 1.0e+30}
+  efficiencies: {H2: 2.0, H2O: 14.0, O2: 0.78, CO: 1.9, CO2: 3.8}
+- equation: HO2 + H <=> H2 + O2  # Reaction 12
+  rate-constant: {A: 2.75e+06, b: 2.09, Ea: -1451.0}
+- equation: HO2 + H <=> OH + OH  # Reaction 13
+  rate-constant: {A: 7.079e+13, b: 0.0, Ea: 295.0}
+- equation: HO2 + O <=> O2 + OH  # Reaction 14
+  rate-constant: {A: 2.85e+10, b: 1.0, Ea: -723.93}
+- equation: HO2 + OH <=> H2O + O2  # Reaction 15
+  rate-constant: {A: 2.89e+13, b: 0.0, Ea: -497.0}
+- equation: HO2 + HO2 <=> H2O2 + O2  # Reaction 16
+  duplicate: true
+  rate-constant: {A: 4.2e+14, b: 0.0, Ea: 1.1982e+04}
+- equation: HO2 + HO2 <=> H2O2 + O2  # Reaction 17
+  duplicate: true
+  rate-constant: {A: 1.3e+11, b: 0.0, Ea: -1629.3}
+- equation: H2O2 (+M) <=> OH + OH (+M)  # Reaction 18
+  type: falloff
+  low-P-rate-constant: {A: 2.49e+24, b: -2.3, Ea: 4.8749e+04}
+  high-P-rate-constant: {A: 2.0e+12, b: 0.9, Ea: 4.8749e+04}
+  Troe: {A: 0.43, T3: 1.0e-30, T1: 1.0e+30}
+  efficiencies: {H2O: 7.5, CO2: 1.6, N2: 1.5, O2: 1.2, H2O2: 7.7}
+- equation: H2O2 + H <=> H2O + OH  # Reaction 19
+  rate-constant: {A: 2.41e+13, b: 0.0, Ea: 3970.0}
+- equation: H2O2 + H <=> HO2 + H2  # Reaction 20
+  rate-constant: {A: 4.82e+13, b: 0.0, Ea: 7950.0}
+- equation: H2O2 + O <=> OH + HO2  # Reaction 21
+  rate-constant: {A: 9.55e+06, b: 2.0, Ea: 3970.0}
+- equation: H2O2 + OH <=> HO2 + H2O  # Reaction 22
+  duplicate: true
+  rate-constant: {A: 1.74e+12, b: 0.0, Ea: 318.0}
+- equation: H2O2 + OH <=> HO2 + H2O  # Reaction 23
+  duplicate: true
+  rate-constant: {A: 7.59e+13, b: 0.0, Ea: 7270.0}
+- equation: CO + O (+M) <=> CO2 (+M)  # Reaction 24
+  type: falloff
+  low-P-rate-constant: {A: 1.55e+24, b: -2.79, Ea: 4191.0}
+  high-P-rate-constant: {A: 1.8e+10, b: 0.0, Ea: 2384.0}
+  efficiencies: {H2: 2.5, H2O: 12.0, CO: 1.9, CO2: 3.8}
+- equation: CO + O2 <=> CO2 + O  # Reaction 25
+  rate-constant: {A: 2.53e+12, b: 0.0, Ea: 4.77e+04}
+- equation: CO + HO2 <=> CO2 + OH  # Reaction 26
+  rate-constant: {A: 3.01e+13, b: 0.0, Ea: 2.3e+04}
+- equation: CO + OH <=> CO2 + H  # Reaction 27
+  rate-constant: {A: 2.229e+05, b: 1.89, Ea: -1158.7}
+- equation: HCO + M <=> H + CO + M  # Reaction 28
+  type: three-body
+  rate-constant: {A: 4.7485e+11, b: 0.659, Ea: 1.4874e+04}
+  efficiencies: {H2: 2.5, H2O: 12.0, CO: 1.9, CO2: 3.8}
+- equation: HCO + O2 <=> CO + HO2  # Reaction 29
+  rate-constant: {A: 7.58e+12, b: 0.0, Ea: 410.0}
+- equation: HCO + H <=> CO + H2  # Reaction 30
+  rate-constant: {A: 7.23e+13, b: 0.0, Ea: 0.0}
+- equation: HCO + O <=> CO + OH  # Reaction 31
+  rate-constant: {A: 3.02e+13, b: 0.0, Ea: 0.0}
+- equation: HCO + O <=> CO2 + H  # Reaction 32
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: HCO + OH <=> CO + H2O  # Reaction 33
+  rate-constant: {A: 3.02e+13, b: 0.0, Ea: 0.0}
+- equation: HCO + HO2 <=> CO2 + OH + H  # Reaction 34
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: HCO + HCO <=> H2 + CO + CO  # Reaction 35
+  rate-constant: {A: 3.0e+12, b: 0.0, Ea: 0.0}
+- equation: HCO + HCO <=> CH2O + CO  # Reaction 36
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+
+surface1-reactions:
+- equation: H2 + 2 Pt(S) => 2 H(S)  # Reaction 1
+  rate-constant: {A: 4.4579e+10, b: 0.5, Ea: 0.0 J/mol}
+  orders: {Pt(S): 1.0}
+- equation: 2 H(S) => H2 + 2 Pt(S)  # Reaction 2
+  rate-constant: {A: 3.7e+21, b: 0.0, Ea: 67400.0 J/mol}
+  coverage-dependencies:
+    H(S): [0.0, 0.0, -6000.0 J/mol]
+- equation: H + Pt(S) => H(S)  # Reaction 3
+  sticking-coefficient: {A: 1.0, b: 0.0, Ea: 0.0 J/mol}
+- equation: O2 + 2 Pt(S) => 2 O(S)  # Reaction 4
+  duplicate: true
+  rate-constant: {A: 1.8e+21, b: -0.5, Ea: 0.0 J/mol}
+- equation: O2 + 2 Pt(S) => 2 O(S)  # Reaction 5
+  duplicate: true
+  sticking-coefficient: {A: 0.023, b: 0.0, Ea: 0.0 J/mol}
+- equation: 2 O(S) => O2 + 2 Pt(S)  # Reaction 6
+  rate-constant: {A: 3.7e+21, b: 0.0, Ea: 213200.0 J/mol}
+  coverage-dependencies:
+    O(S): [0.0, 0.0, -60000.0 J/mol]
+- equation: O + Pt(S) => O(S)  # Reaction 7
+  sticking-coefficient: {A: 1.0, b: 0.0, Ea: 0.0 J/mol}
+- equation: H2O + Pt(S) => H2O(S)  # Reaction 8
+  sticking-coefficient: {A: 0.75, b: 0.0, Ea: 0.0 J/mol}
+- equation: H2O(S) => H2O + Pt(S)  # Reaction 9
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 40300.0 J/mol}
+- equation: OH + Pt(S) => OH(S)  # Reaction 10
+  sticking-coefficient: {A: 1.0, b: 0.0, Ea: 0.0 J/mol}
+- equation: OH(S) => OH + Pt(S)  # Reaction 11
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 192800.0 J/mol}
+- equation: H(S) + O(S) => OH(S) + Pt(S)  # Reaction 12
+  rate-constant: {A: 3.7e+20, b: 0.0, Ea: 70500.0 J/mol}
+- equation: OH(S) + Pt(S) => H(S) + O(S)  # Reaction 13
+  rate-constant: {A: 1.004e+21, b: 0.0, Ea: 130690.0 J/mol}
+- equation: H(S) + OH(S) <=> H2O(S) + Pt(S)  # Reaction 14
+  rate-constant: {A: 3.7e+21, b: 0.0, Ea: 17400.0 J/mol}
+- equation: OH(S) + OH(S) <=> H2O(S) + O(S)  # Reaction 15
+  rate-constant: {A: 3.7e+21, b: 0.0, Ea: 48200.0 J/mol}
+- equation: CO + Pt(S) => CO(S)  # Reaction 16
+  sticking-coefficient: {A: 0.84, b: 0.0, Ea: 0.0 J/mol}
+  orders: {Pt(S): 2.0}
+- equation: CO(S) => CO + Pt(S)  # Reaction 17
+  rate-constant: {A: 2.126e+13, b: 0.0, Ea: 136190.0 J/mol}
+  coverage-dependencies:
+    CO(S): [0.0, 0.0, -33000.0 J/mol]
+- equation: CO2(S) => CO2 + Pt(S)  # Reaction 18
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 20500.0 J/mol}
+- equation: CO(S) + O(S) => CO2(S) + Pt(S)  # Reaction 19
+  rate-constant: {A: 3.7e+20, b: 0.0, Ea: 108000.0 J/mol}
+  coverage-dependencies:
+    CO(S): [0.0, 0.0, -33000.0 J/mol]
+- equation: C(S) + O(S) => CO(S) + Pt(S)  # Reaction 20
+  rate-constant: {A: 3.7e+21, b: 0.0, Ea: 62800.0 J/mol}
+- equation: CO(S) + Pt(S) => C(S) + O(S)  # Reaction 21
+  rate-constant: {A: 1.0e+18, b: 0.0, Ea: 184000.0 J/mol}
+- equation: OH(S) + CO(S) => HCOO(S) + Pt(S)  # Reaction 22
+  rate-constant: {A: 3.7e+21, b: 0.0, Ea: 94200.0 J/mol}
+- equation: HCOO(S) + Pt(S) => OH(S) + CO(S)  # Reaction 23
+  rate-constant: {A: 1.333e+21, b: 0.0, Ea: 870.0 J/mol}
+- equation: HCOO(S) + O(S) => OH(S) + CO2(S)  # Reaction 24
+  rate-constant: {A: 3.7e+21, b: 0.0, Ea: 0.0 J/mol}
+- equation: OH(S) + CO2(S) => HCOO(S) + O(S)  # Reaction 25
+  rate-constant: {A: 2.787e+21, b: 0.0, Ea: 151050.0 J/mol}
+- equation: HCOO(S) + Pt(S) => CO2(S) + H(S)  # Reaction 26
+  rate-constant: {A: 3.7e+21, b: 0.0, Ea: 0.0 J/mol}
+- equation: CO2(S) + H(S) => HCOO(S) + Pt(S)  # Reaction 27
+  rate-constant: {A: 2.79e+21, b: 0.0, Ea: 90050.0 J/mol}

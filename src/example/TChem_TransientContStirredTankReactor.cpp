@@ -89,6 +89,7 @@ main(int argc, char* argv[])
   bool initial_condition(false);
   int number_of_algebraic_constraints(0);
   int poisoning_species_idx(-1);
+  bool useYaml(false);
 
   TChem::CommandLineParser opts(
     "This example computes temperature, mass fraction, and site "
@@ -162,7 +163,8 @@ main(int argc, char* argv[])
   opts.set_option<int>("index-poisoning-species",
                        "catalysis deactivation, index for species",
                        &poisoning_species_idx);
-
+  opts.set_option<bool>(
+    "use-yaml", "If true, use yaml to parse input file", &useYaml);
   opts.set_option<std::string>("outputfile",
   "Output file name e.g., CSTRSolution.dat", &outputFile);
 
@@ -206,9 +208,13 @@ main(int argc, char* argv[])
       typename TChem::UseThisTeamPolicy<TChem::exec_space>::type;
 
     /// construct kmd and use the view for testing
-
-    TChem::KineticModelData kmd(
-      chemFile, thermFile, chemSurfFile, thermSurfFile);
+    TChem::KineticModelData kmd;
+    if (useYaml) {
+      kmd = TChem::KineticModelData(chemFile, true);
+    } else {
+      kmd = TChem::KineticModelData(chemFile, thermFile, chemSurfFile, thermSurfFile);
+    }
+    
     const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
     const auto kmcdSurf = TChem::createSurfaceKineticModelConstData<device_type>(kmd);
 

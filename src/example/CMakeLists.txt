@@ -9,6 +9,7 @@ LIST(APPEND TCHEM_EXAMPLE_SOURCES
   TChem_IgnitionZeroD_SourceTermJacobian.cpp
   TChem_IgnitionZeroD_Jacobians.cpp
   TChem_IgnitionZeroD.cpp
+  TChem_IgnitionZeroD_HostSingle.cpp
   TChem_InitialCondSurface.cpp
   TChem_Jacobian.cpp
   TChem_JacobianSacado.cpp

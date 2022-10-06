@@ -46,6 +46,7 @@ main(int argc, char* argv[])
   std::string outputFileSurf(prefixPath + "omegaSurf.dat");
   int nBatch(1);
   bool verbose(true);
+  bool useYaml(false);
 
   /// parse command line arguments
   TChem::CommandLineParser opts(
@@ -76,6 +77,8 @@ main(int argc, char* argv[])
     "Batchsize the same state vector described in statefile is cloned",
     &nBatch);
   opts.set_option<bool>(
+    "use-yaml", "If true, use yaml to parse input file", &useYaml);
+  opts.set_option<bool>(
     "verbose", "If true, printout the first omega values", &verbose);
 
   const bool r_parse = opts.parse(argc, argv);
@@ -91,12 +94,20 @@ main(int argc, char* argv[])
 
     /// construct kmd and use the view for testing
     using device_type      = typename Tines::UseThisDevice<exec_space>::type;
+    
+    TChem::KineticModelData kmd;
 
-    // need to fix it
-    TChem::KineticModelData kmd(
-      chemFile, thermFile, chemSurfFile, thermSurfFile);
+    if (useYaml) {
+      kmd = TChem::KineticModelData(chemFile, true);
+    } else {
+      kmd = TChem::KineticModelData(chemFile, thermFile, chemSurfFile, thermSurfFile);
+    }
+
+
     const auto kmcd = TChem::createGasKineticModelConstData<device_type>(kmd);
     const auto kmcdSurf = TChem::createSurfaceKineticModelConstData<device_type>(kmd);
+
+
 
     /// input: state vectors: temperature, pressure and mass fraction
     real_type_2d_view state(

@@ -484,6 +484,13 @@ void KineticModelData::syncSurfToDevice() {
   vski_.sync_device();
   vsurfki_.sync_device();
   coverageFactor_.sync_device();
+
+  reaction_No_arbitrary_order_.sync_device();
+  reacNreac_arbitrary_order_.sync_device();
+  reacSidx_arbitrary_order_.sync_device();
+  reacSsrf_arbitrary_order_.sync_device();
+  reacNuki_arbitrary_order_.sync_device();
+
 }
 
 int KineticModelData::initChem() {
@@ -1271,6 +1278,7 @@ int KineticModelData::initChemSurf() {
   TCsurf_nArhPar_ = 0;
   TCsurf_Nspec_ = 0;
   TCsurf_Nreac_ = 0;
+  motz_wise_=false;
 
   FILE *chemfile, *echofile, *errfile;
   /* Retrieve things from kmod.list */
@@ -2396,6 +2404,8 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
   TCsurf_Nspec_ = 0;
   TCsurf_Nreac_ = 0;
   TCsurf_NcoverageFactors = 0;
+  int TCsurf_Nreac_w_arbitrary_order=0;
+  motz_wise_ = false;
 
   FILE *echofile; //*chemfile,, *errfile
   /* Retrieve things from kmod.list */
@@ -2412,6 +2422,12 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
     // std::cout << "reactions: " << doc["phases"][surfacePhaseIndex]["reactions"][0] << "\n";
     reactions = doc["phases"][surfacePhaseIndex]["reactions"][0].as<std::string>();
   }
+
+  if (doc["phases"][surfacePhaseIndex]["Motz-Wise"])
+  {
+    motz_wise_ = doc["phases"][surfacePhaseIndex]["Motz-Wise"].as<bool>();
+  }
+
   auto surface_reactions = doc[reactions];
 
   TCsurf_Nreac_ = surface_reactions.size();
@@ -2495,9 +2511,9 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
         }
 
         auto temperature_ranges = sp["thermo"]["temperature-ranges"];
-        TCsurf_TloHost(spi) = temperature_ranges[0].as<double>();
-        TCsurf_TmiHost(spi) = temperature_ranges[1].as<double>();
-        TCsurf_ThiHost(spi) = temperature_ranges[2].as<double>();
+        TCsurf_TloHost(spi) = temperature_ranges[0].as<real_type>();
+        TCsurf_TmiHost(spi) = temperature_ranges[1].as<real_type>();
+        TCsurf_ThiHost(spi) = temperature_ranges[2].as<real_type>();
         TCsurf_TthrmMin_ = std::min(TCsurf_TthrmMin_, TCsurf_TloHost(spi));
         TCsurf_TthrmMax_ = std::max(TCsurf_TthrmMax_, TCsurf_ThiHost(spi));
 
@@ -2505,7 +2521,7 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
         for (int j = 0; j < TCsurf_nNASAinter_; j++) {
           auto dataIntervale = data[j];
           for (int k = 0; k < TCsurf_nCpCoef_ + 2; k++)
-            TCsurf_cppolHost(spi, j, k) = dataIntervale[k].as<double>();
+            TCsurf_cppolHost(spi, j, k) = dataIntervale[k].as<real_type>();
         }
 
         spi++;
@@ -2565,6 +2581,13 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
         }
       }
 
+      auto arbitrary_order = reaction["orders"];
+
+      if (arbitrary_order)
+      {
+          TCsurf_Nreac_w_arbitrary_order++;
+      }  
+
       countReac++;
     }
   }
@@ -2591,6 +2614,29 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
     coverageFactor_ =
         coverage_modification_type_1d_dual_view(do_not_init_tag("KMD::coveragefactor"), TCsurf_NcoverageFactors);
   }
+  //
+
+  if (TCsurf_Nreac_w_arbitrary_order > 0) {
+
+    const ordinal_type half_max_spec_in_reac_ = TCsurf_maxSpecInReac_/2; 
+
+    // No of reaction with  arbitrary order 
+    reaction_No_arbitrary_order_ = ordinal_type_1d_dual_view(do_not_init_tag("KMD::reaction_No_arbitrary_order_"),
+     TCsurf_Nreac_w_arbitrary_order);
+    // Number of reactants per reaction  
+    reacNreac_arbitrary_order_ =  ordinal_type_1d_dual_view(do_not_init_tag("KMD::reacNreac_arbitrary_order_"),
+     TCsurf_Nreac_w_arbitrary_order);
+    // only reactants 
+    reacSidx_arbitrary_order_ = ordinal_type_2d_dual_view(do_not_init_tag("KMD::reacSidx_arbitrary_order_"),
+     TCsurf_Nreac_w_arbitrary_order, half_max_spec_in_reac_);
+
+    reacSsrf_arbitrary_order_ = ordinal_type_2d_dual_view(do_not_init_tag("KMD::reacSsrf_arbitrary_order_"),
+     TCsurf_Nreac_w_arbitrary_order, half_max_spec_in_reac_);
+
+    reacNuki_arbitrary_order_ = real_type_2d_dual_view(do_not_init_tag("KMD::reacNuki_arbitrary_order_"),
+     TCsurf_Nreac_w_arbitrary_order, half_max_spec_in_reac_);
+  }  
+
 
   auto TCsurf_reacScoefHost = TCsurf_reacScoef_.view_host();
   auto TCsurf_reacNukiHost = TCsurf_reacNuki_.view_host();
@@ -2601,6 +2647,13 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
 
   auto TCsurf_isStickHost = TCsurf_isStick_.view_host();
   auto TCsurf_isDupHost = TCsurf_isDup_.view_host();
+
+  auto reaction_No_arbitrary_order_Host = reaction_No_arbitrary_order_.view_host();
+  auto reacNreac_arbitrary_order_Host = reacNreac_arbitrary_order_.view_host();
+  auto reacSidx_arbitrary_order_Host = reacSidx_arbitrary_order_.view_host();
+  auto reacSsrf_arbitrary_order_Host = reacSsrf_arbitrary_order_.view_host();
+  auto reacNuki_arbitrary_order_Host = reacNuki_arbitrary_order_.view_host();
+
 
   // /*I do not need  this on the device */
   ordinal_type_1d_view_host TCsurf_isCovHost(do_not_init_tag("KMD::TCsurf_isCov_"), TCsurf_Nreac_);
@@ -2673,8 +2726,12 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
     }
   }
 
+
   int ireac(0);
   int count_cov(0);
+  int ireac_arbitrary_order=0;
+
+
 
   for (auto const &reaction : surface_reactions) {
     //
@@ -2719,14 +2776,14 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
 
         cov._species_index = it->second;
         cov._reaction_index = ireac;
-        cov._eta = sp.second[0].as<double>();
-        cov._mu = sp.second[1].as<double>();
+        cov._eta = sp.second[0].as<real_type>();
+        cov._mu = sp.second[1].as<real_type>();
 
         std::vector<std::string> items;
         std::string delimiter = " ";
         auto epsilonWUnits = sp.second[2].as<std::string>();
         TCMI_parseString(epsilonWUnits, delimiter, items);
-        const double unitFactor = TCMI_unitFactorActivationEnergies(items[1]);
+        const real_type unitFactor = TCMI_unitFactorActivationEnergies(items[1]);
         cov._epsilon = std::stod(items[0]) * unitFactor;
         coverageFactorHost(count_cov) = cov;
         count_cov++;
@@ -2736,24 +2793,85 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
       TCsurf_Cov_CountHost(ireac) = countCovPerReaction;
     }
 
+    //  reaction with arbitrary order
+    auto arbitrary_order = reaction["orders"];
+    if (arbitrary_order)
+    {      
+      reaction_No_arbitrary_order_Host(ireac_arbitrary_order) = ireac;
+      reacNreac_arbitrary_order_Host(ireac_arbitrary_order) = TCsurf_reacNreacHost(ireac);
+
+      // yaml is case sensitive, so we need to convert key to uppercase. 
+      // we convert all species name to uppercase.  
+      std::map<std::string, int> arbitrary_order_map;
+      for(auto it=arbitrary_order.begin();it!=arbitrary_order.end();++it) {
+        auto sp_name = it->first.as<std::string>();
+        std::transform(sp_name.begin(), sp_name.end(), sp_name.begin(), ::toupper);
+        arbitrary_order_map.insert(make_pair(sp_name, it->second.as<real_type>()));
+      }
+
+      int count_species_w_arb_order = 0;
+      for (int k = 0; k < TCsurf_reacNukiHost.extent(1)/2; ++k)
+      {
+        // copy data
+        reacNuki_arbitrary_order_Host(ireac_arbitrary_order,k) = TCsurf_reacNukiHost(ireac, k);
+        reacSidx_arbitrary_order_Host(ireac_arbitrary_order,k) = TCsurf_reacSidxHost(ireac, k); 
+        reacSsrf_arbitrary_order_Host(ireac_arbitrary_order,k) = TCsurf_reacSsrfHost(ireac, k); 
+        // get species index 
+        const ordinal_type kspec = reacSidx_arbitrary_order_Host(ireac_arbitrary_order, k); // species index
+        // look for species with arbitrary_order and only change order of that species.
+        // is surface?
+        std::string sp_name;  
+        if (reacSsrf_arbitrary_order_Host(ireac_arbitrary_order, k) == 1)
+        {
+          sp_name = &TCsurf_sNamesHost(kspec, 0); 
+        } else { // gas
+          sp_name = &sNamesHost(kspec, 0); 
+
+        } // end is surface?
+
+        it = arbitrary_order_map.find(sp_name);
+        if (it != arbitrary_order_map.end()) {
+            auto order = arbitrary_order_map[sp_name];
+            reacNuki_arbitrary_order_Host(ireac_arbitrary_order,k) = order;
+            count_species_w_arb_order++;
+        } 
+
+      } // end species 
+      // check if we find all the species listed in the orders list
+      const int n_species_w_arb_order = arbitrary_order.size();
+      const int diff_species_w_arb_order = abs(count_species_w_arb_order - n_species_w_arb_order);
+
+      if (diff_species_w_arb_order > 0)
+      {
+         printf("Error: in reaction No %d \n ", ireac);
+         printf("Check : are all species reactants ?\n");
+         std::cout<<"arbitrary_order :" <<arbitrary_order<<std::endl;
+      } 
+      TCHEM_CHECK_ERROR( diff_species_w_arb_order > 0,
+         "Error: number of species with arbitrary order is wrong");
+      ireac_arbitrary_order++;
+
+    }   // end arbitrary_order
+
     auto rate_constant = reaction[rate_constant_string];
     if (rate_constant) {
-      const double Areac = rate_constant["A"].as<double>();
+      const real_type Areac = rate_constant["A"].as<real_type>();
       TCsurf_reacArhenForHost(ireac, 0) = Areac;
 
-      const double breac = rate_constant["b"].as<double>();
+      const real_type breac = rate_constant["b"].as<real_type>();
       TCsurf_reacArhenForHost(ireac, 1) = breac;
 
       auto EareacWUnits = rate_constant["Ea"].as<std::string>();
       std::vector<std::string> items;
       std::string delimiter = " ";
       TCMI_parseString(EareacWUnits, delimiter, items);
-      const double unitFactor = TCMI_unitFactorActivationEnergies(items[1]);
-      const double Eareac = std::stod(items[0]);
+      const real_type unitFactor = TCMI_unitFactorActivationEnergies(items[1]);
+      const real_type Eareac = std::stod(items[0]);
       TCsurf_reacArhenForHost(ireac, 2) = Eareac * unitFactor;
     }
     ireac++;
   }
+
 
   // stoichiometric matrix only gas species
   vski_ = ordinal_type_2d_dual_view(do_not_init_tag("KMD::stoichiometric_matrix_gas"), nSpec_, TCsurf_Nreac_);
@@ -2791,12 +2909,10 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
   fprintf(echofile, "kmodSurf.list : Max # of species in a reaction                    : %d\n", TCsurf_maxSpecInReac_);
   fprintf(echofile, "kmodSurf.list : # of temperature regions for thermo fits          : %d\n", TCsurf_nNASAinter_);
   fprintf(echofile, "kmodSurf.list : # of polynomial coefficients for thermo fits      : %d\n", TCsurf_nCpCoef_);
-  // fprintf(
-  //   echofile,
-  //   "kmodSurf.list : # of Arrhenius parameters                         : %d\n",
-  //   TCsurf_nArhPar_);
   fprintf(echofile, "kmodSurf.list : # of species                                      : %d\n", TCsurf_Nspec_);
   fprintf(echofile, "kmodSurf.list : # of reactions                                    : %d\n", TCsurf_Nreac_);
+  fprintf(echofile, "kmodSurf.list : # of reactions with arbitrary order               : %d\n", TCsurf_Nreac_w_arbitrary_order);
+  fprintf(echofile, "kmodSurf.list : motz–wise correction                              : %s\n", motz_wise_ ? "true":"false");
   fprintf(echofile, "----------------------------------------------------------"
                     "---------------\n");
   fflush(echofile);
@@ -2858,6 +2974,7 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
   }
   DASHLINE(echofile);
   count_cov = 0; // set this value to zero to print out cov parameters in echofile
+  ireac_arbitrary_order =0; // reactions with arbitrary order
   fprintf(echofile, "Reaction data : species and Arrhenius pars\n");
   for (int i = 0; i < TCsurf_Nreac_; i++) {
     fprintf(echofile, "%-5d\t%1d\t%2d\t%2d | ", i + 1, TCsurf_isRevHost(i), TCsurf_reacNreacHost(i),
@@ -2907,8 +3024,39 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
       }
     }
 
+    if (TCsurf_Nreac_w_arbitrary_order > 0)
+    {
+      // check if reactions has an arbitrary order
+      if (i == reaction_No_arbitrary_order_Host(ireac_arbitrary_order))
+      {
+        fprintf(echofile, "  \n FORD \t");
+        for (int k = 0; k < reacNreac_arbitrary_order_Host(ireac_arbitrary_order); ++k)
+        {
+          // get species index 
+          const ordinal_type kspec = reacSidx_arbitrary_order_Host(ireac_arbitrary_order, k); // species index
+          // is surface? 
+          if (reacSsrf_arbitrary_order_Host(ireac_arbitrary_order, k) == 1)
+          {
+            fprintf(echofile, "%s: %f | ",  &TCsurf_sNamesHost(reacSidx_arbitrary_order_Host(ireac_arbitrary_order, k), 0),
+              reacNuki_arbitrary_order_Host(ireac_arbitrary_order, k)
+            );
+          } else { // gas
+            fprintf(echofile, "%s: %f | ", &sNamesHost(reacSidx_arbitrary_order_Host(ireac_arbitrary_order, k), 0),
+             reacNuki_arbitrary_order_Host(ireac_arbitrary_order, k));
+          } // end is surface?
+
+        } // end species
+        // continue to next reaction 
+        ireac_arbitrary_order++;
+      }
+
+    }
+
+
+
     fprintf(echofile, "\n");
   }
+
   DASHLINE(echofile);
   if (verboseEnabled)
     printf("KineticModelData::initChem() : Done reading reaction data\n");
@@ -2943,6 +3091,11 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
   vsurfki_.modify_host();
 
   coverageFactor_.modify_host();
+  reaction_No_arbitrary_order_.modify_host();
+  reacNreac_arbitrary_order_.modify_host();
+  reacSidx_arbitrary_order_.modify_host();
+  reacSsrf_arbitrary_order_.modify_host();
+  reacNuki_arbitrary_order_.modify_host();
 
   syncSurfToDevice();
 

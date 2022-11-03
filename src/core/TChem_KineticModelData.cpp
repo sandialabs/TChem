@@ -21,6 +21,10 @@ Sandia National Laboratories, Livermore, CA, USA
 #include "TChem_KineticModelData.hpp"
 #include "TC_kmodint.hpp"
 
+#if defined(TCHEM_ENABLE_TPL_YAML_CPP)
+#include <cstdarg>
+#endif
+
 namespace TChem {
 
 KineticModelData::KineticModelData(const std::string &mechfile, const std::string &thermofile) {
@@ -1780,8 +1784,43 @@ void KineticModelData::modifyArrheniusForwardParametersPLOG_End() {
 
 #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
 
-KineticModelData::KineticModelData(const std::string &mechfile, const bool &hasSurface) {
+/**
+ * Helper function to print to the stream.
+ * @param stream
+ * @param buffer
+ * @param format
+ * @param ...
+ */
+void StreamPrint(std::ostream& stream, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    auto len = vsnprintf(nullptr,0, format, args);
+    va_end(args);
+    std::vector<char> vec(len + 1);
+    va_start(args, format);
+    std::vsnprintf(&vec[0], len + 1, format, args);
+    va_end(args);
+    va_end(args);
+    stream << vec.data();
+}
 
+KineticModelData::KineticModelData(const std::string &mechfile, const bool &hasSurface) {
+    std::ofstream echofile, errfile, surfechofile;
+    echofile.open("kmod.echo");
+    errfile.open("kmod.err");
+    surfechofile.open("kmodSurf.echo");
+    initYamlFile(mechfile, hasSurface, echofile, errfile, surfechofile);
+    echofile.close();
+    errfile.close();
+    surfechofile.close();
+}
+
+KineticModelData::KineticModelData(const std::string &mechfile, std::ostream& echofile, std::ostream& errfile, const bool &hasSurface) {
+    initYamlFile(mechfile, hasSurface, echofile, errfile, echofile);
+}
+
+void KineticModelData::initYamlFile(const std::string &mechfile, const bool &hasSurface, std::ostream& echofile, std::ostream& errfile, std::ostream& surfechofile){
   YAML::Node doc = YAML::LoadFile(mechfile);
 
   if (doc["cantera-version"]) {
@@ -1799,31 +1838,29 @@ KineticModelData::KineticModelData(const std::string &mechfile, const bool &hasS
       countPhase++;
     }
 
-    initChemYaml(doc, gasPhaseIndex);
+    initChemYaml(doc, gasPhaseIndex, echofile, errfile);
     if (hasSurface) {
-      initChemSurfYaml(doc, surfacePhaseIndex);
+      initChemSurfYaml(doc, surfacePhaseIndex, surfechofile);
     }
 
   } else if (doc["NCAR-version"]) {
     if (verboseEnabled) {
       printf("Using parser for NCAR atmospheric chemistry\n");
     }
-    initChemNCAR(doc);
+    initChemNCAR(doc, echofile);
   } else {
     printf("we do not have a parser for this file\n");
     // exit
   }
 }
-int KineticModelData::initChemNCAR(YAML::Node &root) {
 
-#define DASHLINE(file)                                                                                                 \
-  fprintf(file, "------------------------------------------------------------"                                         \
-                "-------------\n")
+int KineticModelData::initChemNCAR(YAML::Node &root, std::ostream& echofile) {
+
+#define DASHLINE(stream)                                                                                                 \
+  stream << "------------------------------------------------------------"                                         \
+                "-------------\n";
 
   CONV_PPM_ = CONV_PPM;
-
-  FILE *echofile;
-  echofile = fopen("kmod.echo", "w");
 
   auto species_names = root["species"];
   auto reactions = root["reactions"];
@@ -1870,13 +1907,13 @@ int KineticModelData::initChemNCAR(YAML::Node &root) {
     sp_i++;
   }
 
-  fprintf(echofile, "kmod.list : # of species                                      : %d\n", nSpec_);
-  fprintf(echofile, "kmod.list : # of species with constant concentration          : %d\n", nConstSpec_);
-  fprintf(echofile, "kmod.list : # of reactions                                    : %d\n", nReac_);
+  StreamPrint(echofile, "kmod.list : # of species                                      : %d\n", nSpec_);
+  StreamPrint(echofile, "kmod.list : # of species with constant concentration          : %d\n", nConstSpec_);
+  StreamPrint(echofile, "kmod.list : # of reactions                                    : %d\n", nReac_);
   //
-  fprintf(echofile, "No. \t Species\n");
+  StreamPrint(echofile, "No. \t Species\n");
   for (int i = 0; i < nSpec_; i++)
-    fprintf(echofile, "%-3d\t%-32s\n", i + 1, &sNamesHost(i, 0));
+    StreamPrint(echofile, "%-3d\t%-32s\n", i + 1, &sNamesHost(i, 0));
   DASHLINE(echofile);
   // fflush(echofile);
 
@@ -1994,14 +2031,14 @@ int KineticModelData::initChemNCAR(YAML::Node &root) {
   // twice because we only consider max (products, reactants)
   maxSpecInReac_ *= 2;
 
-  fprintf(echofile, "kmod.list : Max # of species in a reaction                    : %d\n", maxSpecInReac_);
+  StreamPrint(echofile, "kmod.list : Max # of species in a reaction                    : %d\n", maxSpecInReac_);
 
   //
-  fprintf(echofile, "kmod.list :  # of arrhenius type reactions                    : %d\n", countArrheniusReac);
+  StreamPrint(echofile, "kmod.list :  # of arrhenius type reactions                    : %d\n", countArrheniusReac);
   //
-  fprintf(echofile, "kmod.list :  # of CMAQ_H2O2 type reactions                    : %d\n", countCMAQ_H2O2Reac);
+  StreamPrint(echofile, "kmod.list :  # of CMAQ_H2O2 type reactions                    : %d\n", countCMAQ_H2O2Reac);
   //
-  fprintf(echofile, "kmod.list :  # of Troe type reactions                         : %d\n", nFallReac_);
+  StreamPrint(echofile, "kmod.list :  # of Troe type reactions                         : %d\n", nFallReac_);
 
   //
   if (nReac_ > 0) {
@@ -2322,34 +2359,31 @@ int KineticModelData::initChemNCAR(YAML::Node &root) {
     convExponentHost(i) = nu_sum - ordinal_type(1);
   }
 
-  fprintf(echofile, "kmod.list :  # sources e.g., EMISSION                         : %d\n", countEmissionSources);
+  StreamPrint(echofile, "kmod.list :  # sources e.g., EMISSION                         : %d\n", countEmissionSources);
 
-  fprintf(echofile, "Reaction data : species and Arrhenius pars\n");
+  StreamPrint(echofile, "Reaction data : species and Arrhenius pars\n");
   for (int i = 0; i < nReac_; i++) {
-    fprintf(echofile, "%-5d\t%1d\t%2d\t%2d | ", i + 1, isRevHost(i), reacNreacHost(i), reacNprodHost(i));
+    StreamPrint(echofile, "%-5d\t%1d\t%2d\t%2d | ", i + 1, isRevHost(i), reacNreacHost(i), reacNprodHost(i));
     //
     for (int j = 0; j < reacNreacHost(i); j++)
-      fprintf(echofile, "%f*%s | ", reacNukiHost(i, j), &sNamesHost(reacSidxHost(i, j), 0));
+      StreamPrint(echofile, "%f*%s | ", reacNukiHost(i, j), &sNamesHost(reacSidxHost(i, j), 0));
 
     /// KJ why do we do this way ?
     const int joff = maxSpecInReac_ / 2;
     for (int j = 0; j < reacNprodHost(i); j++)
-      fprintf(echofile, "%f*%s | ", reacNukiHost(i, j + joff), &sNamesHost(reacSidxHost(i, j + joff), 0));
+      StreamPrint(echofile, "%f*%s | ", reacNukiHost(i, j + joff), &sNamesHost(reacSidxHost(i, j + joff), 0));
 
-    // fprintf(echofile,
+    // StreamPrint(echofile,
     //         "%16.8e\t%16.8e\t%16.8e",
     //         reacArhenForHost(i, 0),
     //         reacArhenForHost(i, 1),
     //         reacArhenForHost(i, 2));
 
-    fprintf(echofile, "\n");
+    StreamPrint(echofile, "\n");
 
     if (verboseEnabled)
       printf("KineticModelData::initChem() : Done reading reaction data\n");
   }
-
-  // end file
-  fclose(echofile);
 
   sNames_.modify_host();
   isRev_.modify_host();
@@ -2388,10 +2422,10 @@ int KineticModelData::initChemNCAR(YAML::Node &root) {
   return (0);
 }
 
-int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseIndex) {
-#define DASHLINE(file)                                                                                                 \
-  fprintf(file, "------------------------------------------------------------"                                         \
-                "-------------\n")
+int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseIndex, std::ostream& echofile) {
+#define DASHLINE(stream)                                                                                                 \
+  stream << "------------------------------------------------------------"                                         \
+                "-------------\n";
 
   //
   // char charvar4[4];
@@ -2406,10 +2440,6 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
   TCsurf_NcoverageFactors = 0;
   int TCsurf_Nreac_w_arbitrary_order=0;
   motz_wise_ = false;
-
-  FILE *echofile; //*chemfile,, *errfile
-  /* Retrieve things from kmod.list */
-  echofile = fopen("kmodSurf.echo", "w");
 
   auto eNamesHost = eNames_.view_host();
   auto eMassHost = eMass_.view_host();
@@ -2906,84 +2936,84 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
     }
   }
 
-  fprintf(echofile, "kmodSurf.list : Max # of species in a reaction                    : %d\n", TCsurf_maxSpecInReac_);
-  fprintf(echofile, "kmodSurf.list : # of temperature regions for thermo fits          : %d\n", TCsurf_nNASAinter_);
-  fprintf(echofile, "kmodSurf.list : # of polynomial coefficients for thermo fits      : %d\n", TCsurf_nCpCoef_);
-  fprintf(echofile, "kmodSurf.list : # of species                                      : %d\n", TCsurf_Nspec_);
-  fprintf(echofile, "kmodSurf.list : # of reactions                                    : %d\n", TCsurf_Nreac_);
-  fprintf(echofile, "kmodSurf.list : # of reactions with arbitrary order               : %d\n", TCsurf_Nreac_w_arbitrary_order);
-  fprintf(echofile, "kmodSurf.list : motz–wise correction                              : %s\n", motz_wise_ ? "true":"false");
-  fprintf(echofile, "----------------------------------------------------------"
+  StreamPrint(echofile, "kmodSurf.list : Max # of species in a reaction                    : %d\n", TCsurf_maxSpecInReac_);
+  StreamPrint(echofile, "kmodSurf.list : # of temperature regions for thermo fits          : %d\n", TCsurf_nNASAinter_);
+  StreamPrint(echofile, "kmodSurf.list : # of polynomial coefficients for thermo fits      : %d\n", TCsurf_nCpCoef_);
+  StreamPrint(echofile, "kmodSurf.list : # of species                                      : %d\n", TCsurf_Nspec_);
+  StreamPrint(echofile, "kmodSurf.list : # of reactions                                    : %d\n", TCsurf_Nreac_);
+  StreamPrint(echofile, "kmodSurf.list : # of reactions with arbitrary order               : %d\n", TCsurf_Nreac_w_arbitrary_order);
+  StreamPrint(echofile, "kmodSurf.list : motz–wise correction                              : %s\n", motz_wise_ ? "true":"false");
+  StreamPrint(echofile, "----------------------------------------------------------"
                     "---------------\n");
-  fflush(echofile);
+  echofile.flush();
   //
   // fscanf(chemfile, "%lf", &reacbalance);
-  // fprintf(
+  // StreamPrint(
   //   echofile,
   //   "kmodSurf.list : Tolerance for reaction balance                    : %e\n",
   //   reacbalance);
-  // fprintf(echofile,
+  // StreamPrint(echofile,
   //         "----------------------------------------------------------"
   //         "---------------\n");
   // fflush(echofile);
 
   TCsurf_siteden_ = doc["phases"][surfacePhaseIndex]["site-density"].as<real_type>();
-  fprintf(echofile, "kmodSurf.list : Site density                                      : %e\n", TCsurf_siteden_);
-  fprintf(echofile, "----------------------------------------------------------"
+  StreamPrint(echofile, "kmodSurf.list : Site density                                      : %e\n", TCsurf_siteden_);
+  StreamPrint(echofile, "----------------------------------------------------------"
                     "---------------\n");
-  fflush(echofile);
+  echofile.flush();
   /* stoichiometric matrix gas species*/
-  fprintf(echofile, "No. \t Species \t Mass\n");
+  StreamPrint(echofile, "No. \t Species \t Mass\n");
   for (int i = 0; i < TCsurf_Nspec_; i++)
-    fprintf(echofile, "%-3d\t%-32s\t%12.7f\n", i + 1, &TCsurf_sNamesHost(i, 0), TCsurf_sMassHost(i));
+    StreamPrint(echofile, "%-3d\t%-32s\t%12.7f\n", i + 1, &TCsurf_sNamesHost(i, 0), TCsurf_sMassHost(i));
   DASHLINE(echofile);
-  fflush(echofile);
+  echofile.flush();
 
   /* Species' elemental composition */
 
-  fprintf(echofile, "Elemental composition of species\n");
-  fprintf(echofile, "No. \t Species \t\t\t\t Element\n\t\t\t\t\t");
+  StreamPrint(echofile, "Elemental composition of species\n");
+  StreamPrint(echofile, "No. \t Species \t\t\t\t Element\n\t\t\t\t\t");
 
   for (int i = 0; i < nElem_; i++)
-    fprintf(echofile, "%s\t", &eNamesHost(i, 0));
-  fprintf(echofile, "\n");
+    StreamPrint(echofile, "%s\t", &eNamesHost(i, 0));
+  StreamPrint(echofile, "\n");
 
   for (int i = 0; i < TCsurf_Nspec_; i++) {
-    fprintf(echofile, "%-3d\t%-32s", i + 1, &TCsurf_sNamesHost(i, 0));
+    StreamPrint(echofile, "%-3d\t%-32s", i + 1, &TCsurf_sNamesHost(i, 0));
     for (int j = 0; j < nElem_; j++)
-      fprintf(echofile, "%-3d\t", TCsurf_elemCountHost(i, j));
-    fprintf(echofile, "\n");
+      StreamPrint(echofile, "%-3d\t", TCsurf_elemCountHost(i, j));
+    StreamPrint(echofile, "\n");
   }
 
-  fprintf(echofile, "Range of temperature for thermodynamic fits\n");
-  fprintf(echofile, "No. \t Species \t\t Tlow \tTmid \tThigh\n");
+  StreamPrint(echofile, "Range of temperature for thermodynamic fits\n");
+  StreamPrint(echofile, "No. \t Species \t\t Tlow \tTmid \tThigh\n");
   for (int i = 0; i < TCsurf_Nspec_; i++) {
-    fprintf(echofile, "%-3d\t%-32s %12.4f\t%12.4f\t%12.4f\n", i + 1, &TCsurf_sNamesHost(i, 0), TCsurf_TloHost(i),
+    StreamPrint(echofile, "%-3d\t%-32s %12.4f\t%12.4f\t%12.4f\n", i + 1, &TCsurf_sNamesHost(i, 0), TCsurf_TloHost(i),
             TCsurf_TmiHost(i), TCsurf_ThiHost(i));
   }
   DASHLINE(echofile);
 
-  fprintf(echofile, "List of coefficients for thermodynamic fits\n");
+  StreamPrint(echofile, "List of coefficients for thermodynamic fits\n");
 
   for (int i = 0; i < TCsurf_Nspec_; i++) {
     const auto ptr = &TCsurf_cppolHost(i, 0, 0);
-    fprintf(echofile, "%-4d %-32s\n %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n", i + 1,
+    StreamPrint(echofile, "%-4d %-32s\n %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n", i + 1,
             &TCsurf_sNamesHost(i, 0), ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], ptr[6]);
-    fprintf(echofile, " %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n", ptr[7], ptr[8], ptr[9], ptr[10], ptr[11],
+    StreamPrint(echofile, " %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n", ptr[7], ptr[8], ptr[9], ptr[10], ptr[11],
             ptr[12], ptr[13]);
   }
   DASHLINE(echofile);
   count_cov = 0; // set this value to zero to print out cov parameters in echofile
   ireac_arbitrary_order =0; // reactions with arbitrary order
-  fprintf(echofile, "Reaction data : species and Arrhenius pars\n");
+  StreamPrint(echofile, "Reaction data : species and Arrhenius pars\n");
   for (int i = 0; i < TCsurf_Nreac_; i++) {
-    fprintf(echofile, "%-5d\t%1d\t%2d\t%2d | ", i + 1, TCsurf_isRevHost(i), TCsurf_reacNreacHost(i),
+    StreamPrint(echofile, "%-5d\t%1d\t%2d\t%2d | ", i + 1, TCsurf_isRevHost(i), TCsurf_reacNreacHost(i),
             TCsurf_reacNprodHost(i));
     for (int j = 0; j < TCsurf_reacNreacHost(i); j++) {
       if (TCsurf_reacSsrfHost(i, j) == 1) {
-        fprintf(echofile, "%d*%s | ", TCsurf_reacNukiHost(i, j), &TCsurf_sNamesHost(TCsurf_reacSidxHost(i, j), 0));
+        StreamPrint(echofile, "%d*%s | ", TCsurf_reacNukiHost(i, j), &TCsurf_sNamesHost(TCsurf_reacSidxHost(i, j), 0));
       } else {
-        fprintf(echofile, "%d*%s | ", TCsurf_reacNukiHost(i, j), &sNamesHost(TCsurf_reacSidxHost(i, j), 0));
+        StreamPrint(echofile, "%d*%s | ", TCsurf_reacNukiHost(i, j), &sNamesHost(TCsurf_reacSidxHost(i, j), 0));
       }
     }
 
@@ -2991,34 +3021,34 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
 
     for (int j = 0; j < TCsurf_reacNprodHost(i); j++)
       if (TCsurf_reacSsrfHost(i, j + joff) == 1) {
-        fprintf(echofile, "%d*%s | ", TCsurf_reacNukiHost(i, j + joff),
+        StreamPrint(echofile, "%d*%s | ", TCsurf_reacNukiHost(i, j + joff),
                 &TCsurf_sNamesHost(TCsurf_reacSidxHost(i, j + joff), 0));
       } else {
-        fprintf(echofile, "%d*%s | ", TCsurf_reacNukiHost(i, j + joff),
+        StreamPrint(echofile, "%d*%s | ", TCsurf_reacNukiHost(i, j + joff),
                 &sNamesHost(TCsurf_reacSidxHost(i, j + joff), 0));
       }
 
-    fprintf(echofile, "%16.8e\t%16.8e\t%16.8e", TCsurf_reacArhenForHost(i, 0), TCsurf_reacArhenForHost(i, 1),
+    StreamPrint(echofile, "%16.8e\t%16.8e\t%16.8e", TCsurf_reacArhenForHost(i, 0), TCsurf_reacArhenForHost(i, 1),
             TCsurf_reacArhenForHost(i, 2));
 
     if (TCsurf_isDupHost[i] == 1)
-      fprintf(echofile, "  DUPLICATE");
+      StreamPrint(echofile, "  DUPLICATE");
     if (TCsurf_isStickHost[i] == 1)
-      fprintf(echofile, "  STICK");
+      StreamPrint(echofile, "  STICK");
 
     if (TCsurf_isCovHost(i) == 1) {
 
       for (int k = 0; k < TCsurf_Cov_CountHost(i); k++) {
-        fprintf(echofile, "  \n COV");
+        StreamPrint(echofile, "  \n COV");
 
         if (coverageFactorHost(count_cov)._isgas) {
-          fprintf(echofile, " %s\t", &sNamesHost(coverageFactorHost(count_cov)._species_index, 0));
+          StreamPrint(echofile, " %s\t", &sNamesHost(coverageFactorHost(count_cov)._species_index, 0));
         } else {
           // surface species
-          fprintf(echofile, " %s\t", &TCsurf_sNamesHost(coverageFactorHost(count_cov)._species_index, 0));
+          StreamPrint(echofile, " %s\t", &TCsurf_sNamesHost(coverageFactorHost(count_cov)._species_index, 0));
         }
 
-        fprintf(echofile, "%16.8e\t%16.8e\t%16.8e", coverageFactorHost(count_cov)._eta,
+        StreamPrint(echofile, "%16.8e\t%16.8e\t%16.8e", coverageFactorHost(count_cov)._eta,
                 coverageFactorHost(count_cov)._mu, coverageFactorHost(count_cov)._epsilon);
         count_cov++;
       }
@@ -3029,7 +3059,7 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
       // check if reactions has an arbitrary order
       if (i == reaction_No_arbitrary_order_Host(ireac_arbitrary_order))
       {
-        fprintf(echofile, "  \n FORD \t");
+        StreamPrint(echofile, "  \n FORD \t");
         for (int k = 0; k < reacNreac_arbitrary_order_Host(ireac_arbitrary_order); ++k)
         {
           // get species index 
@@ -3037,11 +3067,11 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
           // is surface? 
           if (reacSsrf_arbitrary_order_Host(ireac_arbitrary_order, k) == 1)
           {
-            fprintf(echofile, "%s: %f | ",  &TCsurf_sNamesHost(reacSidx_arbitrary_order_Host(ireac_arbitrary_order, k), 0),
+            StreamPrint(echofile, "%s: %f | ",  &TCsurf_sNamesHost(reacSidx_arbitrary_order_Host(ireac_arbitrary_order, k), 0),
               reacNuki_arbitrary_order_Host(ireac_arbitrary_order, k)
             );
           } else { // gas
-            fprintf(echofile, "%s: %f | ", &sNamesHost(reacSidx_arbitrary_order_Host(ireac_arbitrary_order, k), 0),
+            StreamPrint(echofile, "%s: %f | ", &sNamesHost(reacSidx_arbitrary_order_Host(ireac_arbitrary_order, k), 0),
              reacNuki_arbitrary_order_Host(ireac_arbitrary_order, k));
           } // end is surface?
 
@@ -3054,16 +3084,12 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
 
 
 
-    fprintf(echofile, "\n");
+    StreamPrint(echofile, "\n");
   }
 
   DASHLINE(echofile);
   if (verboseEnabled)
     printf("KineticModelData::initChem() : Done reading reaction data\n");
-
-  // fclose(chemfile);
-  // fclose(errfile);
-  fclose(echofile);
 
   /// Raise modify flags for all modified dual views
   TCsurf_isStick_.modify_host();
@@ -3102,14 +3128,10 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
   //
   return (0);
 }
-int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
-#define DASHLINE(file)                                                                                                 \
-  fprintf(file, "------------------------------------------------------------"                                         \
-                "-------------\n")
-
-  FILE *echofile, *errfile;
-  echofile = fopen("kmod.echo", "w");
-  errfile = fopen("kmod.err", "w");
+int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex, std::ostream& echofile, std::ostream& errfile) {
+#define DASHLINE(stream)                                                                                                 \
+  stream << "------------------------------------------------------------"                                         \
+                "-------------\n";
 
   /* zero-out variables */
   isInit_ = 0;
@@ -3157,9 +3179,9 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
   nSpec_ = species_name.size();
   nReac_ = gas_reactions.size();
   // nReac_ =
-  fprintf(echofile, "kmod.list : # of elements                                     : %d\n", nElem_);
-  fprintf(echofile, "kmod.list : # of species                                      : %d\n", nSpec_);
-  fprintf(echofile, "kmod.list : # of reactions                                    : %d\n", nReac_);
+  StreamPrint(echofile, "kmod.list : # of elements                                     : %d\n", nElem_);
+  StreamPrint(echofile, "kmod.list : # of species                                      : %d\n", nSpec_);
+  StreamPrint(echofile, "kmod.list : # of reactions                                    : %d\n", nReac_);
 
   /* Elements' name and weights */
   eNames_ = string_type_1d_dual_view<LENGTHOFELEMNAME + 1>(do_not_init_tag("KMD::eNames"), nElem_);
@@ -3301,45 +3323,45 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
       }
     }
 
-    fprintf(echofile, "No. \t Element \t Mass\n");
+    StreamPrint(echofile, "No. \t Element \t Mass\n");
     for (int i = 0; i < nElem_; i++)
-      fprintf(echofile, "%-3d\t%-4s\t%f10.7\n", i + 1, &eNamesHost(i, 0), eMassHost(i));
+      StreamPrint(echofile, "%-3d\t%-4s\t%f10.7\n", i + 1, &eNamesHost(i, 0), eMassHost(i));
     DASHLINE(echofile);
-    fflush(echofile);
+    echofile.flush();
 
-    fprintf(echofile, "No. \t Species \t Mass\n");
+    StreamPrint(echofile, "No. \t Species \t Mass\n");
     for (int i = 0; i < nSpec_; i++)
-      fprintf(echofile, "%-3d\t%-32s\t%12.7f\n", i + 1, &sNamesHost(i, 0), sMassHost(i));
+      StreamPrint(echofile, "%-3d\t%-32s\t%12.7f\n", i + 1, &sNamesHost(i, 0), sMassHost(i));
     DASHLINE(echofile);
-    fflush(echofile);
+    echofile.flush();
 
-    fprintf(echofile, "Elemental composition of species\n");
-    fprintf(echofile, "No. \t Species \t\t Element\n\t\t\t\t");
+    StreamPrint(echofile, "Elemental composition of species\n");
+    StreamPrint(echofile, "No. \t Species \t\t Element\n\t\t\t\t");
     for (int i = 0; i < nElem_; i++)
-      fprintf(echofile, "%s\t", &eNamesHost(i, 0));
-    fprintf(echofile, "\n");
+      StreamPrint(echofile, "%s\t", &eNamesHost(i, 0));
+    StreamPrint(echofile, "\n");
 
     for (int i = 0; i < nSpec_; i++) {
-      fprintf(echofile, "%-3d\t%-32s", i + 1, &sNamesHost(i, 0));
+      StreamPrint(echofile, "%-3d\t%-32s", i + 1, &sNamesHost(i, 0));
       for (int j = 0; j < nElem_; j++)
-        fprintf(echofile, "%-3d\t", elemCountHost(i, j));
-      fprintf(echofile, "\n");
+        StreamPrint(echofile, "%-3d\t", elemCountHost(i, j));
+      StreamPrint(echofile, "\n");
     }
 
-    fprintf(echofile, "Range of temperature for thermodynamic fits\n");
-    fprintf(echofile, "No. \t Species \t\t Tlow \tTmid \tThigh\n");
+    StreamPrint(echofile, "Range of temperature for thermodynamic fits\n");
+    StreamPrint(echofile, "No. \t Species \t\t Tlow \tTmid \tThigh\n");
     for (int i = 0; i < nSpec_; i++) {
-      fprintf(echofile, "%-3d\t%-32s %12.4f\t%12.4f\t%12.4f\n", i + 1, &sNamesHost(i, 0), TloHost(i), TmiHost(i),
+      StreamPrint(echofile, "%-3d\t%-32s %12.4f\t%12.4f\t%12.4f\n", i + 1, &sNamesHost(i, 0), TloHost(i), TmiHost(i),
               ThiHost(i));
     }
     DASHLINE(echofile);
 
-    fprintf(echofile, "List of coefficients for thermodynamic fits\n");
+    StreamPrint(echofile, "List of coefficients for thermodynamic fits\n");
     for (int i = 0; i < nSpec_; i++) {
       const auto ptr = &cppolHost(i, 0, 0);
-      fprintf(echofile, "%-4d %-32s\n %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n", i + 1, &sNamesHost(i, 0),
+      StreamPrint(echofile, "%-4d %-32s\n %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n", i + 1, &sNamesHost(i, 0),
               ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], ptr[6]);
-      fprintf(echofile, " %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n", ptr[7], ptr[8], ptr[9], ptr[10], ptr[11],
+      StreamPrint(echofile, " %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e %16.8e\n", ptr[7], ptr[8], ptr[9], ptr[10], ptr[11],
               ptr[12], ptr[13]);
     }
     DASHLINE(echofile);
@@ -3401,7 +3423,7 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
   if (verboseEnabled)
     printf("KineticModelData::initChemYaml() : Done reading number of reactants and products \n");
 
-  fprintf(echofile, "kmod.list : Max # of species in a reaction                    : %d\n", maxSpecInReac_);
+  StreamPrint(echofile, "kmod.list : Max # of species in a reaction                    : %d\n", maxSpecInReac_);
 
   if (nReac_ > 0) {
     reacSidx_ = ordinal_type_2d_dual_view(do_not_init_tag("KMD::reacNrp"), nReac_, maxSpecInReac_);
@@ -3541,21 +3563,21 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
   } /* gas reactions */
   /* Reactions with reversible Arrhenius parameters given */
 
-  fprintf(echofile, "kmod.list : # of reactions with REV given                     : %d\n", nRevReac_);
-  fprintf(echofile, "kmod.list : # of pressure-dependent reactions                 : %d\n", nFallReac_);
+  StreamPrint(echofile, "kmod.list : # of reactions with REV given                     : %d\n", nRevReac_);
+  StreamPrint(echofile, "kmod.list : # of pressure-dependent reactions                 : %d\n", nFallReac_);
   //
-  fprintf(echofile, "kmod.list : # of Chebyshev reactions                          : %d\n", nChebyshev);
+  StreamPrint(echofile, "kmod.list : # of Chebyshev reactions                          : %d\n", nChebyshev);
 
-  fprintf(echofile, "kmod.list : # of parameters for pressure-dependent reactions  : %d\n", nFallPar_);
+  StreamPrint(echofile, "kmod.list : # of parameters for pressure-dependent reactions  : %d\n", nFallPar_);
 
-  fprintf(echofile, "kmod.list : # of reactions using third-body efficiencies      : %d\n", nThbReac_);
+  StreamPrint(echofile, "kmod.list : # of reactions using third-body efficiencies      : %d\n", nThbReac_);
   //
-  fprintf(echofile, "kmod.list : Max # of third-body efficiencies in a reaction    : %d\n", maxTbInReac_);
+  StreamPrint(echofile, "kmod.list : Max # of third-body efficiencies in a reaction    : %d\n", maxTbInReac_);
 
   //
-  fprintf(echofile, "kmod.list : # of PLOG reactions                               : %d\n", nPlogReac_);
+  StreamPrint(echofile, "kmod.list : # of PLOG reactions                               : %d\n", nPlogReac_);
   //
-  fprintf(echofile, "kmod.list : # of reactions with non-int stoichiometric coeffs : %d\n", nRealNuReac_);
+  StreamPrint(echofile, "kmod.list : # of reactions with non-int stoichiometric coeffs : %d\n", nRealNuReac_);
 
   //
   /* Reactions with real stoichiometric coefficients */
@@ -3643,24 +3665,24 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
     count_reac++;
   }
 
-  fprintf(echofile, "Reaction data : species and Arrhenius pars\n");
+  StreamPrint(echofile, "Reaction data : species and Arrhenius pars\n");
   for (int i = 0; i < nReac_; i++) {
-    fprintf(echofile, "%-5d\t%1d\t%2d\t%2d | ", i + 1, isRevHost(i), reacNreacHost(i), reacNprodHost(i));
+    StreamPrint(echofile, "%-5d\t%1d\t%2d\t%2d | ", i + 1, isRevHost(i), reacNreacHost(i), reacNprodHost(i));
     //
     for (int j = 0; j < reacNreacHost(i); j++)
-      fprintf(echofile, "%f*%s | ", reacNukiHost(i, j), &sNamesHost(reacSidxHost(i, j), 0));
+      StreamPrint(echofile, "%f*%s | ", reacNukiHost(i, j), &sNamesHost(reacSidxHost(i, j), 0));
 
     /// KJ why do we do this way ?
     const int joff = maxSpecInReac_ / 2;
     for (int j = 0; j < reacNprodHost(i); j++)
-      fprintf(echofile, "%f*%s | ", reacNukiHost(i, j + joff), &sNamesHost(reacSidxHost(i, j + joff), 0));
+      StreamPrint(echofile, "%f*%s | ", reacNukiHost(i, j + joff), &sNamesHost(reacSidxHost(i, j + joff), 0));
     //
-    fprintf(echofile, "%16.8e\t%16.8e\t%16.8e", reacArhenForHost(i, 0), reacArhenForHost(i, 1), reacArhenForHost(i, 2));
+    StreamPrint(echofile, "%16.8e\t%16.8e\t%16.8e", reacArhenForHost(i, 0), reacArhenForHost(i, 1), reacArhenForHost(i, 2));
 
     if (isDupHost(i) == 1)
-      fprintf(echofile, "  DUPLICATE\n");
+      StreamPrint(echofile, "  DUPLICATE\n");
     else
-      fprintf(echofile, "\n");
+      StreamPrint(echofile, "\n");
   }
 
   if (verboseEnabled)
@@ -3668,40 +3690,40 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
 
   /* Pressure-dependent reactions */
   if (nFallReac_ > 0) {
-    fprintf(echofile, "Reaction data : Pressure dependencies for %d reactions :\n", nFallReac_);
+    StreamPrint(echofile, "Reaction data : Pressure dependencies for %d reactions :\n", nFallReac_);
     for (int i = 0; i < nFallReac_; i++) {
-      fprintf(echofile, "%-4d\t", reacPfalHost(i) + 1);
+      StreamPrint(echofile, "%-4d\t", reacPfalHost(i) + 1);
 
       if (reacPtypeHost(i) == 1)
-        fprintf(echofile, "Lind \t");
+        StreamPrint(echofile, "Lind \t");
       if (reacPtypeHost(i) == 2)
-        fprintf(echofile, "SRI  \t");
+        StreamPrint(echofile, "SRI  \t");
       if (reacPtypeHost(i) == 3)
-        fprintf(echofile, "Troe3\t");
+        StreamPrint(echofile, "Troe3\t");
       if (reacPtypeHost(i) == 4)
-        fprintf(echofile, "Troe4\t");
+        StreamPrint(echofile, "Troe4\t");
       if (reacPtypeHost(i) == 6)
-        fprintf(echofile, "Cheb \t");
+        StreamPrint(echofile, "Cheb \t");
 
       if (reacPlohiHost(i) == 0)
-        fprintf(echofile, "Low  \t");
+        StreamPrint(echofile, "Low  \t");
       if (reacPlohiHost(i) == 1)
-        fprintf(echofile, "High \t");
+        StreamPrint(echofile, "High \t");
 
       if (reacPspecHost(i) < 0)
-        fprintf(echofile, "Mixture \n");
+        StreamPrint(echofile, "Mixture \n");
       if (reacPspecHost(i) >= 0)
-        fprintf(echofile, "%s\n", &sNamesHost(reacPspecHost(i), 0));
+        StreamPrint(echofile, "%s\n", &sNamesHost(reacPspecHost(i), 0));
     }
     DASHLINE(echofile);
 
-    fprintf(echofile, "Reaction data : Fall off parameters \n");
+    StreamPrint(echofile, "Reaction data : Fall off parameters \n");
     for (int i = 0; i < nFallReac_; i++) {
-      fprintf(echofile, "%-4d\t", reacPfalHost(i) + 1);
+      StreamPrint(echofile, "%-4d\t", reacPfalHost(i) + 1);
       for (int j = 0; j < nFallPar_; j++) {
-        fprintf(echofile, "%e \t", reacPparHost(i, j));
+        StreamPrint(echofile, "%e \t", reacPparHost(i, j));
       }
-      fprintf(echofile, "\n");
+      StreamPrint(echofile, "\n");
     }
     DASHLINE(echofile);
   }
@@ -3769,12 +3791,12 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
 
   if (nThbReac_ > 0) {
 
-    fprintf(echofile, "Reaction data : Third body efficiencies :\n");
+    StreamPrint(echofile, "Reaction data : Third body efficiencies :\n");
     for (int i = 0; i < nThbReac_; i++) {
-      fprintf(echofile, "%-4d\t", reacTbdyHost(i) + 1);
+      StreamPrint(echofile, "%-4d\t", reacTbdyHost(i) + 1);
       for (int j = 0; j < reacTbnoHost(i); j++)
-        fprintf(echofile, "%s->%5.2f, ", &sNamesHost(specTbdIdxHost(i, j), 0), specTbdEffHost(i, j));
-      fprintf(echofile, "\n");
+        StreamPrint(echofile, "%s->%5.2f, ", &sNamesHost(specTbdIdxHost(i, j), 0), specTbdEffHost(i, j));
+      StreamPrint(echofile, "\n");
     }
     DASHLINE(echofile);
   }
@@ -3846,28 +3868,28 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
       reacPlogParsHost(i, 3) = constant[3];
     }
 
-    fprintf(echofile, "Reaction data : PLog off parameters \n");
+    StreamPrint(echofile, "Reaction data : PLog off parameters \n");
     for (int i = 0; i < nPlogReac_; i++) {
       const ordinal_type idx = reacPlogIdxHost(i) + 1;
       const ordinal_type number_intervals = reacPlogPnoHost(i + 1) - reacPlogPnoHost(i);
-      fprintf(echofile, "Reaction id %-4d\t", idx);
-      fprintf(echofile, "Number of pressure intervals %-4d\t", number_intervals);
-      fprintf(echofile, "\n");
+      StreamPrint(echofile, "Reaction id %-4d\t", idx);
+      StreamPrint(echofile, "Number of pressure intervals %-4d\t", number_intervals);
+      StreamPrint(echofile, "\n");
       for (int j = reacPlogPnoHost(i); j < reacPlogPnoHost(i + 1); j++) {
-        fprintf(echofile, "P: %e\t", reacPlogParsHost(j, 0));
-        fprintf(echofile, "A: %e\t", reacPlogParsHost(j, 1));
-        fprintf(echofile, "b: %e\t", reacPlogParsHost(j, 2));
-        fprintf(echofile, "Ea: %e\t", reacPlogParsHost(j, 3));
-        fprintf(echofile, "\n");
+        StreamPrint(echofile, "P: %e\t", reacPlogParsHost(j, 0));
+        StreamPrint(echofile, "A: %e\t", reacPlogParsHost(j, 1));
+        StreamPrint(echofile, "b: %e\t", reacPlogParsHost(j, 2));
+        StreamPrint(echofile, "Ea: %e\t", reacPlogParsHost(j, 3));
+        StreamPrint(echofile, "\n");
       }
     }
 
     // for (int i = 0; i < reacPlogPnoHost(nPlogReac_); i++) {
-    //   fprintf(echofile, "%d => P: %e\t",i, reacPlogParsHost(i, 0));
-    //   fprintf(echofile, "A: %e\t",reacPlogParsHost(i, 1));
-    //   fprintf(echofile, "b: %e\t",reacPlogParsHost(i, 2));
-    //   fprintf(echofile, "Ea: %e\t",reacPlogParsHost(i, 3));
-    //   fprintf(echofile, "\n");
+    //   StreamPrint(echofile, "%d => P: %e\t",i, reacPlogParsHost(i, 0));
+    //   StreamPrint(echofile, "A: %e\t",reacPlogParsHost(i, 1));
+    //   StreamPrint(echofile, "b: %e\t",reacPlogParsHost(i, 2));
+    //   StreamPrint(echofile, "Ea: %e\t",reacPlogParsHost(i, 3));
+    //   StreamPrint(echofile, "\n");
     // }
     DASHLINE(echofile);
   }
@@ -3974,8 +3996,6 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
   if (verboseEnabled)
     printf("KineticModelData::initChemYaml() : Done reading Chebyshev data\n");
 
-  fclose(errfile);
-
   /* universal gas constant */
   Runiv_ = RUNIV * 1.0e3; // j/kmol/K
   Rcal_ = Runiv_ / (CALJO * 1.0e3);
@@ -4033,8 +4053,6 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
   /* done */
   isInit_ = 1;
 
-  fclose(echofile);
-
   // count elements that are present in gas species
   NumberofElementsGas_ = 0;
   for (int i = 0; i < elemCountHost.extent(1); i++) {   // loop over elements
@@ -4066,7 +4084,7 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex) {
   }
 
   // if (errmsg.length() > 0) {
-  //   fprintf(errfile, "Error: %s\n", errmsg.c_str());
+  //   StreamPrint(errfile, "Error: %s\n", errmsg.c_str());
   //   std::runtime_error("Error: TChem::KineticModelData \n" + errmsg);
   // }
 

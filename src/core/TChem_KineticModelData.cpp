@@ -23,6 +23,7 @@ Sandia National Laboratories, Livermore, CA, USA
 
 #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
 #include <cstdarg>
+#include <algorithm>
 #endif
 
 namespace TChem {
@@ -3271,56 +3272,63 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex, st
 
     auto cppolHost = cppol_.view_host();
 
-    int spi(0);
-    auto species = doc["species"];
-    for (auto const &sp : species) {
+    YAML::Node species = doc["species"];
 
-      if (spi < nSpec_) {
-        if (sp["name"].as<std::string>() == species_name[spi].as<std::string>()) {
+    // iterate through the species_names in order
+    for(int spi = 0; spi < species_name.size(); spi++){
+        auto sp_name = species_name[spi].as<std::string>();
 
-          std::string sp_name = species_name[spi].as<std::string>();
-          std::transform(sp_name.begin(), sp_name.end(), sp_name.begin(), ::toupper);
-          species_indx.insert(std::pair<std::string, int>(sp_name, spi));
+        // start by assuming the species list is in the same order as the species_name
+        auto sp = species[spi];
 
-          char *specNm = &*sp_name.begin();
-          strncat(&sNamesHost(spi, 0), specNm, LENGTHOFSPECNAME);
+        // check to see if this is a valid assumption
+        if(sp["name"].as<std::string>() != sp_name){
+            auto sp_it = std::find_if(species.begin(), species.end(), [sp_name](const auto& test_species){
+                return test_species["name"].template as<std::string>() == sp_name;
+            });
+            if (sp_it == species.end()){
+                printf("Yaml : Error when interpreting kinetic model  !!!");
+                printf("species does not exit %s\n", sp_name.c_str());
+                exit(1);
+            }else{
+                sp.reset(*sp_it);
+            }
+        }
 
-          auto comp = sp["composition"];
-          for (auto const &element : comp) {
-            std::string first = element.first.as<std::string>();
-            std::transform(first.begin(), first.end(), first.begin(), ::toupper);
-            char *elemNm = &*first.begin();
+        std::transform(sp_name.begin(), sp_name.end(), sp_name.begin(), ::toupper);
+        species_indx.insert(std::pair<std::string, int>(sp_name, spi));
 
-            for (int j = 0; j < nElem_; j++) {
-              if (strcmp(&eNamesHost(j, 0), elemNm) == 0) {
-                elemCountHost(spi, j) = element.second.as<int>();
-                sMassHost(spi) += elemCountHost(spi, j) * eMassHost(j);
-              }
+        char *specNm = &*sp_name.begin();
+        strncat(&sNamesHost(spi, 0), specNm, LENGTHOFSPECNAME);
+
+        auto comp = sp["composition"];
+        for (auto const &element : comp) {
+          std::string first = element.first.as<std::string>();
+          std::transform(first.begin(), first.end(), first.begin(), ::toupper);
+          char *elemNm = &*first.begin();
+
+          for (int j = 0; j < nElem_; j++) {
+            if (strcmp(&eNamesHost(j, 0), elemNm) == 0) {
+              elemCountHost(spi, j) = element.second.as<int>();
+              sMassHost(spi) += elemCountHost(spi, j) * eMassHost(j);
             }
           }
+        }
 
-          auto temperature_ranges = sp["thermo"]["temperature-ranges"];
-          TloHost(spi) = temperature_ranges[0].as<double>();
-          TmiHost(spi) = temperature_ranges[1].as<double>();
-          ThiHost(spi) = temperature_ranges[2].as<double>();
-          TthrmMin_ = std::min(TthrmMin_, TloHost(spi));
-          TthrmMax_ = std::max(TthrmMax_, ThiHost(spi));
+        auto temperature_ranges = sp["thermo"]["temperature-ranges"];
+        TloHost(spi) = temperature_ranges[0].as<double>();
+        TmiHost(spi) = temperature_ranges[1].as<double>();
+        ThiHost(spi) = temperature_ranges[2].as<double>();
+        TthrmMin_ = std::min(TthrmMin_, TloHost(spi));
+        TthrmMax_ = std::max(TthrmMax_, ThiHost(spi));
 
-          /* Polynomial coeffs for thermo fits */
-          auto data = sp["thermo"]["data"];
-          for (int j = 0; j < nNASAinter_; j++) {
-            auto dataIntervale = data[j];
-            for (int k = 0; k < nCpCoef_ + 2; k++)
-              cppolHost(spi, j, k) = dataIntervale[k].as<double>();
-          }
-
-          spi++;
-        } // else{
-        //   std::cout << "Species Name: "<<sp["name"]<< "\n";
-        // }
-      } else {
-        break;
-      }
+        /* Polynomial coeffs for thermo fits */
+        auto data = sp["thermo"]["data"];
+        for (int j = 0; j < nNASAinter_; j++) {
+          auto dataIntervale = data[j];
+          for (int k = 0; k < nCpCoef_ + 2; k++)
+            cppolHost(spi, j, k) = dataIntervale[k].as<double>();
+        }
     }
 
     StreamPrint(echofile, "No. \t Element \t Mass\n");

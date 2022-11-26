@@ -42,6 +42,7 @@ OPTION(TCHEM_ENABLE_VERBOSE "Flag to enable TChem verbose flag" OFF)
 OPTION(TCHEM_ENABLE_DEBUG "Flag to enable TChem debug flag" OFF)
 OPTION(TCHEM_ENABLE_PYTHON "Flag to enable python binding" OFF)
 OPTION(TCHEM_ENABLE_FORTRAN "Flag to enable fortran binding" OFF)
+OPTION(TCHEM_ENABLE_INSTALL "Flag to enable install exports for TCHEM" ON)
 
 OPTION(TCHEM_ENABLE_NO_NEG_CONCENTRATION_ARBITRARY_ORDER "Flag to enable no negative values of concentration only in arbitrary-order reactions" OFF)
 OPTION(TCHEM_ENABLE_PROBLEMS_NUMERICAL_JACOBIAN "Flag to enable numerical jacobian" OFF)
@@ -133,28 +134,45 @@ ENDIF()
 #
 # Kokkos
 #
-IF (KOKKOS_INSTALL_PATH)
-  MESSAGE(STATUS "TChem attempts to use Kokkos installed at ${KOKKOS_INSTALL_PATH}")
-  FIND_PACKAGE(Kokkos REQUIRED)
+IF(TARGET Kokkos::kokkos)
+  # check to see if kokkos was loaded in another project
+  message(STATUS "Found Kokkos::kokkos target")
   SET(TCHEM_INTERNAL_KOKKOS_TARGET "Kokkos::kokkos")
   SET(TCHEM_ENABLE_TPL_KOKKOS ON CACHE BOOL "Enable Kokkos")
   LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_KOKKOS_TARGET})
 ELSE()
-  MESSAGE(FATAL_ERROR "-- Kokkos install path is not provided")
+  IF (KOKKOS_INSTALL_PATH)
+    MESSAGE(STATUS "TChem attempts to use Kokkos installed at ${KOKKOS_INSTALL_PATH}")
+    FIND_PACKAGE(Kokkos REQUIRED)
+    SET(TCHEM_INTERNAL_KOKKOS_TARGET "Kokkos::kokkos")
+    SET(TCHEM_ENABLE_TPL_KOKKOS ON CACHE BOOL "Enable Kokkos")
+    LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_KOKKOS_TARGET})
+  ELSE()
+    MESSAGE(FATAL_ERROR "-- Kokkos install path is not provided")
+  ENDIF()
 ENDIF()
 
 #
 # Tines
 #
-IF (TINES_INSTALL_PATH)
-  MESSAGE(STATUS "TChem attempts to use Tines installed at ${TINES_INSTALL_PATH}")
-  FIND_PACKAGE(Tines REQUIRED)
+IF(TARGET Tines::tines)
+  # check to see if tines was loaded in another project
+  message(STATUS "Found Tines::tines target")
   SET(TCHEM_INTERNAL_TINES_TARGET "Tines::tines")
   SET(TCHEM_ENABLE_TPL_TINES ON CACHE BOOL "Enable Tines")
   LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_TINES_TARGET})
 ELSE()
-  MESSAGE(FATAL_ERROR "-- Tines install path is not provided")
+  IF (TINES_INSTALL_PATH)
+    MESSAGE(STATUS "TChem attempts to use Tines installed at ${TINES_INSTALL_PATH}")
+    FIND_PACKAGE(Tines REQUIRED)
+    SET(TCHEM_INTERNAL_TINES_TARGET "Tines::tines")
+    SET(TCHEM_ENABLE_TPL_TINES ON CACHE BOOL "Enable Tines")
+    LIST(APPEND TCHEM_LINK_LIBRARIES ${TCHEM_INTERNAL_TINES_TARGET})
+  ELSE()
+    MESSAGE(FATAL_ERROR "-- Tines install path is not provided")
+  ENDIF()
 ENDIF()
+
 
 #
 # gtest
@@ -204,3 +222,8 @@ ENDIF()
 IF (TCHEM_ENABLE_PYTHON)
   ADD_SUBDIRECTORY(pytchem)
 ENDIF()
+
+# add in target include for build to enable finding TChem_Config
+TARGET_INCLUDE_DIRECTORIES(tchem
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)

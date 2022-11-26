@@ -26,6 +26,7 @@ Sandia National Laboratories, Livermore, CA, USA
 
 #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
 #include "yaml-cpp/yaml.h"
+#include <iostream>
 #endif
 
 namespace TChem {
@@ -257,7 +258,22 @@ namespace TChem {
     void allocateViewsSurf(FILE* errfile);
 
   public:
-    KineticModelData(const std::string& mechfile, const bool& hasSurface=false);
+      /**
+       * constructor that allows use of a yaml file and custom echo and error streams
+       * @param mechfile
+       * @param echofile
+       * @param errfile
+       * @param surfechofile
+       * @param hasSurface
+       */
+      KineticModelData(const std::string& mechfile, std::ostream& echofile, std::ostream& errfile, const bool& hasSurface=false);
+
+      /**
+       * constructor that allows use of a yaml file with default file echo and error streams
+       * @param mechfile
+       * @param hasSurface
+       */
+      KineticModelData(const std::string& mechfile, const bool& hasSurface=false);
 
 
     KineticModelData(const std::string& mechfile, const std::string& thermofile);
@@ -276,9 +292,10 @@ namespace TChem {
     ordinal_type initChemSurf();
 
 #if defined(TCHEM_ENABLE_TPL_YAML_CPP)
-    ordinal_type initChemYaml(YAML::Node& doc, const int& gasPhaseIndex);
-    ordinal_type initChemSurfYaml(YAML::Node& doc, const int& surfacePhaseIndex);
-    ordinal_type initChemNCAR(YAML::Node& doc);
+    void initYamlFile(const std::string &mechfile, const bool &hasSurface, std::ostream& echofile, std::ostream& errfile, std::ostream& surfechofile);
+    ordinal_type initChemYaml(YAML::Node& doc, const int& gasPhaseIndex, std::ostream& echofile, std::ostream& errfile);
+    ordinal_type initChemSurfYaml(YAML::Node& doc, const int& surfacePhaseIndex, std::ostream& echofile);
+    ordinal_type initChemNCAR(YAML::Node& doc, std::ostream& echofile);
 #endif
 
     /// create multiple models sharing the data in this model

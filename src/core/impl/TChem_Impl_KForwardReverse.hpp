@@ -179,8 +179,10 @@ template <typename ValueType, typename DeviceType> struct KForwardReverse {
                     if (ki1 > 0) {
                       ki1 = ats<value_type>::log(ki1);
                     } else {
-                      Kokkos::abort("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative "
-                                    "value (high range)");
+                      // The reaction rate is non-valid, set the value to zero to allow the reaction rate to continue and error out of the time stepper
+                      ki1 = 0;
+                      std::cout << "Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative "
+                                   "value (high range)." << std::endl;
                     }
 
                     // printf("ki1 i %d,  ki1 %e, logPi %e, log(A) %e, b %e, Ea %e
@@ -205,8 +207,10 @@ template <typename ValueType, typename DeviceType> struct KForwardReverse {
                     if (ki > 0) {
                       ki = ats<value_type>::log(ki);
                     } else {
-                      Kokkos::abort("Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative "
-                                    "value (low range).");
+                      // The reaction rate is non-valid, set the value to zero to allow the reaction rate to continue and error out of the time stepper
+                      ki1 = 0;
+                      std::cout << "Error: log(reaction rate) is nan. Sum of PLOG expressions results in a negative "
+                                   "value (low range)." << std::endl;
                     }
 
                     kfor(i) = ats<value_type>::exp(ki + (logP - rpp(0)) * (ki1 - ki) / (rpp1 - rpp(0)));

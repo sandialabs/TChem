@@ -3088,6 +3088,14 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
     StreamPrint(echofile, "\n");
   }
 
+  /// save kmod.reaction file
+  DASHLINE(echofile);
+  StreamPrint(echofile, "%s \n", "kmodSurf.reactions");
+  for (auto const &reaction : surface_reactions) {
+    auto equation = reaction["equation"].as<std::string>();
+    StreamPrint(echofile, "%s ,\n",equation.c_str());
+  }
+
   DASHLINE(echofile);
   if (verboseEnabled)
     printf("KineticModelData::initChem() : Done reading reaction data\n");
@@ -3129,7 +3137,10 @@ int KineticModelData::initChemSurfYaml(YAML::Node &doc, const int &surfacePhaseI
   //
   return (0);
 }
-int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex, std::ostream& echofile, std::ostream& errfile) {
+int KineticModelData::initChemYaml(YAML::Node &doc,
+                                   const int &gasPhaseIndex,
+                                   std::ostream& echofile,
+                                    std::ostream& errfile) {
 #define DASHLINE(stream)                                                                                                 \
   stream << "------------------------------------------------------------"                                         \
                 "-------------\n";
@@ -3902,6 +3913,7 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex, st
     DASHLINE(echofile);
   }
 
+
   if (verboseEnabled)
     printf("KineticModelData::initChemYaml() : Done reading plog data\n");
 
@@ -4118,6 +4130,110 @@ int KineticModelData::initChemYaml(YAML::Node &doc, const int &gasPhaseIndex, st
       stoiCoefMatrixHost(kspec, i) = reacNukiHost(i, j + joff);
     }
   }
+  /// save kmod.reaction file
+  DASHLINE(echofile);
+  StreamPrint(echofile, "%s \n", "kmod.reactions");
+  for (auto const &reaction : gas_reactions) {
+    auto equation = reaction["equation"].as<std::string>();
+    std::cout << equation <<"\n";
+    StreamPrint(echofile, "%s ,\n",equation.c_str());
+  }
+ #if 0   
+   // following code produces also kmod.reactions. 
+  {
+    DASHLINE(echofile);
+    StreamPrint(echofile, "%s \n", "kmod.reactions");
+    int fall_off_start, third_body_start = 0;
+    bool add_fall_off, add_third_body = false;
+
+    for (int ireac = 0; ireac < nReac_; ++ireac) {
+      // reactants
+      for (int j = 0; j < reacNreacHost(ireac); ++j) {
+        const auto kspec = reacSidxHost(ireac, j);
+        const auto value = reacNukiHost(ireac, j);
+        const auto sp_name = &sNamesHost(kspec, 0);
+        // no add coef if it is equal to 1
+        if (int(value) != -1) {
+          StreamPrint(echofile, "%.1f", -value);
+        }
+        StreamPrint(echofile, "%s", sp_name);
+        // no add + in the last species
+        if (j != reacNreacHost(ireac) - 1) {
+          StreamPrint(echofile, " + ");
+        }
+
+      } // end reactants
+
+      /* Check for fall-off */
+      for (int ifall_off = fall_off_start; ifall_off < nFallReac_;
+           ++ifall_off) {
+        if (ireac == reacPfalHost(ifall_off)) {
+          printf("Reaction No fall_off %d \n ", ireac);
+          add_fall_off = true;
+          // start next time in next item
+          fall_off_start = ifall_off + 1;
+          break;
+        }
+      }
+
+      if (add_fall_off)
+        StreamPrint(echofile, "%s", " (+M) ");
+
+      /* Check for third-body */
+      for (int ithird_body = third_body_start; ithird_body < nThbReac_;
+           ++ithird_body) {
+        if (ireac == reacTbdyHost(ithird_body)) {
+          printf("Reaction No third_body %d \n ", ireac);
+          add_third_body = true;
+          // start next time in next item
+          third_body_start = ithird_body + 1;
+          break;
+        }
+      }
+
+      if (add_third_body && !add_fall_off)
+        StreamPrint(echofile, "%s", " +M ");
+
+      // check if reaction is irreversible
+      if (isRevHost(ireac) == 1) {
+        StreamPrint(echofile, "%s", " <=> ");
+      } else {
+        StreamPrint(echofile, "%s", " => ");
+      }
+
+      // products
+      const ordinal_type joff = maxSpecInReac_ / 2;
+      for (int j = 0; j < reacNprodHost(ireac); ++j) {
+        const int kspec = reacSidxHost(ireac, j + joff);
+        const auto sp_name = &sNamesHost(kspec, 0);
+        const auto value = reacNukiHost(ireac, j + joff);
+        if (int(value) != 1) {
+          StreamPrint(echofile, "%.1f", value);
+        }
+        StreamPrint(echofile, "%s", sp_name);
+        // no add + in the last species
+        if (j != reacNprodHost(ireac) - 1) {
+          StreamPrint(echofile, " + ");
+        }
+      } // end products
+
+      if (add_fall_off) {
+        StreamPrint(echofile, "%s", " (+M) ");
+      }
+
+      if (add_third_body && !add_fall_off) {
+        StreamPrint(echofile, "%s", " +M ");
+      }
+
+      // make again false
+      add_fall_off = false;
+      add_third_body = false;
+
+      StreamPrint(echofile, ",\n");
+
+    } // end ireac
+  }
+#endif
 
   auto reacAOrdHost = reacAOrd_.view_host();
   auto specAOidxHost = specAOidx_.view_host();

@@ -107,3 +107,32 @@ Reaction data : species and Arrhenius pars
 26   	0	 2	 2 | -1*HCOO(S) | -1*PT(S) | 1*CO2(S) | 1*H(S) |   3.70000000e+21	  0.00000000e+00	  0.00000000e+00
 27   	0	 2	 2 | -1*CO2(S) | -1*H(S) | 1*HCOO(S) | 1*PT(S) |   2.79000000e+21	  0.00000000e+00	  1.08305134e+04
 -------------------------------------------------------------------------
+kmodSurf.reactions 
+H2 + 2 Pt(S) => 2 H(S) ,
+2 H(S) => H2 + 2 Pt(S) ,
+H + Pt(S) => H(S) ,
+O2 + 2 Pt(S) => 2 O(S) ,
+O2 + 2 Pt(S) => 2 O(S) ,
+2 O(S) => O2 + 2 Pt(S) ,
+O + Pt(S) => O(S) ,
+H2O + Pt(S) => H2O(S) ,
+H2O(S) => H2O + Pt(S) ,
+OH + Pt(S) => OH(S) ,
+OH(S) => OH + Pt(S) ,
+H(S) + O(S) => OH(S) + Pt(S) ,
+OH(S) + Pt(S) => H(S) + O(S) ,
+H(S) + OH(S) <=> H2O(S) + Pt(S) ,
+OH(S) + OH(S) <=> H2O(S) + O(S) ,
+CO + Pt(S) => CO(S) ,
+CO(S) => CO + Pt(S) ,
+CO2(S) => CO2 + Pt(S) ,
+CO(S) + O(S) => CO2(S) + Pt(S) ,
+C(S) + O(S) => CO(S) + Pt(S) ,
+CO(S) + Pt(S) => C(S) + O(S) ,
+OH(S) + CO(S) => HCOO(S) + Pt(S) ,
+HCOO(S) + Pt(S) => OH(S) + CO(S) ,
+HCOO(S) + O(S) => OH(S) + CO2(S) ,
+OH(S) + CO2(S) => HCOO(S) + O(S) ,
+HCOO(S) + Pt(S) => CO2(S) + H(S) ,
+CO2(S) + H(S) => HCOO(S) + Pt(S) ,
+-------------------------------------------------------------------------

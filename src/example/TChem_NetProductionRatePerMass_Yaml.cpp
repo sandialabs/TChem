@@ -65,8 +65,8 @@ int main(int argc, char *argv[]) {
   {
     const bool detail = false;
 
-    TChem::exec_space::print_configuration(std::cout, detail);
-    TChem::host_exec_space::print_configuration(std::cout, detail);
+    TChem::exec_space().print_configuration(std::cout, detail);
+    TChem::host_exec_space().print_configuration(std::cout, detail);
     const auto exec_space_instance = TChem::exec_space();
 
     /// construct kmd and use the view for testing

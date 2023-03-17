@@ -90,8 +90,8 @@ int main(int argc, char *argv[]) {
   {
     const bool detail = false;
 
-    TChem::exec_space::print_configuration(std::cout, detail);
-    TChem::host_exec_space::print_configuration(std::cout, detail);
+    TChem::exec_space().print_configuration(std::cout, detail);
+    TChem::host_exec_space().print_configuration(std::cout, detail);
 
     using device_type = typename Tines::UseThisDevice<exec_space>::type;
 

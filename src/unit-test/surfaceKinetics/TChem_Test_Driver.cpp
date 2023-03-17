@@ -45,8 +45,8 @@ int main (int argc, char *argv[]) {
   {
     const bool detail = false;
 
-    TChem::     exec_space::print_configuration(std::cout, detail);
-    TChem::host_exec_space::print_configuration(std::cout, detail);
+    TChem::exec_space().print_configuration(std::cout, detail);
+    TChem::host_exec_space().print_configuration(std::cout, detail);
 
     _prefixPath = "input/PT/";
     std::string chemFile(_prefixPath + "chem.inp");

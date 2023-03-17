@@ -65,8 +65,8 @@ main(int argc, char* argv[])
 
     const bool detail = false;
 
-    TChem::exec_space::print_configuration(std::cout, detail);
-    TChem::host_exec_space::print_configuration(std::cout, detail);
+    TChem::exec_space().print_configuration(std::cout, detail);
+    TChem::host_exec_space().print_configuration(std::cout, detail);
 
     /// construct kmd and use the view for testing
     TChem::KineticModelData kmd(chemFile, thermFile);
@@ -90,10 +90,6 @@ main(int argc, char* argv[])
 
     real_type_2d_view_type state("StateVector Devices", nBatch, stateVecDim);
     Kokkos::deep_copy(state, state_host);
-    // output:: CpMass
-    real_type_2d_view_type CpMass("CpMass", nBatch, kmcd.nSpec);
-    real_type_1d_view_type CpMixMass("CpMass Mixture", nBatch);
-    value_type_1d_view_type CpW("CpMass", kmcd.nSpec, kmcd.nSpec+1);
 
     problem_type problem;
     problem._kmcd = kmcd;

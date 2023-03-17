@@ -34,8 +34,8 @@ main(int argc, char* argv[])
   {
     const bool detail = false;
 
-    TChem::exec_space::print_configuration(std::cout, detail);
-    TChem::host_exec_space::print_configuration(std::cout, detail);
+    TChem::exec_space().print_configuration(std::cout, detail);
+    TChem::host_exec_space().print_configuration(std::cout, detail);
 
     ::testing::InitGoogleTest(&argc, argv);
     r_val = RUN_ALL_TESTS();

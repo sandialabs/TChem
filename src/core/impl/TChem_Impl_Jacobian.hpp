@@ -498,11 +498,11 @@ struct Jacobian
     /// const input from kinetic model
     const KineticModelConstDataType& kmcd)
   {
-    static_assert(Kokkos::Impl::SpaceAccessibility<
+    static_assert(Kokkos::SpaceAccessibility<
                     typename RealType1DViewType::execution_space,
                     typename WorkViewType::memory_space>::accessible,
                   "RealType1DView is not accessible to workspace");
-    static_assert(Kokkos::Impl::SpaceAccessibility<
+    static_assert(Kokkos::SpaceAccessibility<
                     typename RealType2DViewType::execution_space,
                     typename WorkViewType::memory_space>::accessible,
                   "RealType2DView is not accessible to workspace");

@@ -1,0 +1,3 @@
+[submodule "ext/Tines"]
+	path = ext/Tines
+	url = git@github.com:sandialabs/Tines.git

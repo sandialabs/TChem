@@ -3271,6 +3271,8 @@ int KineticModelData::initChemYaml(YAML::Node &doc,
       }
     }
 
+    free(periodictable);
+
     /* Range of temperatures for thermo fits */
     TthrmMin_ = 1.e-5;
     TthrmMax_ = 1.e+5;

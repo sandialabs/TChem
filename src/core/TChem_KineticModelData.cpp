@@ -4137,7 +4137,6 @@ int KineticModelData::initChemYaml(YAML::Node &doc,
   StreamPrint(echofile, "%s \n", "kmod.reactions");
   for (auto const &reaction : gas_reactions) {
     auto equation = reaction["equation"].as<std::string>();
-    std::cout << equation <<"\n";
     StreamPrint(echofile, "%s ,\n",equation.c_str());
   }
  #if 0   

@@ -3271,6 +3271,8 @@ int KineticModelData::initChemYaml(YAML::Node &doc,
       }
     }
 
+    free(periodictable);
+
     /* Range of temperatures for thermo fits */
     TthrmMin_ = 1.e-5;
     TthrmMax_ = 1.e+5;
@@ -4135,7 +4137,6 @@ int KineticModelData::initChemYaml(YAML::Node &doc,
   StreamPrint(echofile, "%s \n", "kmod.reactions");
   for (auto const &reaction : gas_reactions) {
     auto equation = reaction["equation"].as<std::string>();
-    std::cout << equation <<"\n";
     StreamPrint(echofile, "%s ,\n",equation.c_str());
   }
  #if 0   

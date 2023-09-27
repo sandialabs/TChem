@@ -687,7 +687,7 @@ public:
 
   /// validate input vector
   KOKKOS_INLINE_FUNCTION bool isValid() const {
-    const bool is_valid_rank = (RealType1DView::Rank == 1);
+    const bool is_valid_rank = (RealType1DView::rank == 1);
     const bool is_extent_valid = (_v.extent(0) <= (3 + _nSpec));
     return (is_valid_rank && is_extent_valid);
   }
@@ -729,12 +729,12 @@ namespace Test {
 
 template <typename ViewType> static inline void cloneView(const ViewType &v) {
   auto vp = v.data();
-  if (ViewType::Rank == 1) {
+  if (ViewType::rank == 1) {
     const auto vs = v.stride(0);
     Kokkos::parallel_for(
         Kokkos::RangePolicy<typename ViewType::execution_space>(0, v.extent(0)),
         KOKKOS_LAMBDA(const ordinal_type i) { vp[i * vs] = vp[0]; });
-  } else if (ViewType::Rank == 2) {
+  } else if (ViewType::rank == 2) {
     const auto vs0 = v.stride(0);
     const auto vs1 = v.stride(1);
     Kokkos::parallel_for(
